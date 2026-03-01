@@ -1669,11 +1669,12 @@ currentDieBox.appendChild(img);
           config: {
             iceServers: [
               { urls: "stun:stun.l.google.com:19302" },
-              // public TURN servers for quick testing (no guarantees)
-              { urls: "turn:turn.bistri.com:80" },
-              { urls: "turn:turn.anyfirewall.com:443?transport=tcp" },
-              { urls: "turn:openrelay.metered.ca:80" },
-              { urls: "turn:openrelay.metered.ca:443" }
+              // authenticated TURN server provided by metered.live
+              {
+                urls: "turn:turn.dicegame.metered.live:3478",
+                username: "b509c1735ca2cb18ca624913",
+                credential: "wQVmLRg4orteQDXi"
+              }
             ]
           }
         });
