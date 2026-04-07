@@ -1452,6 +1452,17 @@
       document.getElementById("round-text").textContent = "Runde: " + state.roundNumber;
     }
 
+    function updateCardButtons() {
+      const p1Btn = document.getElementById("btn-player1-cards");
+      const p2Btn = document.getElementById("btn-player2-cards");
+      const p1Set = state.players[1].diceSet || "numbers";
+      const p2Set = state.players[2].diceSet || "numbers";
+      const folder1 = p1Set === "numbers" ? "numbers" : p1Set;
+      const folder2 = p2Set === "numbers" ? "numbers" : p2Set;
+      p1Btn.innerHTML = `<img src="img/${folder1}/rules/artwork.png" alt="Artwork" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px;">`;
+      p2Btn.innerHTML = `<img src="img/${folder2}/rules/artwork.png" alt="Artwork" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px;">`;
+    }
+
     // --- Lobby / Würfel-Set-Auswahl ---
     function initLobbyDiceSets() {
       const p1Select = document.getElementById("p1-dice-set");
@@ -1494,6 +1505,7 @@
       updateBoardDOM();
       refreshPlayerPanels();
       updateRoundDisplay();
+      updateCardButtons();
       clearSelection();
       resetHistory();
       updateSaveLoadButtons();
@@ -1829,6 +1841,7 @@
             refreshPlayerPanels();
             updateRoundDisplay();
             updateCurrentDieView();
+            updateCardButtons();
             resetHistory();
             setStatusFromState();
             updateSaveLoadButtons();
@@ -2031,6 +2044,7 @@
           updateBoardDOM();
           refreshPlayerPanels();
           updateRoundDisplay();
+          updateCardButtons();
           updatePerspective();
           clearSelection();
           resetHistory();
@@ -2078,6 +2092,7 @@
             updateBoardDOM();
             refreshPlayerPanels();
             updateRoundDisplay();
+            updateCardButtons();
             updatePerspective();
             clearSelection();
             resetHistory();
