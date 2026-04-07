@@ -39,7 +39,6 @@
     html, body {
       margin: 0;
       height: 100%;
-      overflow: hidden;
     }
 
     #app {
@@ -50,7 +49,7 @@
       flex-direction: column;
       justify-content: space-between;
       padding-top: env(safe-area-inset-top, 0);
-      padding-bottom: env(safe-area-inset-bottom, 0);
+      padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
     }
 
     .player-zone {
