@@ -657,7 +657,7 @@
           </div>
         </div>
         <div class="side-card btn-down-card">
-          <button class="btn primary" id="btn-die-minus">-</button>
+          <button class="btn primary" id="btn-die-minus">↻</button>
         </div>
         <div class="side-card card-player1">
           <button class="btn" id="btn-player1-cards">Spieler 1<br />Karten</button>
@@ -886,6 +886,7 @@
             owner: null,
             value: null,
             type: "neutral",
+            rotation: 0,
           });
         }
         state.board.push(row);
@@ -987,9 +988,14 @@
                   ? "radial-gradient(circle at 30% 20%, #ff877d, var(--p1-color))"
                   : "radial-gradient(circle at 30% 20%, #79b5ff, var(--p2-color))";
               die.style.color = "#fff";
+              let transform = "";
               if (state.gameMode === "duel" && owner === 2) {
-                die.style.transform = "rotate(180deg)";
+                transform = "rotate(180deg)";
               }
+              if (data.rotation !== 0) {
+                transform += ` rotate(${data.rotation}deg)`;
+              }
+              die.style.transform = transform || "none";
             } else {
               die.textContent = "";
               const imgPath =
@@ -1003,9 +1009,14 @@
               img.style.objectFit = "contain";
               img.style.borderRadius = "6px";
               img.alt = `Würfel ${data.value}`;
+              let transform = "";
               if (state.gameMode === "duel" && owner === 2) {
-                img.style.transform = "rotate(180deg)";
+                transform = "rotate(180deg)";
               }
+              if (data.rotation !== 0) {
+                transform += ` rotate(${data.rotation}deg)`;
+              }
+              img.style.transform = transform || "none";
               die.appendChild(img);
             }
 
@@ -1121,9 +1132,11 @@
             pushUndoState();
             cell.owner = from.owner;
             cell.value = from.value;
+            cell.rotation = from.rotation;
             cell.type = cell.type || "neutral";
             from.owner = null;
             from.value = null;
+            from.rotation = 0;
             clearSelection();
             updateBoardDOM();
             if (state.gameMode === "online") {
@@ -1140,6 +1153,7 @@
             state.players[p].reserve--;
             cell.owner = p;
             cell.value = 1;
+            cell.rotation = 0;
             clearSelection();
             refreshPlayerPanels();
             updateBoardDOM();
@@ -1157,6 +1171,7 @@
             state.players[p].exile--;
             cell.owner = p;
             cell.value = 1;
+            cell.rotation = 0;
             clearSelection();
             refreshPlayerPanels();
             updateBoardDOM();
@@ -1228,6 +1243,7 @@
 
       pushUndoState();
       state.players[player].reserve++;
+      cell.rotation = 0;
       cell.owner = null;
       cell.value = null;
       clearSelection();
@@ -1246,6 +1262,7 @@
 
       pushUndoState();
       state.players[player].exile++;
+      cell.rotation = 0;
       cell.owner = null;
       cell.value = null;
       clearSelection();
@@ -1301,6 +1318,24 @@
       }
     }
 
+    function rotateSelectedDieVisual(degrees) {
+      if (state.gameOver) return;
+      if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
+        return;
+      }
+      if (!state.selected || state.selected.type !== "board") return;
+      const { row, col } = state.selected;
+      const cell = state.board[row][col];
+      if (cell.owner == null || cell.value == null) return;
+      pushUndoState();
+      cell.rotation = (cell.rotation + degrees) % 360;
+      updateBoardDOM();
+      updateCurrentDieView();
+      if (state.gameMode === "online") {
+        sendGameState();
+      }
+    }
+
     function updateCurrentDieView() {
       if (!state.selected || state.selected.type !== "board") {
         currentDieBox.classList.add("empty");
@@ -1337,11 +1372,14 @@
             ? "radial-gradient(circle at 30% 20%, #ff877d, var(--p1-color))"
             : "radial-gradient(circle at 30% 20%, #79b5ff, var(--p2-color))";
         currentDieBox.style.color = "#fff";
+        let transform = "";
         if (state.gameMode === "duel" && cell.owner === 2) {
-          currentDieBox.style.transform = "rotate(180deg)";
-        } else {
-          currentDieBox.style.transform = "none";
+          transform = "rotate(180deg)";
         }
+        if (cell.rotation !== 0) {
+          transform += ` rotate(${cell.rotation}deg)`;
+        }
+        currentDieBox.style.transform = transform || "none";
       } else {
         currentDieBox.innerHTML = "";
         const imgPath =
@@ -1355,9 +1393,14 @@
         img.style.objectFit = "contain";
         img.style.borderRadius = "6px";
         img.alt = `Würfel ${cell.value}`;
+        let transform = "";
         if (state.gameMode === "duel" && cell.owner === 2) {
-          img.style.transform = "rotate(180deg)";
+          transform = "rotate(180deg)";
         }
+        if (cell.rotation !== 0) {
+          transform += ` rotate(${cell.rotation}deg)`;
+        }
+        img.style.transform = transform || "none";
         currentDieBox.appendChild(img);
         currentDieBox.style.color = "transparent";
         currentDieBox.style.transform = "none";
@@ -1725,7 +1768,7 @@
         .addEventListener("click", () => rotateSelectedDie(1));
       document
         .getElementById("btn-die-minus")
-        .addEventListener("click", () => rotateSelectedDie(-1));
+        .addEventListener("click", () => rotateSelectedDieVisual(90));
 
       document
         .getElementById("btn-player1-cards")
