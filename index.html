@@ -771,7 +771,7 @@
     function applyStateSnapshot(snap) {
       if (!snap || !snap.board || !snap.players) return;
       state.currentPlayer = snap.currentPlayer ?? 1;
-      state.gameOver = !!snap.gameOver;
+      state.gameOver = false;
       state.gameMode = snap.gameMode || "duel";
       state.roundNumber = snap.roundNumber || 1;
       state.board = cloneBoard(snap.board);
@@ -803,18 +803,7 @@
     }
 
     function setStatusFromState() {
-      if (state.gameOver) {
-        let winner = null;
-        if (state.players[1].victory > state.players[2].victory) winner = 1;
-        else if (state.players[2].victory > state.players[1].victory) winner = 2;
-        if (winner) {
-          setStatus("Spieler " + winner + " hat gewonnen!");
-        } else {
-          setStatus("Spiel beendet.");
-        }
-      } else {
-        setStatus("Spieler " + state.currentPlayer + " ist am Zug.");
-      }
+      setStatus("Spieler " + state.currentPlayer + " ist am Zug.");
     }
 
     function updateHistoryButtons() {
@@ -1101,7 +1090,6 @@
     }
 
     function onCellClick(r, c) {
-      if (state.gameOver) return;
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
         return;
       }
@@ -1198,7 +1186,6 @@
     }
 
     function onReserveClick(player) {
-      if (state.gameOver) return;
       const block = document.getElementById(`p${player}-reserve`);
       const wasSelected =
         state.selected &&
@@ -1217,7 +1204,6 @@
     }
 
     function onExileClick(player) {
-      if (state.gameOver) return;
       const block = document.getElementById(`p${player}-exile`);
       const wasSelected =
         state.selected &&
@@ -1298,7 +1284,6 @@
     }
 
     function rotateSelectedDie(delta) {
-      if (state.gameOver) return;
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
         return;
       }
@@ -1319,7 +1304,6 @@
     }
 
     function rotateSelectedDieVisual(degrees) {
-      if (state.gameOver) return;
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
         return;
       }
@@ -1408,8 +1392,6 @@
     }
 
     function onCounterButtonClick(counterId, delta) {
-      if (state.gameOver && !counterId.endsWith("victory")) return;
-
       let player = counterId.startsWith("p1") ? 1 : 2;
       const field = counterId.endsWith("trigger") ? "trigger" : "victory";
       pushUndoState();
@@ -1419,18 +1401,12 @@
       state.players[player][field] = value;
       document.getElementById(counterId).textContent = value;
 
-      if (field === "victory" && value >= 10 && !state.gameOver) {
-        state.gameOver = true;
-        setStatus("Spieler " + player + " hat gewonnen!");
-      }
-
       if (state.gameMode === "online") {
         sendGameState();
       }
     }
 
     function endTurn() {
-      if (state.gameOver) return;
       pushUndoState();
 
       if (state.currentPlayer === 2) {
