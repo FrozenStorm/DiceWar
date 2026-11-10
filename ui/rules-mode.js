@@ -15,7 +15,7 @@ import { IMPLEMENTED_LOCATIONS } from "../engine/locations/index.js";
 import { actionPath, pendingPrompt, abilityName, TURN_LABELS } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
 import { SIZE, sq, rowOf, colOf, supplyRow, defaultDir } from "../engine/board.js";
-import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animate.js";
+import { captureDice, play as playAnimation, animateTurnAt, getSpeed, setSpeed } from "./animate.js";
 
 // UI dice set id -> engine set id
 // "Numbers" is deliberately not mapped: it is played without rules (by humans only),
@@ -186,7 +186,9 @@ function perform(action) {
     rm.message = err.message;
   }
   render();
-  if (next) rm.animating = playAnimation(next.events, before, { slow: byAI, alignDeg }).catch((e) => console.error(e));
+  // A turn before the action was already shown while the player chose it.
+  const preShown = !byAI && (action.pre !== undefined || (action.sub && action.sub.pre !== undefined));
+  if (next) rm.animating = playAnimation(next.events, before, { slow: byAI, alignDeg, preShown }).catch((e) => console.error(e));
   if (state.gameMode === "online") sendGameState();
 }
 
@@ -263,6 +265,10 @@ function choose(token) {
   }
   rm.prefix = prefix;
   render();
+  // "Turn …" (KoS): the die turns on the board right away.
+  const dir = TURN_LABELS.indexOf(token);
+  const die = dir >= 0 && typeof prefix[0] === "number" ? rm.game.board[prefix[0]] : null;
+  if (die) animateTurnAt(prefix[0], alignDeg(die.owner, die.dir), alignDeg(die.owner, dir));
 }
 
 function onCellClick(r, c) {

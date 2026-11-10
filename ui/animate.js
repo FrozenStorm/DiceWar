@@ -147,6 +147,16 @@ function animateTurn(el, fromDeg, toDeg, ms) {
   ], { duration: ms, easing: "ease-in-out" }).finished.catch(() => {});
 }
 
+/** Turn the die on `at` right away (KoS: "Turn …" while choosing an action). */
+export function animateTurnAt(at, fromDeg, toDeg) {
+  const factor = SPEEDS[getSpeed()];
+  const die = dieEl(at);
+  if (!factor || !die) return Promise.resolve();
+  let delta = ((toDeg - fromDeg) % 360 + 360) % 360;
+  if (delta > 180) delta -= 360;
+  return animateTurn(rotEl(die), fromDeg, fromDeg + delta, Math.round(300 * factor));
+}
+
 /** Square where the die on `at` stands after the remaining events. */
 function finalSquare(events, from, at) {
   let cur = at;
@@ -161,7 +171,7 @@ function finalSquare(events, from, at) {
  * Play the events of one action. `before` comes from captureDice() taken
  * before the new position was rendered. Resolves when everything is done.
  */
-export async function play(events, before, { slow = false, alignDeg = null } = {}) {
+export async function play(events, before, { slow = false, alignDeg = null, preShown = false } = {}) {
   const factor = SPEEDS[getSpeed()] * (slow ? 1.3 : 1);
   if (!factor || !events || !events.length) return;
   const ms = (base) => Math.round(base * factor);
@@ -189,6 +199,12 @@ export async function play(events, before, { slow = false, alignDeg = null } = {
         shown.set(el, alignDeg(ev.owner, ev.from));
         el.style.transform = `rotate(${shown.get(el)}deg)`;
       }
+      // A turn before the action that the player already saw while choosing it.
+      if (i === 0 && preShown) {
+        shown.set(el, alignDeg(ev.owner, ev.to));
+        el.style.transform = `rotate(${shown.get(el)}deg)`;
+        return;
+      }
       const fromDeg = shown.get(el);
       let delta = ((alignDeg(ev.owner, ev.to) - fromDeg) % 360 + 360) % 360;
       if (delta > 180) delta -= 360; // the short way round
@@ -196,6 +212,22 @@ export async function play(events, before, { slow = false, alignDeg = null } = {
       turning.set(i, { el, fromDeg, toDeg: fromDeg + delta });
     });
   }
+  // Moving dice stay on their start field until their move begins (e.g. while
+  // they turn first).
+  const holds = new Map(); // element -> rendered transform
+  const seenMove = new Set();
+  events.forEach((ev, j) => {
+    if (ev.t !== "move") return;
+    const end = ev.path[ev.path.length - 1];
+    const fs = finalSquare(events, j + 1, end);
+    if (seenMove.has(fs)) return;
+    seenMove.add(fs);
+    const die = dieEl(fs);
+    if (!die || fs !== end || j === 0) return; // only needed when something happens first
+    const a = center(cellEl(ev.path[0])), b = center(cellEl(end));
+    holds.set(die, die.style.transform);
+    die.style.transform = `translate(${a.x - b.x}px, ${a.y - b.y}px) ${die.style.transform || ""}`;
+  });
   // Dice that leave the board stay visible where they stood until it is their turn to go.
   const ghosts = new Map();
   for (const ev of events) {
@@ -209,7 +241,12 @@ export async function play(events, before, { slow = false, alignDeg = null } = {
           if (tr) await animateTurn(tr.el, tr.fromDeg, tr.toDeg, ms(300));
           break;
         }
-        case "move": await animateMove(ev, ms(260)); break;
+        case "move": {
+          const die = dieEl(ev.path[ev.path.length - 1]);
+          if (die && holds.has(die)) { die.style.transform = holds.get(die); holds.delete(die); }
+          await animateMove(ev, ms(260));
+          break;
+        }
         case "remove": {
           const box = boxEl(ev.owner, ev.dest);
           let g = ghosts.get(ev.at);
@@ -234,5 +271,6 @@ export async function play(events, before, { slow = false, alignDeg = null } = {
     for (const d of hidden) d.style.visibility = "";
     for (const g of ghosts.values()) g.node.remove();
     for (const [el, tf] of restore) el.style.transform = tf;
+    for (const [el, tf] of holds) el.style.transform = tf;
   }
 }
