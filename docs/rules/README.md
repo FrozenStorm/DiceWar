@@ -1,35 +1,37 @@
-# DiceWar Regeln als Text
+# DiceWar rules as text
 
-Ziel: Alle Regeln, die bisher nur als Bilder der Regelkarten existieren, als Text erfassen und von Daniel validieren lassen. Diese Texte sind die Grundlage für die Regel-Engine (Zugprüfung) und den KI-Gegner.
+Goal: capture every rule that so far only exists as images of the rule cards as text, and have it validated. These texts are the basis for the rules engine (move validation) and the AI opponent.
 
-## Aufbau
+## Contents
 
-| Datei | Inhalt | Status |
+| File | Content | Status |
 |---|---|---|
-| [grundregeln.md](grundregeln.md) | Brett, Aufstellung, Zugablauf, Standardaktionen, Siegpunkte, Machthierarchie, Glossar | aus dem Regelheft übernommen, wenige Annahmen |
-| [RoX.md](RoX.md) | Würfelset RoX (Xeladron), wird zuerst umgesetzt | Entwurf, zur Prüfung |
-| [LoD.md](LoD.md) | Würfelset LoD (Light of Dragons, Grundspiel) | Entwurf, zur Prüfung |
-| [RoM.md](RoM.md) | Würfelset RoM (Mali) | Entwurf, zur Prüfung |
-| [BoD.md](BoD.md) | Würfelset BoD (Bond of Demons) | Entwurf, zur Prüfung |
-| [DoA.md](DoA.md) | Würfelset DoA (Awakening) | Entwurf, zur Prüfung |
-| [KoS.md](KoS.md) | Würfelset KoS (King's Knight), braucht Ausrichtung pro Würfel | Entwurf, zur Prüfung |
+| [base-rules.md](base-rules.md) | Board, setup, turn sequence, standard actions, victory points, power hierarchy, End of War, glossary | **Validated** |
+| [RoX.md](RoX.md) | Dice set RoX (Rise of Xeladron), implemented first | **Validated** |
+| [LoD.md](LoD.md) | Dice set LoD (Light of Dragons, base game) | Draft, open questions |
+| [RoM.md](RoM.md) | Dice set RoM (Roots of Mali) | Draft, open questions |
+| [BoD.md](BoD.md) | Dice set BoD (Bond of Demons) | Draft, open questions |
+| [DoA.md](DoA.md) | Dice set DoA (Awakening) | Draft, open questions |
+| [KoS.md](KoS.md) | Dice set KoS (Knights of Steel), needs an alignment per die | Draft, open questions |
 
-## Konventionen
+## Conventions
 
-Jede Fähigkeit bekommt eine feste ID der Form `SET.kreatur.faehigkeit` (z. B. `RoX.portal.wormhole`). Die Engine verwendet später dieselben IDs, damit Regeltext und Code eindeutig zusammengehören.
+Every ability has a fixed ID of the form `SET.creature.ability` (e.g. `RoX.portal.wormhole`). The engine uses the same IDs so rule text and code clearly belong together.
 
-Fähigkeitstyp (abgeleitet aus der Farbe des Balkens auf der Karte):
+Ability type (derived from the colour of the bar on the card):
 
-| Farbe | Typ | Bedeutung |
+| Colour | Type | Meaning |
 |---|---|---|
-| grün | `movement` | Variante der Standardaktion Bewegung |
-| rot | `attack` | Variante der Standardaktion Angriff |
-| violett | `spell` | Zauber, verbraucht die Standardaktion Zauber |
-| blaugrau | `speciality` | Spezialität, passiv oder automatisch ausgelöst |
+| green | `movement` | variant of the Movement standard action |
+| red | `attack` | variant of the Attack standard action |
+| yellow | `upgrade` | variant of the Upgrade standard action |
+| purple | `spell` | spell, uses the Spell standard action |
+| blue-grey | `speciality` | passive or automatically triggered |
 
-Markierungen im Text:
+Markers in the text:
 
-- **[Annahme]** meine Interpretation, bitte bestätigen oder korrigieren
-- **[Frage]** offen, ohne Antwort nicht umsetzbar
+- **[Assumption]** interpretation that still needs confirmation
+- **[Question]** open, cannot be implemented without an answer
+- **Confirmed:** decision made by the rules owner where the cards were ambiguous
 
-Quellen: offizielles Regelheft „Light of Dragons“ (4. Edition, 2022) für die Grundregeln, Bilder in `img/global/` und `img/<SET>/rules/` für die Sets. Die Karten sind auf Englisch, die Fähigkeitsnamen bleiben deshalb englisch.
+Sources: official rulebook "DiceWar – Light of Dragons" (4th edition, June 2022) for the base rules, images in `img/global/` and `img/<SET>/rules/` for the sets.

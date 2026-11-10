@@ -1,14 +1,16 @@
-# Würfelset RoX (Xeladron)
+# Dice set RoX (Rise of Xeladron)
 
-Quelle: `img/RoX/rules/1.png` bis `6.png` und `marker.png`. Grundbegriffe stehen in [grundregeln.md](grundregeln.md).
+Source: `img/RoX/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
-## Übersicht
+**Status: validated.** All points marked "Confirmed" were decided by the rules owner.
 
-| Stufe | Kreatur | Fähigkeiten | Besiegt |
+## Overview
+
+| Level | Creature | Abilities | Defeats |
 |---|---|---|---|
-| 1 | Portal | Unmovable, Wormhole, Resistance | niemanden |
+| 1 | Portal | Unmovable, Wormhole, Resistance | nobody |
 | 2 | Portal Bearer | Aerial Maneuver, Arrival, Balance | 1 |
-| 3 | Portal Guardian | New Paths | 2, 1 und 6 |
+| 3 | Portal Guardian | New Paths | 2, 1 and 6 |
 | 4 | Emissary | Energy Circle, Dimensional Summoning | 3, 2, 1 |
 | 5 | Enchantress of Gravity | Force of Attraction | 4, 3, 2, 1 |
 | 6 | Xeladron | Decay, Impact, Forceful Alliance | 5, 4, 3, 2, 1 |
@@ -16,88 +18,92 @@ Quelle: `img/RoX/rules/1.png` bis `6.png` und `marker.png`. Grundbegriffe stehen
 ## 1 · Portal
 
 ### `RoX.portal.unmovable` (speciality)
-Portale können keine Bewegungsaktionen ausführen.
-- **[Annahme]** Gilt auch für Angriffe, da ein Portal ohnehin niemanden besiegen kann.
+Portals can't use Movement actions.
+- Confirmed: this also applies to attacks; a Portal cannot defeat anything anyway.
 
 ### `RoX.portal.wormhole` (speciality)
-Solange du mindestens 1 Portal Bearer kontrollierst, darfst du eigene Kreaturen auf Felder mit deinen Portalen bewegen. Bewegt sich eine eigene Kreatur auf ein Portal, wird sie auf das Feld eines eigenen Portal Bearers gesetzt. Mit dieser Kreatur führst du eine zusätzliche Bewegung oder einen zusätzlichen Angriff aus. Danach kommt das Portal in die Reserve, und der Portal Bearer wird um 1 Stufe herabgestuft.
+As long as you control at least 1 Portal Bearer, you can move friendly creatures to fields with your Portals. If a friendly creature moves to a Portal, put it on a field with a friendly Portal Bearer. Perform an additional Movement or Attack with this creature. Then put the Portal back to the Reserve and downgrade the Portal Bearer by 1 Power Level.
 
-Ablauf laut Bild: Xeladron (6) zieht auf ein Portal. Er erscheint beim Portal Bearer (2) und zieht von dort auf eines der 4 angrenzenden Felder. Ergebnis: Xeladron steht auf dem neuen Feld, der Portal Bearer ist auf Stufe 1 herabgestuft, also selbst zu einem Portal geworden.
+Sequence according to the picture: Xeladron (6) moves onto a Portal. It appears at the Portal Bearer (2) and moves from there to one of the 4 adjacent fields. Result: Xeladron stands on the new field, the Portal Bearer is downgraded to level 1 and has therefore become a Portal itself.
 
-- **[Annahme]** Die Kreatur steht kurz auf demselben Feld wie der Portal Bearer und muss es mit der Zusatzaktion wieder verlassen.
-- **[Frage RoX1]** Ist die Zusatzaktion Pflicht? Was passiert, wenn kein Feld neben dem Portal Bearer frei oder angreifbar ist?
-- **[Frage RoX2]** Gibt es mehrere Portal Bearer, wählt dann der Spieler, zu welchem die Kreatur geht?
+- Confirmed: the creature briefly shares the field with the Portal Bearer and must leave it with the additional action.
+- Confirmed: the additional Movement or Attack is **mandatory**. If no valid additional action exists, the move onto the Portal is not allowed.
+- Confirmed: with several Portal Bearers, the player freely chooses which one the creature goes to.
+- The additional action is a normal Movement or Attack of that creature (including its own movement abilities, e.g. Aerial Maneuver if the creature is itself a Portal Bearer).
 
 ### `RoX.portal.resistance` (speciality)
-Deine Portale sind immun gegen Angriffe, wenn du gleich viele oder weniger Portale als Portal Bearer im Spiel kontrollierst (Anzahl Portale ≤ Anzahl Portal Bearer).
+Your Portals are immune against attacks if you control Portals in the same amount or less than friendly Portal Bearers in the game (number of Portals ≤ number of Portal Bearers).
 
 ## 2 · Portal Bearer
 
 ### `RoX.bearer.aerial_maneuver` (movement)
-Der Portal Bearer kann über eine angrenzende Kreatur auf ein unbesetztes Feld ziehen (Sprung in gerader Linie, 2 Felder weit).
-Hinweis der Karte: Der Portal Bearer darf nicht auf das Feld zurückziehen, von dem er gestartet ist.
+The Portal Bearer can move over an adjacent creature to an unoccupied field.
+Card note: don't move the Portal Bearer back to the field she started from.
 
-- **[Annahme]** Die übersprungene Kreatur kann eigene oder gegnerische sein und wird nicht besiegt. Das Bild zeigt einen gegnerischen 4er, über den in 3 Richtungen gesprungen wird.
-- **[Frage RoX3]** Bedeutet der Hinweis, dass man mehrere Sprünge hintereinander machen darf? Sonst wäre ein Zurückziehen ja gar nicht möglich. Im Bild startet der Bearer unten, springt über den 4er und hat die Ziele oben, links und rechts. Das sieht nach einem Sprung plus einem weiteren Schritt aus.
+- Confirmed: the Portal Bearer jumps over an orthogonally adjacent creature and lands on any unoccupied field orthogonally adjacent to the jumped creature, except her starting field. In the picture she starts below the 4 and can land to the left of, to the right of or above the 4.
+- Confirmed: only one jump per action.
+- Confirmed: the jumped creature can be friendly or opposing and is not defeated.
+- This is a movement only, no attack.
 
 ### `RoX.bearer.arrival` (speciality)
-Erhalte 1 TP, wenn ein Portal Bearer ins Spiel gebracht wird.
-- **[Frage RoX4]** Zählt auch ein Upgrade von Portal (1) auf Portal Bearer (2) oder ein Herabstufen (z. B. Wormhole) als „ins Spiel bringen“, oder nur das Setzen aus der Reserve (z. B. durch New Paths, Decay)?
+Gain 1 TP if a Portal Bearer is placed into the game.
+- Confirmed: only placing a die as a new Portal Bearer counts (e.g. through New Paths, Decay, Dimensional Summoning). Upgrading or downgrading a die to level 2 does not count.
 
 ### `RoX.bearer.balance` (speciality)
-Wird dieser Portal Bearer besiegt, setze 1 Portal aus deiner Reserve auf ein beliebiges unbesetztes Feld oder werte ein eigenes Portal um 1 Stufe auf.
+If this Portal Bearer is defeated, place 1 Portal from your Reserve Dice on any unoccupied field or upgrade a friendly Portal by 1 Power Level.
 
 ## 3 · Portal Guardian
 
 ### `RoX.guardian.new_paths` (spell)
-Teile einen Portal Guardian in 1 Portal Bearer und 1 Portal.
-Hinweis der Karte: Setze 1 Portal Bearer und 1 Portal aus deiner Reserve diagonal zueinander und angrenzend an den Portal Guardian. Lege danach den Portal Guardian in die Reserve.
+Split a Portal Guardian into 1 Portal Bearer and 1 Portal.
+Card note: place 1 Portal Bearer and 1 Portal from your Reserve Dice diagonal to each other and adjacent to the Portal Guardian. Then put the Portal Guardian back to the Reserve.
 
-- Die beiden Würfel stehen also auf zwei angrenzenden Feldern des Guardians, die über Eck liegen (z. B. oben und rechts).
-- **[Frage RoX5]** Müssen die beiden Zielfelder unbesetzt sein? **[Annahme]** Ja.
-- **[Frage RoX6]** Braucht man dafür 2 Würfel in der Reserve, oder darf der Guardian-Würfel selbst wiederverwendet werden?
+- The two dice are placed on two fields adjacent to the Guardian that are diagonal to each other (e.g. above and to the right).
+- Confirmed: both target fields must be unoccupied.
+- Confirmed: 2 dice are needed in the Reserve; the Guardian die itself is only returned afterwards.
 
 ## 4 · Emissary
 
 ### `RoX.emissary.energy_circle` (speciality)
-Erhalte zu Beginn deines Zuges höchstens 1 TP, wenn du mindestens 1 Portal, 1 Portal Bearer und 1 Emissary kontrollierst. Verliere 4 TP, wenn der Emissary das Spiel verlässt und du keinen weiteren kontrollierst.
-- **[Frage RoX7]** Können TP negativ werden, oder fällt man auf 0?
+Receive a maximum of 1 TP at the beginning of your turn if you control at least 1 Portal, 1 Portal Bearer and 1 Emissary. Lose 4 TP if the Emissary leaves the game and you don't control another one.
+- Confirmed: TP drop to 0 at most, never negative.
 
 ### `RoX.emissary.dimensional_summoning` (spell)
-Lege 1 Reservewürfel ins Exil. Gib dann beliebig viele TP aus und setze eine Kreatur aus deiner Reserve mit der Stufe gleich den ausgegebenen TP aufs Brett. Sie kommt auf ein Feld angrenzend an einen eigenen Portal Bearer.
-- **[Annahme]** Das Zielfeld muss unbesetzt sein, und es werden 1 bis 6 TP ausgegeben.
+Put 1 Reserve Die into the Exile. Then use any number of TP and place a creature from your Reserve with a Power Level equal to the spent TP on the board. Place it adjacent to a friendly Portal Bearer.
+- Confirmed: the target field must be unoccupied, and 1 to 6 TP are spent.
+- Requires at least 2 dice in the Reserve (1 to exile, 1 to place).
 
 ## 5 · Enchantress of Gravity
 
 ### `RoX.enchantress.force_of_attraction` (speciality)
-Beendet die Enchantress ihre Bewegung oder ihren Angriff auf einem Feld diagonal zu einer oder mehreren gegnerischen Kreaturen, darfst du eine davon 1 Feld weit auf ein Feld angrenzend an die Enchantress ziehen.
-- **[Annahme]** Optional („can“), und das Zielfeld muss unbesetzt sein.
+If the Enchantress of Gravity ends her Movement or Attack on a field diagonal to one or more opposing creatures, you can move one of them 1 field to a field adjacent to her.
+- Confirmed: optional ("can"), and the target field must be unoccupied.
 
 ## 6 · Xeladron
 
 ### `RoX.xeladron.decay` (spell)
-Teile Xeladron in 1 Emissary und 1 Portal Bearer.
-Hinweis der Karte: Setze 1 Emissary aus deiner Reserve diagonal zu Xeladron und 1 Portal Bearer aus deiner Reserve auf ein unbesetztes Feld in deiner eigenen Zone. Lege danach Xeladron in die Reserve.
-- Eigene Zone = die 3 Reihen auf deiner Seite (siehe Grundregeln).
+Split Xeladron into 1 Emissary and 1 Portal Bearer.
+Card note: place 1 Emissary from your Reserve Dice diagonal to Xeladron and place 1 Portal Bearer from your Reserve Dice on an unoccupied field in your own zone. Then put Xeladron back to the Reserve.
+- Own zone = the 3 rows on your side (see base rules).
+- Both target fields must be unoccupied; 2 Reserve Dice are required.
 
 ### `RoX.xeladron.impact` (spell)
-Gib 6 TP aus. Lege Xeladron und alle umgebenden Kreaturen (8 Nachbarfelder, eigene und gegnerische) ins Exil. Erhalte 1 VP für jede gegnerische Kreatur, die ins Exil kommt.
-Hinweis der Karte: Dafür gibt es keine Feldbonuspunkte.
+Use 6 TP. Put Xeladron and all surrounding creatures (8 neighbouring fields, friendly and opposing) into the Exile. Gain 1 VP for every opposing creature put into the Exile.
+Card note: you don't gain Field Bonus Points.
 
 ### `RoX.xeladron.forceful_alliance` (speciality)
-Erhalte 1 virtuellen VP für jedes Paar aus Xeladron und Portal in deinem Besitz, die angrenzend zueinander stehen.
-Hinweis der Karte: Jede Kreatur zählt nur in einem Paar. Beispiel: 2 Xeladron und 2 Portale ergeben 2 virtuelle VP.
-- **[Annahme]** Virtuelle VP werden laufend neu berechnet (nicht dauerhaft gutgeschrieben) und zählen für die Siegbedingung von 10 VP.
-- Für die Engine: maximale Paarung (Matching) zwischen eigenen Xeladrons und angrenzenden eigenen Portalen.
+Gain 1 virtual VP for each pair of Xeladron and Portal in your possession that are adjacent to each other.
+Card note: each creature only counts once per pair. Example: 2 Xeladrons and 2 Portals give 2 virtual VP.
+- Confirmed: virtual VP are recalculated continuously (not permanently credited) and count towards the 10 VP win condition.
+- Engine: maximum matching between your Xeladrons and adjacent Portals.
 
-## Ortsplättchen: Die Krater (`RoX.marker.craters`)
+## Location: The Craters (`RoX.marker.craters`)
 
-Vor der Aufstellungsphase werden 2 Kraterplättchen gelegt. Laut Abbildung (Zeile/Spalte ab 1, von Spieler 1 aus, Zeile 1 = oberste Reihe mit +3):
-- Krater A: Zeile 3 (Bonus +1 für Spieler 1), Spalte 2
-- Krater B: Zeile 5 (Bonus +1 für Spieler 2), Spalte 6
+Before the setup phase, 2 crater tiles are placed. Positions (row/column from 1, seen from player 1, row 1 = top row with +3):
+- Crater A: row 3, column 2
+- Crater B: row 5, column 6
 
-Regeln:
-- Sind zu Beginn deines Zuges beide Krater von deinen Kreaturen mit Stufe 2 oder höher besetzt, erhältst du 1 VP.
-- Kreaturen mit Stufe 1, die auf einem Krater stehen, kommen am Ende des Zuges eines Spielers in die Reserve.
-
-- **[Frage RoX8]** Gelten die Krater nur, wenn ein Spieler RoX spielt, und auch für den Gegner? **[Annahme]** Sie gelten für beide Spieler.
+Rules:
+- If at the beginning of your turn both craters are occupied by your creatures with Power Level 2 or higher, gain 1 VP.
+- Creatures with Power Level 1 that occupy crater fields are put into the Reserve at the end of a player's turn.
+- Confirmed: the craters apply to both players.

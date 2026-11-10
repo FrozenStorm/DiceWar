@@ -1,14 +1,14 @@
-# Würfelset RoM (Mali)
+# Dice set RoM (Roots of Mali)
 
-Quelle: `img/RoM/rules/1.png` bis `6.png` und `marker.png`. Grundbegriffe stehen in [grundregeln.md](grundregeln.md).
+Source: `img/RoM/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
-## Übersicht
+## Overview
 
-| Stufe | Kreatur | Fähigkeiten | Besiegt |
+| Level | Creature | Abilities | Defeats |
 |---|---|---|---|
-| 1 | Golden Fruit | Fake Gold, Breeding | niemanden |
+| 1 | Golden Fruit | Fake Gold, Breeding | nobody |
 | 2 | Sprout | Velocity, Golden Seed, Tenacity | 1 |
-| 3 | Torch Bearer | Fire Demon | 2, 1 und 6 |
+| 3 | Torch Bearer | Fire Demon | 2, 1 and 6 |
 | 4 | Protectress of the Woods | Fellowship, Breath of Life, Symbiosis | 3, 2, 1 |
 | 5 | Shadow Runner | Secret Pathway, Out of the Dark | 4, 3, 2, 1 |
 | 6 | Mali | Children of the Woods, Deep Roots | 5, 4, 3, 2, 1 |
@@ -16,75 +16,75 @@ Quelle: `img/RoM/rules/1.png` bis `6.png` und `marker.png`. Grundbegriffe stehen
 ## 1 · Golden Fruit
 
 ### `RoM.fruit.fake_gold` (speciality)
-Die Golden Fruit kann sich nicht bewegen, und ihre Stufe kann nicht erhöht werden. Wer eine Golden Fruit besiegt, erhält weder VP noch Feldbonus. Eine besiegte Golden Fruit kommt in die Reserve ihres Besitzers.
-- Ausnahme: Breath of Life (Protectress) erhöht ausdrücklich die Stufe einer Golden Fruit. **[Annahme]** Die Karte der Protectress hat Vorrang, Fake Gold verbietet nur die Standardaktion Upgrade.
-- **[Frage RoM1]** „returned to your Reserve“: Reserve des Besitzers der Frucht oder des Angreifers? **[Annahme]** des Besitzers.
+The Golden Fruit cannot move and its Power Level cannot be increased. If you defeat a Golden Fruit you neither receive VP nor Field Bonus. A defeated Golden Fruit is returned to your Reserve.
+- Exception: Breath of Life (Protectress) explicitly increases the level of a Golden Fruit. **[Assumption]** The Protectress card takes precedence; Fake Gold only forbids the Upgrade standard action.
+- **[Question RoM1]** "Returned to your Reserve": the Reserve of the Fruit's owner or of the attacker? **[Assumption]** the owner's.
 
 ### `RoM.fruit.breeding` (spell)
-Teile die Golden Fruit in 2 Golden Fruits.
-Hinweis der Karte: Setze 2 Reservewürfel als Golden Fruits horizontal oder vertikal angrenzend an diese Golden Fruit. Lege danach diese Golden Fruit in die Reserve.
+Split the Golden Fruit into 2 Golden Fruits.
+Card note: place 2 Reserve Dice as Golden Fruits horizontally or vertically adjacent to this Golden Fruit. Then put this Golden Fruit back to the Reserve.
 
 ## 2 · Sprout
 
 ### `RoM.sprout.velocity` (movement + attack)
-Bewege dich oder greife an, bis zu 2 Felder in dieselbe Richtung.
-- **[Annahme]** Anders als der LoD-Ghost nicht durch Kreaturen hindurch, das Zwischenfeld muss frei sein.
+Move or attack up to 2 spaces in the same direction.
+- **[Assumption]** Unlike the LoD Ghost, not through creatures; the intermediate field must be free.
 
 ### `RoM.sprout.golden_seed` (speciality)
-Bewegt sich der Sprout nur 1 Feld, darfst du eine Golden Fruit aus deiner Reserve auf das Feld setzen, von dem er gestartet ist.
-- **[Frage RoM2]** Gilt das auch nach einem Angriff über 1 Feld oder nur nach einer Bewegung?
+If the Sprout moves just one space, you may place a Golden Fruit from your Reserve on the space it moved from.
+- **[Question RoM2]** Does this also apply after a 1-field attack, or only after a movement?
 
 ### `RoM.sprout.tenacity` (speciality)
-Greift eine gegnerische Kreatur den Sprout an, muss der Gegner 2 seiner Reservewürfel ins Exil legen, sofern möglich.
-Hinweis der Karte: Der Angriff ist auch erlaubt, wenn der Gegner weniger als 2 oder keine Würfel in der Reserve hat.
+If an opposing creature attacks the Sprout, the opponent has to put 2 of their Reserve Dice into the Exile, if possible.
+Card note: the attack may be performed even if the opponent has fewer than 2 or no dice in their Reserve.
 
 ## 3 · Torch Bearer
 
 ### `RoM.torch.fire_demon` (movement + attack)
-Bewege dich oder greife an, indem du über eine oder mehrere eigene Kreaturen der Stufen 1, 2 und 6 springst, die aneinander angrenzen. Lege die übersprungenen Kreaturen zurück in deine Reserve.
-- Bild: Der Torch Bearer überspringt eine Reihe aus Golden Fruit (1), Sprout (2) und Mali (6) und landet dahinter. Hier wird anschliessend noch die Richtung gewechselt: Er landet diagonal oberhalb des Mali auf dem Feld rechts neben einer Golden Fruit. Im Bild bleiben übersprungene Kreaturen grau stehen, die Golden Fruit über dem Mali ist schwarz.
-- **[Frage RoM3]** Das Bild ist für mich nicht eindeutig. Springt der Torch Bearer nur in gerader Linie über die Kette, oder kann er der Kette (auch um Ecken) folgen? Werden alle übersprungenen Kreaturen in die Reserve gelegt, auch die Mali (6)?
+Move or attack by leaping over one or more of your creatures of Power Level 1, 2 and 6 that are adjacent to each other. Put the leaped-over creatures back into your Reserve.
+- Picture: the Torch Bearer leaps over a row of Golden Fruit (1), Sprout (2) and Mali (6). It lands diagonally above the Mali, to the right of a Golden Fruit. Leaped-over creatures are shown grey (removed), the Golden Fruit above the Mali stays black.
+- **[Question RoM3]** The picture is ambiguous. Does the Torch Bearer leap only in a straight line over the chain, or can it follow the chain (also around corners)? Are all leaped-over creatures put into the Reserve, including the Mali (6)?
 
 ## 4 · Protectress of the Woods
 
 ### `RoM.protectress.fellowship` (speciality)
-Erhalte zu Beginn deines Zuges 1 TP für jede deiner Protectresses auf dem Brett.
-Hinweis der Karte: Verliere alle TP, sobald du keine Protectress mehr auf dem Brett hast.
+Receive 1 TP at the beginning of your turn for each of your Protectresses of the Woods in the Warlands.
+Card note: lose all TP as soon as you have no Protectress of the Woods in the Warlands.
 
 ### `RoM.protectress.breath_of_life` (spell)
-Lege 1 Reservewürfel in dein Exil. Nutze beliebig viele verfügbare TP, um die Stufe einer deiner Golden Fruits zu erhöhen.
-Beispiel der Karte: 4 TP = +4 Stufen (Golden Fruit 1 wird zum Shadow Runner 5).
-- **[Annahme]** Maximal Stufe 6, also höchstens 5 TP.
+Put 1 Reserve Die into your Exile. Use any available TP to increase the Power Level of one of your Golden Fruits.
+Card example: 4 TP = +4 levels (Golden Fruit 1 becomes Shadow Runner 5).
+- **[Assumption]** Maximum level 6, so at most 5 TP.
 
 ### `RoM.protectress.symbiosis` (upgrade)
-Gelber Balken, also eine Variante der Standardaktion Upgrade: Bewege deine Protectress auf eine angrenzende eigene Golden Fruit. Lege die Golden Fruit in die Reserve. Erhöhe danach die Stufe der Protectress um 1 (sie wird zum Shadow Runner).
+Yellow bar, i.e. a variant of the Upgrade standard action: move your Protectress of the Woods onto an adjacent Golden Fruit you own. Put the Golden Fruit back into your Reserve. Now increase the Power Level of the Protectress by 1 (she becomes a Shadow Runner).
 
 ## 5 · Shadow Runner
 
 ### `RoM.runner.secret_pathway` (movement + attack)
-Einmal pro Zug: Bewege dich oder greife an, indem du über den Seitenrand des Bretts hinaus ziehst und auf der gegenüberliegenden Seite wieder hereinkommst (Fig. 1). Danach darfst du eine weitere Bewegung oder einen weiteren Angriff ausführen (Fig. 2). Secret Pathway kann mit Out of the Dark kombiniert werden.
-- Nur links/rechts (Seitenlinie), nicht oben/unten.
-- **[Annahme]** Die Zusatzaktion ist eine normale Bewegung oder ein normaler Angriff (1 Feld orthogonal). Fig. 2 zeigt oben, rechts und unten als Ziele.
+Move or attack once per turn out of the board, beyond the side line of the Warlands, and back in on the opposite side (Fig. 1). Subsequently you may perform another Movement or Attack (Fig. 2). Secret Pathway may be combined with Out of the Dark.
+- Only left/right (side lines), not top/bottom.
+- **[Assumption]** The follow-up action is a normal Movement or Attack (1 field orthogonally). Fig. 2 shows up, right and down as targets.
 
 ### `RoM.runner.out_of_the_dark` (movement + attack)
-Bewege dich oder greife an, indem du über einen angrenzenden eigenen Shadow Runner springst. Kann mit Secret Pathway kombiniert werden.
+Move or attack by leaping over an adjacent Shadow Runner you own. May be combined with Secret Pathway.
 
 ## 6 · Mali
 
 ### `RoM.mali.children_of_the_woods` (spell)
-Teile einen Mali in 3 Sprouts.
-Hinweis der Karte: Setze 3 Reservewürfel als Sprouts irgendwo in deiner Zone. Lege danach den Mali in die Reserve.
-- Das Bild bestätigt: Die eigene Zone sind die 3 Reihen auf deiner Seite (inklusive der grauen hintersten Reihe). Das gilt auch, wenn der Mali in der gegnerischen Zone steht.
+Split a Mali into 3 Sprouts.
+Card note: place 3 Reserve Dice as Sprouts anywhere in your zone. Then put the Mali back to the Reserve.
+- The picture confirms: your zone is the 3 rows on your side (including the back row). This also applies when the Mali stands in the opponent zone.
 
 ### `RoM.mali.deep_roots` (speciality)
-Erhalte 1 virtuellen VP für jeden deiner Mali in der Zone des Gegners.
+Receive 1 virtual VP for each of your Mali in the opponent's zone.
 
-## Ortsplättchen: Das Lager (`RoM.marker.camp`)
+## Location: The Camp (`RoM.marker.camp`)
 
-In der Aufstellungsphase setzt jeder Spieler sein Lager auf ein beliebiges freies Feld seiner Versorgungszone (Supply Zone, die graue hinterste Reihe).
+During the setup phase each player places their camp on any free space in their Supply Zone.
 
-Regeln:
-- Ziehst du eine Kreatur in dein eigenes Lager, kommt sie sofort in deine Reserve.
-- Ziehst du eine Kreatur in das Lager des Gegners, kommt sie sofort in dein Exil. Der Gegner muss so viele Kreaturwürfel in sein Exil legen, wie die Stufe der Kreatur beträgt.
-- **[Frage RoM4]** Woher nimmt der Gegner diese Würfel: aus der Reserve, vom Brett oder nach Wahl?
-- **[Frage RoM5]** Gibt es das Lager pro Spieler nur, wenn RoM gespielt wird, oder auch für den Gegner?
+Rules:
+- If you move a creature into your own camp, return this creature instantly to your Reserve.
+- If you move a creature into your opponent's camp, put this creature instantly into your Exile. Your opponent has to put creature dice into their Exile equal to the Power Level of the creature you exiled.
+- **[Question RoM4]** Where does the opponent take these dice from: the Reserve, the board, or their choice?
+- **[Question RoM5]** Does each player have a camp only when RoM is played, or also the opponent?

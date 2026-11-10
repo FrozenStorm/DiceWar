@@ -1,14 +1,14 @@
-# Würfelset LoD (Light of Dragons, Grundspiel)
+# Dice set LoD (Light of Dragons, base game)
 
-Quelle: `img/LoD/rules/1.png` bis `6.png` und `marker.png`. Grundbegriffe stehen in [grundregeln.md](grundregeln.md). „Warlands“ auf den Karten bedeutet das Spielbrett.
+Source: `img/LoD/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
-## Übersicht
+## Overview
 
-| Stufe | Kreatur | Fähigkeiten | Besiegt |
+| Level | Creature | Abilities | Defeats |
 |---|---|---|---|
-| 1 | Soul | Floating, Protective Barrier | niemanden |
+| 1 | Soul | Floating, Protective Barrier | nobody |
 | 2 | Ghost | Ghosttrail, Lifepulling, Cursed | 1 |
-| 3 | Dragon Warrior | Brotherhood | 2, 1 und 6 |
+| 3 | Dragon Warrior | Brotherhood | 2, 1 and 6 |
 | 4 | Blood Mage | Blood Trade | 3, 2, 1 |
 | 5 | Fire Basilisk | Serpent Trail, Inner Fire | 4, 3, 2, 1 |
 | 6 | Light Dragon | Dragon Blood, Luminous Flame | 5, 4, 3, 2, 1 |
@@ -16,76 +16,75 @@ Quelle: `img/LoD/rules/1.png` bis `6.png` und `marker.png`. Grundbegriffe stehen
 ## 1 · Soul
 
 ### `LoD.soul.floating` (movement)
-Bewege dich beliebig weit über angrenzende eigene Souls.
-- **[Annahme]** Die Soul springt über eine zusammenhängende Kette eigener Souls (jeweils angrenzend) und landet auf einem freien Feld angrenzend an die letzte übersprungene Soul.
-- **[Frage LoD1]** Gilt das als eine einzige Bewegungsaktion? Darf die Richtung innerhalb der Kette wechseln?
+Move as much as you want over adjacent friendly Souls.
+- **[Assumption]** The Soul jumps over a connected chain of friendly Souls (each adjacent to the next) and lands on a free field adjacent to the last Soul jumped.
+- **[Question LoD1]** Does this count as a single Movement action? May the direction change within the chain?
 
 ### `LoD.soul.protective_barrier` (speciality)
-Stehen 3 bis 6 Souls angrenzend zueinander (zusammenhängende Gruppe), bilden sie eine Schutzbarriere. Schutzbarrieren sind immun gegen Angriffe, Zauber und Spezialitäten gegnerischer Kreaturen.
-Hinweis der Karte: Sind mehr als 6 Souls angrenzend zueinander, werden die überzähligen am Ende deines Zuges in die Reserve gelegt.
-- Zwei Souls bilden keine Barriere (Bild).
-- **[Frage LoD2]** Wer wählt bei mehr als 6 Souls, welche zurück in die Reserve gehen? **[Annahme]** Der Besitzer, und die verbleibenden 6 müssen zusammenhängend bleiben.
+If there are 3 to 6 Souls adjacent to each other (a connected group), a Protective Barrier is formed. Protective Barriers are immune to attacks, spells and specialities of your opponent's creatures.
+Card note: if there are more than 6 Souls adjacent to each other, return any remaining Souls to the Reserve at the end of your turn.
+- Two Souls do not form a barrier (picture).
+- **[Question LoD2]** With more than 6 Souls, who chooses which ones go back to the Reserve? **[Assumption]** The owner, and the remaining 6 must stay connected.
 
 ## 2 · Ghost
 
 ### `LoD.ghost.ghosttrail` (movement + attack)
-Bewege dich oder greife an, bis zu 2 Felder in dieselbe Richtung. Du kannst dabei auch durch Kreaturen hindurchziehen.
-- Bild: links zieht der Ghost 2 Felder geradeaus auf ein freies Feld, rechts zieht er durch einen gegnerischen 4er hindurch auf das freie Feld dahinter.
-- **[Annahme]** Ein Angriff ist auf das 1. oder 2. Feld in gerader Linie möglich, das Zielfeld muss eine besiegbare Kreatur enthalten.
+Move or attack up to 2 spaces in the same direction. You can move through creatures too.
+- Picture: on the left the Ghost moves 2 fields straight to a free field, on the right it moves through an opposing 4 to the free field behind it.
+- **[Assumption]** An attack is possible on the 1st or 2nd field in a straight line; the target field must contain a creature the Ghost can defeat.
 
 ### `LoD.ghost.lifepulling` (speciality)
-Zieht ein Ghost durch eine andere Kreatur hindurch (eigene oder gegnerische), verliert diese Kreatur 1 Stufe. Zusätzlich erhältst du 1 TP.
-Hinweis der Karte: Gegnerische Kreaturen der Stufe 1 kommen sofort ins Exil. Eigene Kreaturen der Stufe 1 kommen in die Reserve.
+If a Ghost moves through another creature, be it your own or your opponent's, this creature loses 1 Power Level. Additionally, you receive 1 TP.
+Card note: opposing creatures of Power Level 1 are immediately sent into the Exile. Your own creatures return to the Reserve.
 
 ### `LoD.ghost.cursed` (speciality)
-Wird ein Ghost von einer gegnerischen Kreatur besiegt, wird deren Stufe um 2 herabgesetzt.
-- Der kleinste mögliche Angreifer hat Stufe 3, die Stufe fällt also nie unter 1.
+If a Ghost is defeated by an opposing creature, this creature's Power Level is downgraded by 2.
+- The weakest possible attacker has level 3, so the level never drops below 1.
 
 ## 3 · Dragon Warrior
 
 ### `LoD.warrior.brotherhood` (spell)
-Teile einen Dragon Warrior in 3 Souls.
-Hinweis der Karte: Setze 2 Reservewürfel als Souls horizontal oder vertikal angrenzend an den Dragon Warrior. Stufe danach den Dragon Warrior zu einer Soul herab.
-- Laut Bild ergeben die drei Souls eine gerade Linie (senkrecht oder waagrecht), der Dragon Warrior in der Mitte.
-- **[Annahme]** Beide Zielfelder müssen frei sein.
+Split a Dragon Warrior into 3 Souls.
+Card note: place 2 Reserve Dice as Souls horizontally or vertically adjacent to the Dragon Warrior. Then downgrade the Dragon Warrior to a Soul.
+- According to the picture the three Souls form a straight line (vertical or horizontal) with the Dragon Warrior in the middle.
+- **[Assumption]** Both target fields must be free.
 
 ## 4 · Blood Mage
 
 ### `LoD.mage.blood_trade` (spell)
-Lege bis zu X Reservewürfel ins Exil und erhalte X+1 TP. X ist die Anzahl deiner Blood Mages auf dem Brett. Gib danach beliebig viele TP aus, um eigene Kreaturen aufzuwerten (1 TP pro Stufe). Nicht genutzte TP verfallen am Ende des Zuges.
-Hinweis der Karte: Für jedes genutzte Upgrade wird der Indikatorwürfel auf der TP-Leiste um 1 Feld nach unten bewegt.
-Wichtig: Der Zauber kann nicht auf den Blood Mage angewendet werden, der ihn wirkt.
-- **[Frage LoD5]** „Bis zu X“ und „X+1 TP“ widersprechen sich leicht. Bekommt man bei Y ins Exil gelegten Würfeln (0 ≤ Y ≤ X) genau Y+1 TP oder immer X+1?
-- **[Frage LoD6]** Verfallen alle TP am Ende des Zuges oder nur die aus diesem Zauber? Das betrifft vorher gesammelte TP.
+Put up to X Reserve Dice into the Exile to get X+1 TP. X is the number of your Blood Mages in the Warlands. Then use any number of TP to upgrade friendly creatures (1 TP per level). Unused TP lapse at the end of the turn.
+Card note: for every used upgrade, the indicator die on the TP bar has to be moved down by 1 field.
+Important: the spell can't be used on the Blood Mage casting it.
+- **[Question LoD5]** "Up to X" and "X+1 TP" slightly contradict each other. If Y dice are exiled (0 ≤ Y ≤ X), do you get exactly Y+1 TP or always X+1?
+- **[Question LoD6]** Do all TP lapse at the end of the turn or only the ones from this spell? This affects TP collected earlier.
 
 ## 5 · Fire Basilisk
 
 ### `LoD.basilisk.serpent_trail` (movement + attack)
-Bewegt sich und greift immer diagonal an (statt orthogonal).
+Move or attack always diagonally (instead of orthogonally).
 
 ### `LoD.basilisk.inner_fire` (speciality)
-Immer wenn der Fire Basilisk eine Kreatur besiegt, darf er eine zusätzliche Bewegung oder einen zusätzlichen Angriff ausführen.
-- **[Annahme]** Kann sich verketten (jeder weitere Sieg gibt wieder eine Zusatzaktion).
+Whenever the Fire Basilisk defeats a creature, it can perform one additional Movement or Attack.
+- **[Assumption]** Can chain (each further win gives another additional action).
 
 ## 6 · Light Dragon
 
 ### `LoD.dragon.dragon_blood` (spell)
-Teile einen Light Dragon in 2 Dragon Warriors.
-Hinweis der Karte: Setze 2 Reservewürfel als Dragon Warriors horizontal oder vertikal angrenzend an den Light Dragon. Lege danach den Light Dragon in die Reserve.
-- **[Annahme]** Die beiden Felder sind beliebig unter den 4 angrenzenden wählbar und müssen frei sein.
+Split a Light Dragon into 2 Dragon Warriors.
+Card note: place 2 Reserve Dice as Dragon Warriors horizontally or vertically adjacent to the Light Dragon. Then put the Light Dragon back to the Reserve.
+- **[Assumption]** The two fields can be any two of the 4 adjacent fields and must be free.
 
 ### `LoD.dragon.luminous_flame` (speciality)
-Erhalte 1 virtuellen VP für jede Kreatur der Stufe 6, die du mehr hast als dein Gegner auf dem Brett.
-Hinweis der Karte: Virtuelle VP zählen gleich wie im Kampf gewonnene VP, werden aber nicht auf der VP-Leiste angezeigt.
-- Die Karte bestätigt, dass virtuelle VP für die Siegbedingung zählen und laufend neu berechnet werden.
+Gain 1 virtual VP for each creature of Power Level 6 that you have more than your opponent in the Warlands.
+Card note: virtual VP are counted the same way as VP gained in combat, but are not displayed on the VP bar.
 
-## Ortsplättchen: Die Ruinen (`LoD.marker.ruins`)
+## Location: The Ruins (`LoD.marker.ruins`)
 
-Vor der Aufstellungsphase werden 3 Ruinenplättchen gelegt (Zeile/Spalte ab 1, von Spieler 1 aus, Zeile 1 = oberste Reihe mit +3):
-- Zeile 2, Spalte 6
-- Zeile 4, Spalte 4 (Brettmitte)
-- Zeile 6, Spalte 2
+Before the setup phase, 3 ruin tiles are placed (row/column from 1, seen from player 1, row 1 = top row with +3):
+- row 2, column 6
+- row 4, column 4 (centre of the board)
+- row 6, column 2
 
-Regeln:
-- **Alternative Siegbedingung:** Besetzt ein Spieler alle Ruinen gleichzeitig mit eigenen Kreaturen, gewinnt er am Ende seines Zuges.
-- Kreaturen der Stufe 1, die auf einer Ruine stehen, kommen sofort in die Reserve.
+Rules:
+- **Alternative victory condition:** if a player occupies all ruins at the same time with their own creatures, they win the game at the end of their turn.
+- Creatures with Power Level 1 that occupy ruins are put immediately into the Reserve.

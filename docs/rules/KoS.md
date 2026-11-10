@@ -1,29 +1,29 @@
-# Würfelset KoS (King's Knight)
+# Dice set KoS (Knights of Steel)
 
-Quelle: `img/KoS/rules/1.png` bis `6.png`, `marker.png`, `rules_1.png`, `rules_2.png`. Grundbegriffe stehen in [grundregeln.md](grundregeln.md).
+Source: `img/KoS/rules/1.png` to `6.png`, `marker.png`, `rules_1.png`, `rules_2.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
-**Wichtig für die Engine:** KoS braucht pro Würfel eine **Ausrichtung** (Alignment: oben, rechts, unten, links). Der Spielzustand muss das für alle Sets speichern können. Im heutigen Code gibt es dafür schon das Feld `rotation`.
+**Important for the engine:** KoS needs an **alignment** per die (up, right, down, left). The game state must be able to store this for all sets. The current code already has a `rotation` field for this.
 
-## Neue Begriffe (Karten „New Terms & Symbols“)
+## New terms (cards "New Terms & Symbols")
 
-- **Formation:** Ein Cluster oder eine Kette aus angrenzenden eigenen Kreaturen (zusammenhängende Gruppe, orthogonal).
-- **Frontal:** Felder in Pfeilrichtung der Kreatur.
-  - *frontal angrenzend:* das 1 Feld direkt vor der Kreatur.
-  - *frontal umgebend:* die 3 Felder vor der Kreatur (vorne links, vorne, vorne rechts).
-- **Alignment (Ausrichtung):** durch ein Pfeilsymbol angezeigt. Es beeinflusst Standardaktionen und Spezialitäten. Das Symbol auf der Karte zeigt, wann ausgerichtet wird: vor der Aktion, vor oder nach der Aktion, oder nach der Aktion.
-  - Bei einer Aktion zählt die aktuelle Ausrichtung.
-  - Wird ein Reservewürfel als Kreatur aufs Brett gesetzt, wählt der Spieler die Ausrichtung bewusst.
-  - Ändert sich die Stufe einer Kreatur, bleibt ihre Ausrichtung erhalten.
-- **Orientate (Ausrichten):** Die Kreatur in eine beliebige der 4 Richtungen drehen.
-- **[Frage KoS1]** Kreaturen ohne Pfeilsymbol (First Sword, Commander, King's Knight) haben trotzdem eine Ausrichtung, die aber keine Rolle spielt. Richtig?
+- **Formation:** a cluster or chain of adjacent creatures you own (connected group, orthogonal).
+- **Frontal:** fields in the direction of a creature's arrow.
+  - *frontally adjacent:* the 1 field directly in front of the creature.
+  - *frontally surrounding:* the 3 fields in front of the creature (front-left, front, front-right).
+- **Alignment:** indicated by an arrow icon. It influences standard actions and specialities. The icon on the card shows when to orientate: before the action, before or after the action, or after the action.
+  - When an action is performed, the creature's current alignment counts.
+  - If a Reserve Die is placed as a creature in the Warlands, the player chooses its alignment consciously.
+  - If a creature is increased or decreased to another Power Level, it keeps its alignment.
+- **Orientate:** rotate the creature in any of the 4 directions.
+- **[Question KoS1]** Creatures without an arrow icon (First Sword, Commander, King's Knight) still have an alignment, but it doesn't matter. Correct?
 
-## Übersicht
+## Overview
 
-| Stufe | Kreatur | Fähigkeiten | Besiegt |
+| Level | Creature | Abilities | Defeats |
 |---|---|---|---|
-| 1 | First Sword | Agile, Support, Relentless | niemanden |
+| 1 | First Sword | Agile, Support, Relentless | nobody |
 | 2 | Loyal Shield | Mindfulness, Resistance, Shield Strike, To the Spears | 1 |
-| 3 | Silver Spear | Impatience, Phalanx, Heart Thrust | 2, 1 und 6 |
+| 3 | Silver Spear | Impatience, Phalanx, Heart Thrust | 2, 1 and 6 |
 | 4 | Commander | Moral Boost, Leadership, Supply | 3, 2, 1 |
 | 5 | Burning Stag | Cautiousness, Crown Path | 4, 3, 2, 1 |
 | 6 | King's Knight | Breakthrough, Reinforcements | 5, 4, 3, 2, 1 |
@@ -31,85 +31,85 @@ Quelle: `img/KoS/rules/1.png` bis `6.png`, `marker.png`, `rules_1.png`, `rules_2
 ## 1 · First Sword
 
 ### `KoS.sword.agile` (movement)
-Bewege den First Sword auf ein beliebiges freies umgebendes Feld (auch diagonal).
+Move the First Sword to any free surrounding space (including diagonally).
 
 ### `KoS.sword.support` (spell)
-Erhöhe die Stufe einer umgebenden eigenen Kreatur um 1 oder verringere die Stufe einer umgebenden gegnerischen Kreatur um 1. Lege danach den First Sword in die Reserve.
-- **[Frage KoS2]** Was passiert mit einer gegnerischen Kreatur der Stufe 1, die verringert wird (Exil wie bei Phalanx)?
+Increase the Power Level of a surrounding friendly creature by 1 or decrease the Power Level of a surrounding opposing creature by 1. Afterwards, put the First Sword back into the Reserve.
+- **[Question KoS2]** What happens to an opposing level 1 creature that is decreased (Exile, as with Phalanx)?
 
 ### `KoS.sword.relentless` (speciality)
-Bewegt sich ein First Sword oder wirkt er einen Zauber, erhältst du eine zusätzliche Aktion für einen eigenen First Sword, der in diesem Zug noch keine Aktion ausgeführt hat.
-Kommt ein First Sword ins Exil, darf er stattdessen auf ein beliebiges freies Feld am Brettrand gesetzt werden (ausser in der gegnerischen Versorgungszone).
-- **[Annahme]** Die Zusatzaktion ist eine beliebige Standardaktion dieses anderen First Swords, die Kette kann sich fortsetzen.
+If a First Sword moves or casts a spell, get an additional action for a friendly First Sword that has not yet performed an action this turn.
+If a First Sword would be put into Exile, it can instead be placed on any free space along the edges of the board (except the opposing Supply Zone).
+- **[Assumption]** The additional action is any standard action of that other First Sword; the chain can continue.
 
-## 2 · Loyal Shield (Ausrichtung: vor oder nach der Aktion)
+## 2 · Loyal Shield (alignment: before or after the action)
 
 ### `KoS.shield.mindfulness` (speciality)
-Richte den Loyal Shield vor oder nach jeder Bewegung und jedem Angriff aus.
+Orient the Loyal Shield before or after each Movement and Attack.
 
 ### `KoS.shield.resistance` (speciality)
-Der Loyal Shield kann von frontal angrenzenden Kreaturen weder angegriffen noch bewegt werden.
+The Loyal Shield cannot be attacked or moved by frontally adjacent creatures.
 
 ### `KoS.shield.shield_strike` (speciality)
-Steht eine gegnerische Kreatur frontal angrenzend vor dem Loyal Shield, kann sie 1 Feld in gerader Linie weggeschoben werden. Gegnerische Kreaturen können so über den Brettrand oder gegen andere eigene Kreaturen geschoben werden. Die gegnerische Kreatur ist dadurch besiegt. Dafür gibt es keinen Feldbonus.
-Hinweis der Karte: Gegnerische Kreaturen können nicht auf andere gegnerische Kreaturen geschoben werden.
-- Bild: Der Shield schiebt einen gegnerischen 4er gegen einen eigenen First Sword. Der 4er ist besiegt, der Shield rückt nach.
-- **[Frage KoS3]** Ist Shield Strike eine eigene Aktion (welche Standardaktion verbraucht sie?) oder passiert sie automatisch? Und wird die Kreatur nur besiegt, wenn sie gegen den Rand oder eine eigene Kreatur geschoben wird, oder auch beim Schieben auf ein freies Feld?
+If an opposing creature is frontally adjacent to the Loyal Shield, it can be moved 1 space in a straight line. Opposing creatures can thus be moved over the edge of the board or against other creatures you own. The opposing creature is defeated as a result. You do not receive Field Bonus for this action.
+Card note: opposing creatures cannot be moved onto other enemy creatures.
+- Picture: the Shield pushes an opposing 4 against a friendly First Sword. The 4 is defeated, the Shield advances.
+- **[Question KoS3]** Is Shield Strike an action of its own (which standard action does it use?) or does it happen automatically? And is the creature only defeated when pushed against the edge or a friendly creature, or also when pushed onto a free field?
 
 ### `KoS.shield.to_the_spears` (speciality)
-Sind zu Beginn deines Zuges mehr als 3 eigene Loyal Shields auf dem Brett, werte alle bis auf 3 um 1 Stufe auf.
-- **[Frage KoS4]** Wer wählt, welche 3 bleiben? **[Annahme]** der Besitzer.
+If there are more than 3 of your own Loyal Shields in the Warlands at the beginning of your turn, upgrade all but 3 Loyal Shields by 1 Power Level.
+- **[Question KoS4]** Who chooses which 3 stay? **[Assumption]** The owner.
 
-## 3 · Silver Spear (Ausrichtung: vor der Aktion)
+## 3 · Silver Spear (alignment: before the action)
 
 ### `KoS.spear.impatience` (speciality)
-Richte den Silver Spear vor jeder Bewegung und jedem Angriff aus.
+Orient the Silver Spear before every Movement and Attack.
 
 ### `KoS.spear.phalanx` (speciality)
-Zieht ein Silver Spear auf das frontal angrenzende Feld zwischen sich und einer gegnerischen Kreatur, oder zieht umgekehrt eine gegnerische Kreatur auf das frontal angrenzende Feld vor einem Silver Spear, verringert sich die Stufe der gegnerischen Kreatur um 1. Die Ausrichtung muss berücksichtigt werden.
-Hinweis der Karte: Gegnerische Kreaturen der Stufe 1 werden ins Exil gelegt.
-- Bild: Gegnerischer 4er zieht vor die Spitze des Speers und wird zum 3er.
+If a Silver Spear is moved to the frontally adjacent space between her and an opposing creature, or vice versa, if an opposing creature is moved to the frontally adjacent space in front of a Silver Spear, decrease the opposing creature's Power Level by 1. Alignment must be taken into account.
+Card note: opposing creatures of Power Level 1 are exiled.
+- Picture: an opposing 4 moves in front of the Spear's tip and becomes a 3.
 
 ### `KoS.spear.heart_thrust` (attack)
-Greife in gerader Linie über einen angrenzenden eigenen Loyal Shield hinweg an.
-- Bild: Speer (3), dahinter Shield (2), dahinter gegnerischer 6er. Der Speer besiegt den 6er.
+Attack in a straight line over a friendly adjacent Loyal Shield.
+- Picture: Spear (3), behind it Shield (2), behind that an opposing 6. The Spear defeats the 6.
 
 ## 4 · Commander
 
 ### `KoS.commander.moral_boost` (speciality)
-Erhalte zu Beginn jedes Zuges 1 TP für jeden Commander, den du auf dem Brett hast. Verliere 2 TP, wenn ein Commander das Brett verlässt oder seine Stufe verändert wird.
-- **[Frage KoS5]** „Jeder Zug“ heisst nur dein eigener Zug, oder auch der des Gegners?
+At the beginning of each turn, receive 1 TP for each Commander you own in the Warlands. Lose 2 TP whenever a Commander leaves the Warlands or when his Power Level is changed.
+- **[Question KoS5]** Does "each turn" mean only your own turn, or also the opponent's?
 
 ### `KoS.commander.leadership` (spell)
-Lege 1 Reservewürfel ins Exil. Gib beliebig viele TP aus, um eigene Kreaturen zu bewegen, deren Stufen zusammen den ausgegebenen TP entsprechen. Jede einmal.
-Beispiel der Karte: 1 Reservewürfel ins Exil, 5 TP ausgeben, um 1 Silver Spear (3) und 1 Loyal Shield (2) zu bewegen.
-Hinweis der Karte: Leadership kann nicht auf den wirkenden Commander selbst angewendet werden.
-- **[Frage KoS6]** Ist jede dieser Bewegungen eine normale Standardbewegung (1 Feld bzw. Spezialbewegung der Kreatur)? Darf dabei angegriffen werden?
+Put 1 Reserve Die into Exile. Use any number of TP to move friendly creatures with the same Power Level in total once.
+Card example: put 1 Reserve Die into Exile, use 5 TP to move 1 Silver Spear (3) and 1 Loyal Shield (2).
+Card note: Leadership cannot be used on the spellcasting Commander himself.
+- **[Question KoS6]** Is each of these moves a normal standard move (1 field or the creature's special movement)? May they attack?
 
 ### `KoS.commander.supply` (spell)
-Teile den Commander in 4 First Swords, sofern er nicht bedroht ist.
-Hinweis der Karte: Setze 4 Reservewürfel als First Swords auf beliebige freie Felder am Brettrand (ausser in der gegnerischen Versorgungszone). Lege danach den Commander in die Reserve.
-- „Bedroht“: **[Annahme]** keine gegnerische Kreatur könnte den Commander im nächsten Zug angreifen und besiegen.
+Split the Commander into 4 First Swords, if he is not threatened.
+Card note: place 4 Reserve Dice as First Swords on any free space on the edges of the board (except the opposing Supply Zone). Afterwards, put the Commander back into the Reserve.
+- "Threatened": **[Assumption]** no opposing creature could attack and defeat the Commander in the next turn.
 
-## 5 · Burning Stag (Ausrichtung: nach der Aktion)
+## 5 · Burning Stag (alignment: after the action)
 
 ### `KoS.stag.cautiousness` (speciality)
-Richte den Burning Stag nach jeder Bewegung und jedem Angriff aus.
+Orient the Burning Stag after every Movement and Attack.
 
 ### `KoS.stag.crown_path` (movement + attack)
-Bewege dich oder greife an, nur auf die frontal umgebenden Felder (vorne links, vorne, vorne rechts), oder bewege den Burning Stag 1 Feld rückwärts. Die Ausrichtung muss berücksichtigt werden.
-- Rückwärts ist nur Bewegung, kein Angriff (grüner Pfeil im Bild).
+Move or attack only on frontally surrounding spaces (front-left, front, front-right), or move the Burning Stag 1 space backwards. Alignment must be taken into account.
+- Backwards is movement only, no attack (green arrow in the picture).
 
 ## 6 · King's Knight
 
 ### `KoS.knight.breakthrough` (speciality)
-Erhalte 1 virtuellen VP für jede Formation mit einer Gesamtstufe von 9 oder mehr, sofern du mindestens 1 King's Knight kontrollierst.
-- Beispiele der Karte: 1+2+4+1+1 = 9 ergibt 1 VP. 4+6+5+6 = 21 ergibt ebenfalls nur 1 VP (eine Formation).
+Get 1 virtual VP for each Formation with a total Power Level of 9 or more, if you control at least 1 King's Knight.
+- Card examples: 1+2+4+1+1 = 9 gives 1 VP. 4+6+5+6 = 21 also gives only 1 VP (one formation).
 
 ### `KoS.knight.reinforcements` (spell)
-Teile den King's Knight in 1 Silver Spear, 1 Loyal Shield und 1 First Sword.
-Hinweis der Karte: Setze 3 Reservewürfel als Silver Spear, Loyal Shield und First Sword auf freie Felder, die den King's Knight umgeben. Lege danach den King's Knight in die Reserve.
+Split the King's Knight into 1 Silver Spear, 1 Loyal Shield and 1 First Sword.
+Card note: place 3 Reserve Dice as Silver Spear, Loyal Shield and First Sword on free spaces surrounding the King's Knight. Afterwards, put the King's Knight back into the Reserve.
 
-## Ortsplättchen: Das Lager (`KoS.marker.camp`)
+## Location: The Camp (`KoS.marker.camp`)
 
-Gleich wie bei RoM, siehe [RoM.md](RoM.md#ortsplättchen-das-lager-rommarkercamp).
+Same as for RoM, see [RoM.md](RoM.md#location-the-camp-rommarkercamp).
