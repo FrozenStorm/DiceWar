@@ -87,7 +87,7 @@ export function clone(s) {
 
 /** Record what happened during the current action, for animations in the UI:
  *  move {path}, place {at,owner,level}, remove {at,owner,level,dest},
- *  level {at,from,to}, reserveToExile {player,n}. */
+ *  level {at,from,to}, reserveToExile {player,n}, turn {at,owner,from,to} (alignment). */
 export function emit(s, event) {
   s.events.push(event);
 }
@@ -533,24 +533,31 @@ function applyMain(s, action) {
 
 /** Resolve a standard action or ability (also used for additional actions). */
 export function performAction(s, action) {
-  // Alignment (KoS): turned before the action (`pre`) and/or the alignment
-  // afterwards (`face`). Nothing during the action reads the alignment of the
-  // acting die, so both are applied right away (face wins).
-  const turned = action.face !== undefined ? action.face : action.pre;
-  if (turned !== undefined) {
-    const d = s.board[actionOrigin(action)];
-    if (d) d.dir = turned;
+  // Alignment (KoS): turned before the action (`pre`), then the action, then
+  // the alignment afterwards (`face`). Each turn is an event for the animation.
+  const die = s.board[actionOrigin(action)];
+  if (die && action.pre !== undefined) turnDie(s, actionOrigin(action), action.pre);
+  if (action.ability) setOf(s, s.current).applyAbility(s, action);
+  else {
+    switch (action.type) {
+      case "move": doMove(s, action.from, action.to); break;
+      case "attack": doAttack(s, action.from, action.to); break;
+      case "upgrade": setLevel(s, action.at, s.board[action.at].level + 1); break;
+      default: throw new Error(`Unknown action type: ${action.type}`);
+    }
   }
-  if (action.ability) {
-    setOf(s, s.current).applyAbility(s, action);
-    return;
+  if (die && action.face !== undefined) {
+    const at = s.board.indexOf(die);
+    if (at >= 0) turnDie(s, at, action.face);
   }
-  switch (action.type) {
-    case "move": doMove(s, action.from, action.to); break;
-    case "attack": doAttack(s, action.from, action.to); break;
-    case "upgrade": setLevel(s, action.at, s.board[action.at].level + 1); break;
-    default: throw new Error(`Unknown action type: ${action.type}`);
-  }
+}
+
+/** Set the alignment of the die on `at` (KoS), with an event for the animation. */
+export function turnDie(s, at, dir) {
+  const d = s.board[at];
+  if (!d || d.dir === dir) return;
+  emit(s, { t: "turn", at, owner: d.owner, from: d.dir, to: dir });
+  d.dir = dir;
 }
 
 /** Drop pending decisions that have no options left. */

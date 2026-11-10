@@ -6,6 +6,7 @@
 //   place          the new die comes out of the Reserve
 //   level          the die spins while its Power Level changes
 //   reserveToExile a ghost die flies from the Reserve to the Exile (spell costs)
+//   turn           the die turns to its new alignment (KoS), before or after it moves
 
 const SPEEDS = { normal: 1, fast: 0.5, off: 0 };
 const STORAGE_KEY = "dicewar-animation-speed";
@@ -135,11 +136,32 @@ function animateReserveToExile(ev, ms) {
   return flyGhost(node, rect, to, ms);
 }
 
+/** Element that carries the alignment rotation (the image of a die, or the die). */
+const rotEl = (die) => die.querySelector("img") || die;
+
+function animateTurn(el, fromDeg, toDeg, ms) {
+  el.style.transform = `rotate(${toDeg}deg)`;
+  return el.animate([
+    { transform: `rotate(${fromDeg}deg)` },
+    { transform: `rotate(${toDeg}deg)` },
+  ], { duration: ms, easing: "ease-in-out" }).finished.catch(() => {});
+}
+
+/** Square where the die on `at` stands after the remaining events. */
+function finalSquare(events, from, at) {
+  let cur = at;
+  for (let j = from; j < events.length; j++) {
+    const ev = events[j];
+    if (ev.t === "move" && ev.path[0] === cur) cur = ev.path[ev.path.length - 1];
+  }
+  return cur;
+}
+
 /**
  * Play the events of one action. `before` comes from captureDice() taken
  * before the new position was rendered. Resolves when everything is done.
  */
-export async function play(events, before, { slow = false } = {}) {
+export async function play(events, before, { slow = false, alignDeg = null } = {}) {
   const factor = SPEEDS[getSpeed()] * (slow ? 1.3 : 1);
   if (!factor || !events || !events.length) return;
   const ms = (base) => Math.round(base * factor);
@@ -151,14 +173,42 @@ export async function play(events, before, { slow = false } = {}) {
       if (d) { d.style.visibility = "hidden"; hidden.push(d); }
     }
   }
+  // Turning dice (KoS) show their old alignment until they turn: before the
+  // move for a turn before the action, at the end for a turn afterwards.
+  const turning = new Map(); // event index -> { el, deg }
+  const restore = new Map(); // element -> rendered transform
+  if (alignDeg) {
+    const shown = new Map(); // element -> currently shown rotation (degrees)
+    events.forEach((ev, i) => {
+      if (ev.t !== "turn") return;
+      const die = dieEl(finalSquare(events, i + 1, ev.at));
+      if (!die) return;
+      const el = rotEl(die);
+      if (!restore.has(el)) restore.set(el, el.style.transform);
+      if (!shown.has(el)) {
+        shown.set(el, alignDeg(ev.owner, ev.from));
+        el.style.transform = `rotate(${shown.get(el)}deg)`;
+      }
+      const fromDeg = shown.get(el);
+      let delta = ((alignDeg(ev.owner, ev.to) - fromDeg) % 360 + 360) % 360;
+      if (delta > 180) delta -= 360; // the short way round
+      shown.set(el, fromDeg + delta);
+      turning.set(i, { el, fromDeg, toDeg: fromDeg + delta });
+    });
+  }
   // Dice that leave the board stay visible where they stood until it is their turn to go.
   const ghosts = new Map();
   for (const ev of events) {
     if (ev.t === "remove" && before.has(ev.at) && !ghosts.has(ev.at)) ghosts.set(ev.at, ghostFrom(before, ev.at, ev));
   }
   try {
-    for (const ev of events) {
+    for (const [i, ev] of events.entries()) {
       switch (ev.t) {
+        case "turn": {
+          const tr = turning.get(i);
+          if (tr) await animateTurn(tr.el, tr.fromDeg, tr.toDeg, ms(300));
+          break;
+        }
         case "move": await animateMove(ev, ms(260)); break;
         case "remove": {
           const box = boxEl(ev.owner, ev.dest);
@@ -183,5 +233,6 @@ export async function play(events, before, { slow = false } = {}) {
   } finally {
     for (const d of hidden) d.style.visibility = "";
     for (const g of ghosts.values()) g.node.remove();
+    for (const [el, tf] of restore) el.style.transform = tf;
   }
 }

@@ -12,7 +12,7 @@ import {
 } from "../engine/core.js";
 import { IMPLEMENTED_SETS } from "../engine/sets/index.js";
 import { IMPLEMENTED_LOCATIONS } from "../engine/locations/index.js";
-import { actionPath, pendingPrompt, abilityName } from "../engine/paths.js";
+import { actionPath, pendingPrompt, abilityName, TURN_LABELS } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
 import { SIZE, sq, rowOf, colOf, supplyRow, defaultDir } from "../engine/board.js";
 import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animate.js";
@@ -186,7 +186,7 @@ function perform(action) {
     rm.message = err.message;
   }
   render();
-  if (next) rm.animating = playAnimation(next.events, before, { slow: byAI }).catch((e) => console.error(e));
+  if (next) rm.animating = playAnimation(next.events, before, { slow: byAI, alignDeg }).catch((e) => console.error(e));
   if (state.gameMode === "online") sendGameState();
 }
 
@@ -227,7 +227,7 @@ function load(game, { resetHistory = false } = {}) {
   if (resetHistory) { rm.undo = []; rm.redo = []; }
   render();
   // Online: show the opponent's action as an animation.
-  if (isUpdate) rm.animating = playAnimation(game.events, before, { slow: true }).catch((e) => console.error(e));
+  if (isUpdate) rm.animating = playAnimation(game.events, before, { slow: true, alignDeg }).catch((e) => console.error(e));
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +333,13 @@ function alignmentRotation(d) {
   return (d.dir * 90 - base + 360) % 360;
 }
 
+/** Total rotation of a die image with alignment `dir`, as rendered by index.html
+ *  (the 180 degrees for player 2 in duel and online games included). */
+function alignDeg(owner, dir) {
+  const base = (state.gameMode === "duel" || state.gameMode === "online") && owner === 2 ? 180 : 0;
+  return base + alignmentRotation({ owner, dir });
+}
+
 function project() {
   const g = rm.game;
   for (let r = 0; r < SIZE; r++) {
@@ -347,6 +354,12 @@ function project() {
         flow: g.locations.includes("river") && RIVER_ROWS.includes(r) && !tile,
       };
     }
+  }
+  // While choosing an action: a die turned before the action ("Turn …") is shown turned.
+  if (g.phase === "war" && typeof rm.prefix[0] === "number" && typeof rm.prefix[1] === "string") {
+    const dir = TURN_LABELS.indexOf(rm.prefix[1]);
+    const d = g.board[rm.prefix[0]];
+    if (dir >= 0 && d) state.board[rowOf(rm.prefix[0])][colOf(rm.prefix[0])].rotation = alignmentRotation({ ...d, dir });
   }
   if (g.phase === "setup") {
     const row = supplyRow(g.current);
