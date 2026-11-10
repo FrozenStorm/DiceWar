@@ -18,7 +18,9 @@ import { SIZE, sq, rowOf, colOf, supplyRow } from "../engine/board.js";
 import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animate.js";
 
 // UI dice set id -> engine set id
-const ENGINE_SET = { numbers: "plain", RoX: "RoX", BoD: "BoD", LoD: "LoD", RoM: "RoM" };
+// "Numbers" is deliberately not mapped: it is played without rules (by humans only),
+// e.g. to try out a new tribe whose rules are not in the engine yet.
+const ENGINE_SET = { RoX: "RoX", BoD: "BoD", LoD: "LoD", RoM: "RoM" };
 const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD", ruins: "LoD", camp: "RoM" };
 
 const rm = {

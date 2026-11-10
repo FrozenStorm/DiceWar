@@ -678,7 +678,7 @@
       </div>
 
       <p id="ai-note" style="display: none; font-size: 0.8rem; color: var(--muted); max-width: 320px;">
-        The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali and Numbers so far. You play Player 1 (bottom), the AI plays Player 2.
+        The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons and Roots of Mali so far. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
       </p>
 
       <button class="btn primary" id="start-game-btn">Start Game</button>
@@ -2278,7 +2278,7 @@
       if (window.RulesMode) RulesMode.stop();
       if (gameMode === "ai") {
         if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
-          alert("The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali and Numbers so far.");
+          alert("The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons and Roots of Mali so far. Numbers is played without rules, by humans only.");
           return;
         }
         originalStartNewGame(p1Set, p2Set, "ai");
