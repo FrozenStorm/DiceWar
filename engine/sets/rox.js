@@ -3,7 +3,7 @@
 import { adjacent, diagonal, surrounding, inOwnZone, SQUARES } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, defeat, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP, canRaise, emit, relocate,
+  pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP, canRaise, emit, relocate, resolveAttack, isProtected,
 } from "../core.js";
 
 const PORTAL = 1, BEARER = 2, GUARDIAN = 3, EMISSARY = 4, ENCHANTRESS = 5, XELADRON = 6;
@@ -71,8 +71,8 @@ function applyWormhole(s, a) {
   const die = s.board[a.from];
   emit(s, { t: "move", path: [a.from, a.to, a.bearer, a.follow.to] });
   s.board[a.from] = null;
-  if (a.follow.type === "attack") defeat(s, a.follow.to, die.owner);
-  s.board[a.follow.to] = die;
+  if (a.follow.type === "attack") resolveAttack(s, die, a.follow.to);
+  else s.board[a.follow.to] = die;
   s.turn.movedDieId = die.id;
   removeDie(s, a.to, "reserve", "wormhole");
   setLevel(s, a.bearer, levelAt(s, a.bearer) - 1);
@@ -141,6 +141,7 @@ function applyImpact(s, a) {
   for (const t of surrounding(a.at)) {
     const d = s.board[t];
     if (!d) continue;
+    if (d.owner !== player && isProtected(s, t, "spell")) continue; // e.g. LoD Protective Barrier
     // Impact does not defeat creatures, it puts them straight into the Exile
     // (confirmed by the publisher): no Balance or other "defeated" effects.
     removeDie(s, t, "exile", "impact");
@@ -168,7 +169,7 @@ function attractionOptions(s, at) {
   const out = [];
   for (const from of diagonal(at)) {
     const d = s.board[from];
-    if (!d || d.owner === me.owner || !canMove(s, from)) continue; // e.g. Portals are unmovable
+    if (!d || d.owner === me.owner || !canMove(s, from) || isProtected(s, from, "speciality")) continue; // e.g. Portals are unmovable
     for (const to of adjacent(at)) {
       if (empty(s, to) && adjacent(from).includes(to)) {
         out.push({ type: "choice", kind: A.attraction, from, to });

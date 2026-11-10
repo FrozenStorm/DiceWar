@@ -8,8 +8,8 @@ Goal: capture every rule that so far only exists as images of the rule cards as 
 |---|---|---|
 | [base-rules.md](base-rules.md) | Board, setup, turn sequence, standard actions, victory points, power hierarchy, End of War, glossary | **Validated** |
 | [RoX.md](RoX.md) | Dice set RoX (Rise of Xeladron), implemented first | **Validated** |
-| [LoD.md](LoD.md) | Dice set LoD (Light of Dragons, base game) | Draft, open questions |
-| [RoM.md](RoM.md) | Dice set RoM (Roots of Mali) | Draft, open questions |
+| [LoD.md](LoD.md) | Dice set LoD (Light of Dragons, base game), implemented third | **Validated** |
+| [RoM.md](RoM.md) | Dice set RoM (Roots of Mali) | **Validated** |
 | [BoD.md](BoD.md) | Dice set BoD (Bond of Demons), implemented second | **Validated** |
 | [DoA.md](DoA.md) | Dice set DoA (Dawn of Awakening) | Draft, open questions |
 | [KoS.md](KoS.md) | Dice set KoS (Knights of Steel), needs an alignment per die | Draft, open questions |

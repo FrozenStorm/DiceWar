@@ -2,6 +2,8 @@
 
 Source: `img/RoM/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
+**Status: validated.** All open questions were answered by the rules owner.
+
 ## Overview
 
 | Level | Creature | Abilities | Defeats |
@@ -17,8 +19,8 @@ Source: `img/RoM/rules/1.png` to `6.png` and `marker.png`. Base terms are define
 
 ### `RoM.fruit.fake_gold` (speciality)
 The Golden Fruit cannot move and its Power Level cannot be increased. If you defeat a Golden Fruit you neither receive VP nor Field Bonus. A defeated Golden Fruit is returned to your Reserve.
-- Exception: Breath of Life (Protectress) explicitly increases the level of a Golden Fruit. **[Assumption]** The Protectress card takes precedence; Fake Gold only forbids the Upgrade standard action.
-- **[Question RoM1]** "Returned to your Reserve": the Reserve of the Fruit's owner or of the attacker? **[Assumption]** the owner's.
+- Exception: Breath of Life (Protectress) explicitly increases the level of a Golden Fruit. Confirmed: the Protectress card takes precedence; Fake Gold only forbids the Upgrade standard action.
+- Confirmed (RoM1): a defeated Golden Fruit goes back to the Reserve of its owner.
 
 ### `RoM.fruit.breeding` (spell)
 Split the Golden Fruit into 2 Golden Fruits.
@@ -28,11 +30,11 @@ Card note: place 2 Reserve Dice as Golden Fruits horizontally or vertically adja
 
 ### `RoM.sprout.velocity` (movement + attack)
 Move or attack up to 2 spaces in the same direction.
-- **[Assumption]** Unlike the LoD Ghost, not through creatures; the intermediate field must be free.
+- Confirmed: unlike the LoD Ghost, not through creatures; the intermediate field must be free.
 
 ### `RoM.sprout.golden_seed` (speciality)
 If the Sprout moves just one space, you may place a Golden Fruit from your Reserve on the space it moved from.
-- **[Question RoM2]** Does this also apply after a 1-field attack, or only after a movement?
+- Confirmed (RoM2): only after a Movement, not after an attack.
 
 ### `RoM.sprout.tenacity` (speciality)
 If an opposing creature attacks the Sprout, the opponent has to put 2 of their Reserve Dice into the Exile, if possible.
@@ -43,7 +45,7 @@ Card note: the attack may be performed even if the opponent has fewer than 2 or 
 ### `RoM.torch.fire_demon` (movement + attack)
 Move or attack by leaping over one or more of your creatures of Power Level 1, 2 and 6 that are adjacent to each other. Put the leaped-over creatures back into your Reserve.
 - Picture: the Torch Bearer leaps over a row of Golden Fruit (1), Sprout (2) and Mali (6). It lands diagonally above the Mali, to the right of a Golden Fruit. Leaped-over creatures are shown grey (removed), the Golden Fruit above the Mali stays black.
-- **[Question RoM3]** The picture is ambiguous. Does the Torch Bearer leap only in a straight line over the chain, or can it follow the chain (also around corners)? Are all leaped-over creatures put into the Reserve, including the Mali (6)?
+- Confirmed (RoM3): the Torch Bearer can follow the chain around corners, and all leaped-over creatures go back into the Reserve, including a Mali (6).
 
 ## 4 · Protectress of the Woods
 
@@ -54,7 +56,7 @@ Card note: lose all TP as soon as you have no Protectress of the Woods in the Wa
 ### `RoM.protectress.breath_of_life` (spell)
 Put 1 Reserve Die into your Exile. Use any available TP to increase the Power Level of one of your Golden Fruits.
 Card example: 4 TP = +4 levels (Golden Fruit 1 becomes Shadow Runner 5).
-- **[Assumption]** Maximum level 6, so at most 5 TP.
+- Confirmed: maximum level 6, so at most 5 TP.
 
 ### `RoM.protectress.symbiosis` (upgrade)
 Yellow bar, i.e. a variant of the Upgrade standard action: move your Protectress of the Woods onto an adjacent Golden Fruit you own. Put the Golden Fruit back into your Reserve. Now increase the Power Level of the Protectress by 1 (she becomes a Shadow Runner).
@@ -64,7 +66,7 @@ Yellow bar, i.e. a variant of the Upgrade standard action: move your Protectress
 ### `RoM.runner.secret_pathway` (movement + attack)
 Move or attack once per turn out of the board, beyond the side line of the Warlands, and back in on the opposite side (Fig. 1). Subsequently you may perform another Movement or Attack (Fig. 2). Secret Pathway may be combined with Out of the Dark.
 - Only left/right (side lines), not top/bottom.
-- **[Assumption]** The follow-up action is a normal Movement or Attack (1 field orthogonally). Fig. 2 shows up, right and down as targets.
+- Confirmed: the follow-up action is a normal Movement or Attack (1 field orthogonally). Fig. 2 shows up, right and down as targets.
 
 ### `RoM.runner.out_of_the_dark` (movement + attack)
 Move or attack by leaping over an adjacent Shadow Runner you own. May be combined with Secret Pathway.
@@ -86,5 +88,5 @@ During the setup phase each player places their camp on any free space in their 
 Rules:
 - If you move a creature into your own camp, return this creature instantly to your Reserve.
 - If you move a creature into your opponent's camp, put this creature instantly into your Exile. Your opponent has to put creature dice into their Exile equal to the Power Level of the creature you exiled.
-- **[Question RoM4]** Where does the opponent take these dice from: the Reserve, the board, or their choice?
-- **[Question RoM5]** Does each player have a camp only when RoM is played, or also the opponent?
+- Confirmed (RoM4): the opponent takes these dice from their Reserve.
+- Confirmed (RoM5): when this location is used, both players always have a camp, whatever dice sets they play.

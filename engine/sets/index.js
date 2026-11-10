@@ -18,11 +18,18 @@
 //   resolveChoice(s, pending, action)
 //   virtualVP(s, player)
 //   constrainOpponent(s, player, actions) -> restrict the opponent's main actions
+//   immuneTo(s, at, kind)                -> immune against the opponent's "attack" | "spell" | "speciality"
+//   stepTargets(s, from, die)            -> fields of a standard step (default: adjacent)
+//   afterDefeatedBy(s, at, defeatedDie)  -> a die of this set was defeated by an attack (attacker on `at`)
+//   afterAttack(s, at, die)              -> a die of this set defeated a creature by attacking
+//   beforeTurnEnd(s, player)             -> may queue last decisions before the turn ends
+//   aiGreedyChoices                      -> decision kinds the AI resolves greedily
 //
 // Rule texts: docs/rules/<SET>.md. Ability IDs in the code match the docs.
 
 import { RoX } from "./rox.js";
 import { BoD } from "./bod.js";
+import { LoD } from "./lod.js";
 
 const plain = {
   id: "plain",
@@ -30,7 +37,7 @@ const plain = {
   creatures: { 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6" },
 };
 
-const SETS = { plain, RoX, BoD };
+const SETS = { plain, RoX, BoD, LoD };
 
 const defaults = {
   choiceOptions: () => [],

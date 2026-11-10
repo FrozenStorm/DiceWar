@@ -34,6 +34,9 @@ const MATCHUPS = [
   { name: "RoX vs RoX", set1: "RoX", set2: "RoX", locations: (g) => (g % 2 ? ["craters"] : []) },
   { name: "BoD vs BoD", set1: "BoD", set2: "BoD", locations: (g) => (g % 2 ? ["oracle"] : []) },
   { name: "BoD vs RoX", set1: "BoD", set2: "RoX", locations: (g) => [["oracle"], ["craters"], []][g % 3] },
+  { name: "LoD vs LoD", set1: "LoD", set2: "LoD", locations: (g) => (g % 2 ? ["ruins"] : []) },
+  { name: "LoD vs RoX", set1: "LoD", set2: "RoX", locations: (g) => [["ruins"], ["craters"], []][g % 3] },
+  { name: "BoD vs LoD", set1: "BoD", set2: "LoD", locations: (g) => [["oracle"], ["ruins"], []][g % 3] },
 ];
 
 for (const m of MATCHUPS) test(`random ${m.name} games always reach a valid end without errors`, () => {

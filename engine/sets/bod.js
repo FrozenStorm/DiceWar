@@ -209,7 +209,8 @@ export const BoD = {
     const forced = actions.filter((a) => {
       if (a.type !== "attack" || a.ability) return false;
       const target = s.board[a.to];
-      return target.owner !== player && target.level === POSSESSED && s.board[a.from].level >= 3;
+      return target.owner !== player && target.level === POSSESSED && s.board[a.from].level >= 3
+        && adjacent(a.from).includes(a.to);
     });
     return forced.length ? forced : actions;
   },

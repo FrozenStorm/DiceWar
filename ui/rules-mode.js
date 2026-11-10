@@ -17,8 +17,8 @@ import { SIZE, sq, rowOf, colOf, supplyRow } from "../engine/board.js";
 import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animate.js";
 
 // UI dice set id -> engine set id
-const ENGINE_SET = { numbers: "plain", RoX: "RoX", BoD: "BoD" };
-const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD" };
+const ENGINE_SET = { numbers: "plain", RoX: "RoX", BoD: "BoD", LoD: "LoD" };
+const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD", ruins: "LoD" };
 
 const rm = {
   active: false,

@@ -47,7 +47,25 @@ const oracle = {
   // level is set back to 4 at the end of the turn anyway (BoD6, confirmed).
 };
 
-const LOCATIONS = { craters, oracle };
+/** LoD: The Ruins. Rules: docs/rules/LoD.md, "Location: The Ruins". */
+const ruins = {
+  id: "ruins",
+  name: "The Ruins",
+  squares: [sq(1, 5), sq(3, 3), sq(5, 1)],
+  // Creatures with Power Level 1 on a ruin go to the Reserve immediately.
+  afterAction(s) {
+    for (const at of this.squares) {
+      const d = s.board[at];
+      if (d && d.level === 1) removeDie(s, at, "reserve", "ruins");
+    }
+  },
+  // Alternative victory: all ruins occupied by your creatures at the end of your turn.
+  winsAtTurnEnd(s, player) {
+    return this.squares.every((at) => s.board[at] && s.board[at].owner === player);
+  },
+};
+
+const LOCATIONS = { craters, oracle, ruins };
 
 export const IMPLEMENTED_LOCATIONS = Object.keys(LOCATIONS);
 

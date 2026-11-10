@@ -217,6 +217,7 @@ export function canDefeatWith(s, att, from, to) {
   if (!(beats ?? defaultBeats(att.level, def.level))) return false;
   const defSet = setOf(s, def.owner);
   if (defSet.isImmuneToAttack && defSet.isImmuneToAttack(s, to, from)) return false;
+  if (isProtected(s, to, "attack")) return false;
   return true;
 }
 
@@ -252,16 +253,34 @@ const canUpgrade = (s, at) => {
   return set.canUpgrade ? set.canUpgrade(s, at, d) : true;
 };
 
+/** Is the creature on `at` immune against an effect of the opposing player's
+ *  creatures? kind: "attack" | "spell" | "speciality" (e.g. LoD Protective Barrier). */
+export function isProtected(s, at, kind) {
+  const d = s.board[at];
+  if (!d) return false;
+  const set = setOf(s, d.owner);
+  return !!(set.immuneTo && set.immuneTo(s, at, kind));
+}
+
+/** Fields a die reaches with one standard step (default: adjacent; e.g. the
+ *  LoD Fire Basilisk moves diagonally instead). */
+function stepTargets(s, from) {
+  const d = s.board[from];
+  const set = setOf(s, d.owner);
+  const custom = set.stepTargets && set.stepTargets(s, from, d);
+  return custom || adjacent(from);
+}
+
 /** Standard Movement targets (1 field, adjacent, unoccupied). */
 export function standardMoves(s, from) {
   if (!canMove(s, from)) return [];
-  return adjacent(from).filter((t) => !s.board[t]);
+  return stepTargets(s, from).filter((t) => !s.board[t]);
 }
 
 /** Standard Attack targets (adjacent opposing creatures that can be defeated). */
 export function standardAttacks(s, from) {
   if (!canAttackFrom(s, from)) return [];
-  return adjacent(from).filter((t) => s.board[t] && canDefeat(s, from, t));
+  return stepTargets(s, from).filter((t) => s.board[t] && canDefeat(s, from, t));
 }
 
 /** Move a die along `path` (squares, first = current field) to the last,
@@ -283,14 +302,25 @@ export function doMove(s, from, to) {
 }
 
 /** Resolve an attack of the die on `from` against the die on `to`. */
-export function doAttack(s, from, to) {
+export function doAttack(s, from, to, path = [from, to]) {
+  emit(s, { t: "move", path }); // the attacker moves in, then the defeated die leaves
   const die = s.board[from];
-  emit(s, { t: "move", path: [from, to] }); // the attacker moves in, then the defeated die leaves
-  defeat(s, to, die.owner);
   s.board[from] = null;
+  resolveAttack(s, die, to);
+  finishMoveOrAttack(s, to);
+}
+
+/** The attacking `die` (already taken off its field) defeats the creature on
+ *  `to` and takes its field. Calls the afterDefeatedBy hook of the defeated
+ *  creature's set (e.g. LoD Cursed) and afterAttack of the attacker's set. */
+export function resolveAttack(s, die, to) {
+  const defeated = defeat(s, to, die.owner);
   s.board[to] = die;
   s.turn.movedDieId = die.id;
-  finishMoveOrAttack(s, to);
+  const defSet = setOf(s, defeated.owner);
+  if (defSet.afterDefeatedBy) defSet.afterDefeatedBy(s, to, defeated);
+  const attSet = setOf(s, die.owner);
+  if (s.board[to] === die && attSet.afterAttack) attSet.afterAttack(s, to, die);
 }
 
 /** Call the "ends its Movement or Attack on `at`" hook of the die's set. */
@@ -438,8 +468,18 @@ export function applyAction(state, action) {
   } else {
     applyMain(s, action);
   }
+  for (const id of s.locations) {
+    const loc = getLocation(id);
+    if (loc.afterAction) loc.afterAction(s);
+  }
   settlePending(s);
-  if (!s.pending.length && s.turn.main) endTurn(s);
+  if (!s.pending.length && s.turn.main) {
+    // Last decisions before the turn ends (e.g. LoD: too many Souls in a group).
+    const set = setOf(s, s.current);
+    if (set.beforeTurnEnd) set.beforeTurnEnd(s, s.current);
+    settlePending(s);
+    if (!s.pending.length) endTurn(s);
+  }
   return s;
 }
 
@@ -500,6 +540,10 @@ function endTurn(s) {
 
   // Step 3: check the VP bar.
   if (totalVP(s, player) >= WIN_VP) return finish(s, player, "victoryPoints");
+  for (const id of s.locations) {
+    const loc = getLocation(id);
+    if (loc.winsAtTurnEnd && loc.winsAtTurnEnd(s, player)) return finish(s, player, loc.id);
+  }
   const other = opponent(player);
   if (totalVP(s, other) >= WIN_VP) return finish(s, other, "victoryPoints");
 

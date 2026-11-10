@@ -24,7 +24,7 @@ const WIN = 1_000_000;
 /** Evaluation weights in "VP x 100" units. */
 export const DEFAULT_WEIGHTS = {
   tp: 12, reserve: 3, advance: 6, fieldBonus: 10, nearPrey: 12,
-  craterOne: 35, craterBoth: 100, oracle: 40, threatToMove: 70, threatOther: 20,
+  craterOne: 35, craterBoth: 100, oracle: 40, ruin: 40, threatToMove: 70, threatOther: 20,
 };
 const LEVEL_VALUE = [0, 20, 30, 45, 55, 65, 80];
 
@@ -69,6 +69,11 @@ function sideValue(s, p, W) {
     const held = getLocation("craters").squares
       .filter((at) => s.board[at] && s.board[at].owner === p && s.board[at].level >= 2).length;
     v += W.craterOne * held + (held === 2 ? W.craterBoth : 0);
+  }
+  if (s.locations.includes("ruins")) {
+    // Holding all Ruins at the end of the own turn wins the game.
+    const held = getLocation("ruins").squares.filter((at) => s.board[at] && s.board[at].owner === p).length;
+    v += W.ruin * held * held;
   }
   if (s.locations.includes("oracle")) {
     // The Oracle gives 1 TP per turn and sets its occupant to level 4.
@@ -128,8 +133,40 @@ function orderedActions(s, width) {
 
 class Timeout extends Error {}
 
+/** Is the next step a decision the AI makes greedily (long chains of small
+ *  steps such as LoD Blood Trade upgrades would blow up the search)? */
+function greedyPending(s) {
+  if (!s.pending.length || s.phase === "over") return false;
+  const p = s.pending[0];
+  const set = getSet(s.players[p.player].set);
+  return !!(set.aiGreedyChoices && set.aiGreedyChoices.includes(p.kind));
+}
+
+/** Best option of a greedy decision by static evaluation for the deciding player. */
+function greedyChoice(s, W) {
+  const who = actor(s);
+  let best = null, bestV = -Infinity;
+  for (const a of legalActions(s)) {
+    const v = evaluate(applyAction(s, a), who, W);
+    if (v > bestV) { bestV = v; best = a; }
+  }
+  return best;
+}
+
+/** Resolve greedy decisions until the state needs a real choice again. */
+function resolveGreedy(s, W) {
+  let guard = 0;
+  while (greedyPending(s) && guard++ < 20) s = applyAction(s, greedyChoice(s, W));
+  return s;
+}
+
 function minimax(s, depth, alpha, beta, me, ctx) {
   if (++ctx.nodes % 256 === 0 && Date.now() > ctx.deadline) throw new Timeout();
+  if (greedyPending(s)) {
+    const t = resolveGreedy(s, ctx.W);
+    const nextDepth = t.phase === "over" || t.current !== s.current ? depth - 1 : depth;
+    return minimax(t, nextDepth, alpha, beta, me, ctx);
+  }
   if (s.phase === "over" || depth === 0) return evaluate(s, me, ctx.W);
   const acts = orderedActions(s, ctx.width);
   if (!acts.length) return evaluate(s, me, ctx.W);
@@ -163,6 +200,7 @@ export function chooseAction(s, opts = {}) {
   const me = actor(s);
   const W = { ...DEFAULT_WEIGHTS, ...(cfg.weights || {}) };
   const ctx = { nodes: 0, deadline: Date.now() + cfg.timeMs, width: cfg.width, W };
+  if (greedyPending(s)) return { action: greedyChoice(s, W), score: 0, depth: 0, nodes: 0 };
   let root = orderedActions(s, 0);
   if (cfg.book) {
     const preferred = bookAbility(s, me);
@@ -174,7 +212,7 @@ export function chooseAction(s, opts = {}) {
 
   // Evaluate every root action once (depth 1 = finish my turn) for ordering and as fallback.
   let scored = root.map((a) => {
-    const child = applyAction(s, a);
+    const child = resolveGreedy(applyAction(s, a), W);
     return { a, child, v: evaluate(child, me, W) + (cfg.noise ? (random() - 0.5) * 2 * cfg.noise : 0) };
   });
   scored.sort((x, y) => y.v - x.v);

@@ -660,6 +660,7 @@
             <option value="">None</option>
             <option value="craters">The Craters (RoX)</option>
             <option value="oracle">The Oracle (BoD)</option>
+            <option value="ruins">The Ruins (LoD)</option>
           </select>
         </label>
         <label>Animations
@@ -672,7 +673,7 @@
       </div>
 
       <p id="ai-note" style="display: none; font-size: 0.8rem; color: var(--muted); max-width: 320px;">
-        The AI opponent is available for Rise of Xeladron, Bond of Demons and Numbers so far. You play Player 1 (bottom), the AI plays Player 2.
+        The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons and Numbers so far. You play Player 1 (bottom), the AI plays Player 2.
       </p>
 
       <button class="btn primary" id="start-game-btn">Start Game</button>
@@ -2272,7 +2273,7 @@
       if (window.RulesMode) RulesMode.stop();
       if (gameMode === "ai") {
         if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
-          alert("The AI opponent is available for Rise of Xeladron, Bond of Demons and Numbers so far.");
+          alert("The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons and Numbers so far.");
           return;
         }
         originalStartNewGame(p1Set, p2Set, "ai");
