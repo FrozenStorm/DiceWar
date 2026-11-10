@@ -10,7 +10,7 @@ Goal: capture every rule that so far only exists as images of the rule cards as 
 | [RoX.md](RoX.md) | Dice set RoX (Rise of Xeladron), implemented first | **Validated** |
 | [LoD.md](LoD.md) | Dice set LoD (Light of Dragons, base game) | Draft, open questions |
 | [RoM.md](RoM.md) | Dice set RoM (Roots of Mali) | Draft, open questions |
-| [BoD.md](BoD.md) | Dice set BoD (Bond of Demons) | Draft, open questions |
+| [BoD.md](BoD.md) | Dice set BoD (Bond of Demons), implemented second | **Validated** |
 | [DoA.md](DoA.md) | Dice set DoA (Dawn of Awakening) | Draft, open questions |
 | [KoS.md](KoS.md) | Dice set KoS (Knights of Steel), needs an alignment per die | Draft, open questions |
 

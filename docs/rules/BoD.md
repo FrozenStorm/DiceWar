@@ -2,7 +2,9 @@
 
 Source: `img/BoD/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
-Note: according to suncoregames.ch there are errata for Hunter of Death and Swamp Hag. It is unclear whether the cards in the repo are already the corrected version. **[Question BoD0]**
+**Status: validated.** All open questions were answered by the rules owner.
+
+Errata: the official errata cards for Hunter of Death (E233) and Swamp Hag (E234) were compared with the cards in the repo. The text is identical, so the repo cards already are the corrected version. Confirmed (BoD0).
 
 ## Overview
 
@@ -29,7 +31,7 @@ Card notes:
 - If there are several opposing creatures on adjacent fields, the opponent can decide which one attacks.
 - If the Possessed is protected by an adjacent Gnome, the opponent can't attack it and has to choose a different action.
 - Engine: if at the start of the opponent's turn there is a valid attack by a level 3+ creature on an adjacent Possessed, only such attacks are allowed.
-- **[Question BoD1]** Does the obligation still apply if the Possessed is immune through other effects? (A level 3+ attacker always defeats level 2, so this only matters for protection.)
+- Confirmed (BoD1): the obligation only applies if the Possessed can actually be attacked. If it is immune (e.g. protected by a Gnome), there is no obligation to attack it.
 
 ## 3 · Hunter of Death
 
@@ -40,7 +42,7 @@ Card note: you can still only attack adjacent fields.
 
 ### `BoD.hunter.dark_fusion` (upgrade)
 Yellow bar, i.e. a variant of the Upgrade standard action: move your Hunter of Death to the field of another friendly Hunter of Death. Put one of them into the Exile. Upgrade the other to a Demon of Darkness (6). If there is no other friendly Hunter of Death in the Warlands, you may take an additional action with this Demon of Darkness.
-- **[Assumption]** The other Hunter must be adjacent (picture).
+- Confirmed: Dark Fusion is possible as long as the Hunter can move onto the other Hunter's field, either adjacent or with Hunter's Path (up to 2 fields, e.g. 2 fields away in a straight line with a free field in between).
 
 ## 4 · Swamp Hag
 
@@ -52,7 +54,7 @@ Card note: as soon as there is no own Swamp Hag or Possessed in the Warlands, th
 Put 1 Reserve Die into your Exile and choose one or both options for different Possessed:
 - Use 3 TP to move one of your Possessed by 3 fields, also around corners.
 - Use 2 TP to increase one of your Possessed by 2 Power Levels.
-- **[Question BoD2]** May the 3-field move also attack (last field occupied)?
+- Confirmed (BoD2): the 3-field move is a movement only, it cannot attack. All fields passed and the target field must be free.
 
 ### `BoD.hag.servitude` (spell)
 Split the Swamp Hag into 2 Possessed.
@@ -84,4 +86,4 @@ Rules:
 - If one of your creatures occupies the Oracle at the end of your turn, its Power Level rises or falls to 4.
 - Get 1 additional TP each turn as long as you own the Oracle (one of your creatures stands on it).
 Card note: creatures that occupy the Oracle cannot raise their Power Level.
-- **[Question BoD3]** Is the TP credited at the beginning of the turn?
+- Confirmed (BoD3): the TP is credited at the beginning of your turn.

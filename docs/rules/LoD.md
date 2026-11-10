@@ -2,6 +2,8 @@
 
 Source: `img/LoD/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
+Errata: the official errata card for the Soul (E411) was compared with the card in the repo. The text is identical, so the repo card already is the corrected version.
+
 ## Overview
 
 | Level | Creature | Abilities | Defeats |
