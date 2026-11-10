@@ -29,7 +29,7 @@ Sequence according to the picture: Xeladron (6) moves onto a Portal. It appears 
 - Confirmed: the creature briefly shares the field with the Portal Bearer and must leave it with the additional action.
 - Confirmed: the additional Movement or Attack is **mandatory**. If no valid additional action exists, the move onto the Portal is not allowed.
 - Confirmed: with several Portal Bearers, the player freely chooses which one the creature goes to.
-- The additional action is a normal Movement or Attack of that creature (including its own movement abilities, e.g. Aerial Maneuver if the creature is itself a Portal Bearer).
+- **[Assumption RoX9]** The additional action is a standard Movement or Attack (1 field) from the Portal Bearer's field. Special movement abilities (e.g. Aerial Maneuver) and moving on into another Portal (chaining Wormholes) are not possible.
 
 ### `RoX.portal.resistance` (speciality)
 Your Portals are immune against attacks if you control Portals in the same amount or less than friendly Portal Bearers in the game (number of Portals ≤ number of Portal Bearers).
@@ -48,6 +48,7 @@ Card note: don't move the Portal Bearer back to the field she started from.
 ### `RoX.bearer.arrival` (speciality)
 Gain 1 TP if a Portal Bearer is placed into the game.
 - Confirmed: only placing a die as a new Portal Bearer counts (e.g. through New Paths, Decay, Dimensional Summoning). Upgrading or downgrading a die to level 2 does not count.
+- **[Assumption RoX10]** Portal Bearers placed during the setup phase do not give TP.
 
 ### `RoX.bearer.balance` (speciality)
 If this Portal Bearer is defeated, place 1 Portal from your Reserve Dice on any unoccupied field or upgrade a friendly Portal by 1 Power Level.
@@ -67,6 +68,7 @@ Card note: place 1 Portal Bearer and 1 Portal from your Reserve Dice diagonal to
 ### `RoX.emissary.energy_circle` (speciality)
 Receive a maximum of 1 TP at the beginning of your turn if you control at least 1 Portal, 1 Portal Bearer and 1 Emissary. Lose 4 TP if the Emissary leaves the game and you don't control another one.
 - Confirmed: TP drop to 0 at most, never negative.
+- **[Assumption RoX11]** "Leaves the game" means the die leaves the board (defeated, exiled, returned to the Reserve). Upgrading or downgrading the last Emissary to another level does not cost 4 TP.
 
 ### `RoX.emissary.dimensional_summoning` (spell)
 Put 1 Reserve Die into the Exile. Then use any number of TP and place a creature from your Reserve with a Power Level equal to the spent TP on the board. Place it adjacent to a friendly Portal Bearer.
@@ -90,6 +92,7 @@ Card note: place 1 Emissary from your Reserve Dice diagonal to Xeladron and plac
 ### `RoX.xeladron.impact` (spell)
 Use 6 TP. Put Xeladron and all surrounding creatures (8 neighbouring fields, friendly and opposing) into the Exile. Gain 1 VP for every opposing creature put into the Exile.
 Card note: you don't gain Field Bonus Points.
+- **[Assumption RoX12]** Opposing creatures exiled by Impact count as defeated (e.g. an opposing RoX Portal Bearer triggers Balance for its owner). Your own creatures exiled by Impact are not "defeated", so your own Portal Bearers do not trigger Balance.
 
 ### `RoX.xeladron.forceful_alliance` (speciality)
 Gain 1 virtual VP for each pair of Xeladron and Portal in your possession that are adjacent to each other.
