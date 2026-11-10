@@ -78,7 +78,7 @@ Beendet die Enchantress ihre Bewegung oder ihren Angriff auf einem Feld diagonal
 ### `RoX.xeladron.decay` (spell)
 Teile Xeladron in 1 Emissary und 1 Portal Bearer.
 Hinweis der Karte: Setze 1 Emissary aus deiner Reserve diagonal zu Xeladron und 1 Portal Bearer aus deiner Reserve auf ein unbesetztes Feld in deiner eigenen Zone. Lege danach Xeladron in die Reserve.
-- Hängt von **[Frage G1]** (eigene Zone) ab.
+- Eigene Zone = die 3 Reihen auf deiner Seite (siehe Grundregeln).
 
 ### `RoX.xeladron.impact` (spell)
 Gib 6 TP aus. Lege Xeladron und alle umgebenden Kreaturen (8 Nachbarfelder, eigene und gegnerische) ins Exil. Erhalte 1 VP für jede gegnerische Kreatur, die ins Exil kommt.

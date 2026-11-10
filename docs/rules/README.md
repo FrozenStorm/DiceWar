@@ -6,7 +6,7 @@ Ziel: Alle Regeln, die bisher nur als Bilder der Regelkarten existieren, als Tex
 
 | Datei | Inhalt | Status |
 |---|---|---|
-| [grundregeln.md](grundregeln.md) | Brett, Zugablauf, Standardaktionen, Machthierarchie, Glossar | Entwurf, viele offene Fragen |
+| [grundregeln.md](grundregeln.md) | Brett, Aufstellung, Zugablauf, Standardaktionen, Siegpunkte, Machthierarchie, Glossar | aus dem Regelheft übernommen, wenige Annahmen |
 | [RoX.md](RoX.md) | Würfelset RoX (Xeladron), wird zuerst umgesetzt | Entwurf, zur Prüfung |
 | [LoD.md](LoD.md) | Würfelset LoD (Light of Dragons, Grundspiel) | Entwurf, zur Prüfung |
 | [RoM.md](RoM.md) | Würfelset RoM (Mali) | Entwurf, zur Prüfung |
@@ -32,4 +32,4 @@ Markierungen im Text:
 - **[Annahme]** meine Interpretation, bitte bestätigen oder korrigieren
 - **[Frage]** offen, ohne Antwort nicht umsetzbar
 
-Quelle: Bilder in `img/global/` und `img/<SET>/rules/`. Die Karten sind auf Englisch, die Fähigkeitsnamen bleiben deshalb englisch.
+Quellen: offizielles Regelheft „Light of Dragons“ (4. Edition, 2022) für die Grundregeln, Bilder in `img/global/` und `img/<SET>/rules/` für die Sets. Die Karten sind auf Englisch, die Fähigkeitsnamen bleiben deshalb englisch.
