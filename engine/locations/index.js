@@ -3,7 +3,8 @@
 // raising the Power Level of a creature (blocksRaise).
 
 import { sq } from "../board.js";
-import { removeDie, gainVP, gainTP, setLevel } from "../core.js";
+import { removeDie, gainVP, gainTP, setLevel, exileFromReserve } from "../core.js";
+import { supplyRow, opponent } from "../board.js";
 
 /** RoX: The Craters. Rules: docs/rules/RoX.md, "Location: The Craters". */
 const craters = {
@@ -65,7 +66,47 @@ const ruins = {
   },
 };
 
-const LOCATIONS = { craters, oracle, ruins };
+/** RoM/KoS: The Camp. Rules: docs/rules/RoM.md, "Location: The Camp".
+ *  Both players place a camp on a free field of their Supply Zone in the setup. */
+const camp = {
+  id: "camp",
+  name: "The Camp",
+  squares: [], // placed during the setup (s.camps)
+  validateSetup(s, player, placements, extra) {
+    const col = extra.camp;
+    if (!Number.isInteger(col) || col < 0 || col > 6) return "Place your camp on a free field of your Supply Zone.";
+    if (placements.some((p) => p.col === col)) return "The camp needs a free field.";
+    return null;
+  },
+  onSetup(s, player, action) {
+    const at = sq(supplyRow(player), action.camp);
+    s.camps = { ...(s.camps || {}), [player]: at };
+    s.tiles = [...s.tiles]; // tiles are shared between states
+    s.tiles[at] = "camp";
+  },
+  // A creature moved into a camp: own camp -> back to the Reserve; opposing
+  // camp -> into the own Exile, and the camp owner exiles as many Reserve Dice
+  // as its Power Level (as far as possible).
+  afterAction(s) {
+    if (!s.camps) return;
+    for (const ev of s.events) {
+      if (ev.t !== "move") continue;
+      const at = ev.path[ev.path.length - 1];
+      const d = s.board[at];
+      if (!d) continue;
+      for (const owner of [1, 2]) {
+        if (s.camps[owner] !== at) continue;
+        if (d.owner === owner) removeDie(s, at, "reserve", "camp");
+        else {
+          removeDie(s, at, "exile", "camp");
+          exileFromReserve(s, owner, Math.min(d.level, s.players[owner].reserve));
+        }
+      }
+    }
+  },
+};
+
+const LOCATIONS = { craters, oracle, ruins, camp };
 
 export const IMPLEMENTED_LOCATIONS = Object.keys(LOCATIONS);
 

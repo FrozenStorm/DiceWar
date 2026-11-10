@@ -2,7 +2,7 @@
 
 Source: `img/RoM/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
-**Status: validated.** All open questions were answered by the rules owner.
+**Status: validated, implemented.** All open questions were answered by the rules owner.
 
 ## Overview
 
@@ -46,6 +46,7 @@ Card note: the attack may be performed even if the opponent has fewer than 2 or 
 Move or attack by leaping over one or more of your creatures of Power Level 1, 2 and 6 that are adjacent to each other. Put the leaped-over creatures back into your Reserve.
 - Picture: the Torch Bearer leaps over a row of Golden Fruit (1), Sprout (2) and Mali (6). It lands diagonally above the Mali, to the right of a Golden Fruit. Leaped-over creatures are shown grey (removed), the Golden Fruit above the Mali stays black.
 - Confirmed (RoM3): the Torch Bearer can follow the chain around corners, and all leaped-over creatures go back into the Reserve, including a Mali (6).
+- **[Assumption RoM6]** The Torch Bearer lands on a field orthogonally adjacent to the last leaped-over creature (free field = Movement, defeatable opposing creature = Attack).
 
 ## 4 · Protectress of the Woods
 
@@ -90,3 +91,4 @@ Rules:
 - If you move a creature into your opponent's camp, put this creature instantly into your Exile. Your opponent has to put creature dice into their Exile equal to the Power Level of the creature you exiled.
 - Confirmed (RoM4): the opponent takes these dice from their Reserve.
 - Confirmed (RoM5): when this location is used, both players always have a camp, whatever dice sets they play.
+- Engine: only *moving* into a camp (Movement, Attack or any ability that moves the creature) triggers it; placing a die there does not. If the opponent has fewer Reserve Dice, they exile as many as they have.

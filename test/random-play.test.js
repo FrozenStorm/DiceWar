@@ -23,11 +23,13 @@ function rng(seed) {
   };
 }
 
-function randomSetup(rand) {
-  const combos = setupLevelCombinations();
+function randomSetup(rand, camp = false) {
+  const combos = setupLevelCombinations().filter((c) => !camp || c.length < 7);
   const levels = combos[Math.floor(rand() * combos.length)];
   const cols = [0, 1, 2, 3, 4, 5, 6].sort(() => rand() - 0.5);
-  return { type: "setup", placements: levels.map((level, i) => ({ col: cols[i], level })) };
+  const action = { type: "setup", placements: levels.map((level, i) => ({ col: cols[i], level })) };
+  if (camp) action.camp = cols[levels.length];
+  return action;
 }
 
 const MATCHUPS = [
@@ -37,14 +39,18 @@ const MATCHUPS = [
   { name: "LoD vs LoD", set1: "LoD", set2: "LoD", locations: (g) => (g % 2 ? ["ruins"] : []) },
   { name: "LoD vs RoX", set1: "LoD", set2: "RoX", locations: (g) => [["ruins"], ["craters"], []][g % 3] },
   { name: "BoD vs LoD", set1: "BoD", set2: "LoD", locations: (g) => [["oracle"], ["ruins"], []][g % 3] },
+  { name: "RoM vs RoM", set1: "RoM", set2: "RoM", locations: (g) => (g % 2 ? ["camp"] : []) },
+  { name: "RoM vs LoD", set1: "RoM", set2: "LoD", locations: (g) => [["camp"], ["ruins"], []][g % 3] },
+  { name: "RoX vs RoM", set1: "RoX", set2: "RoM", locations: (g) => [["camp"], ["craters"], ["oracle"]][g % 3] },
+  { name: "BoD vs RoM", set1: "BoD", set2: "RoM", locations: (g) => [["camp"], ["oracle"], []][g % 3] },
 ];
 
 for (const m of MATCHUPS) test(`random ${m.name} games always reach a valid end without errors`, () => {
   for (let g = 0; g < 40; g++) {
     const rand = rng(g + 1);
     let s = createGame({ set1: m.set1, set2: m.set2, startingPlayer: (g % 2) + 1, locations: m.locations(g), maxTurns: 300 });
-    s = applyAction(s, randomSetup(rand));
-    s = applyAction(s, randomSetup(rand));
+    s = applyAction(s, randomSetup(rand, s.locations.includes("camp")));
+    s = applyAction(s, randomSetup(rand, s.locations.includes("camp")));
     let steps = 0;
     while (s.phase !== "over") {
       assertPathsUnambiguous(legalActions(s));

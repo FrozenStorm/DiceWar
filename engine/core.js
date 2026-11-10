@@ -74,6 +74,7 @@ export function clone(s) {
     players: { 1: { ...s.players[1] }, 2: { ...s.players[2] } },
     pending: s.pending.map((p) => ({ ...p, data: { ...p.data } })),
     turn: { ...s.turn, flags: { ...s.turn.flags } },
+    camps: s.camps ? { ...s.camps } : undefined,
     endOfWar: s.endOfWar ? { ...s.endOfWar } : null,
     result: s.result ? { ...s.result } : null,
     events: [], // events of the next applyAction only
@@ -150,6 +151,7 @@ export function removeDie(s, at, dest, cause = "ability") {
 /** Move a Reserve Die of `player` into their Exile (spell costs). */
 export function exileFromReserve(s, player, n = 1) {
   const p = s.players[player];
+  if (n <= 0) return;
   if (p.reserve < n) throw new Error("exileFromReserve: not enough dice");
   p.reserve -= n;
   p.exile += n;
@@ -164,10 +166,13 @@ export function defeat(s, at, byPlayer, { vp = "level", fieldBonus: withBonus = 
   const die = s.board[at];
   const owner = die.owner;
   const set = setOf(s, owner);
+  // A set may change what a defeat of its creature gives (e.g. RoM Fake Gold:
+  // no VP, no Field Bonus, back to the Reserve).
+  const rules = (set.defeatRules && set.defeatRules(s, at, die)) || {};
   let points = vp === "level" ? die.level : vp;
-  if (set.defeatVP) points = set.defeatVP(s, at, die, points);
   if (withBonus && vp === "level") points += fieldBonus(byPlayer, at);
-  removeDie(s, at, "exile", cause);
+  if (rules.noVP) points = 0;
+  removeDie(s, at, rules.dest || "exile", cause);
   if (points) gainVP(s, byPlayer, points);
   if (set.onDefeated) set.onDefeated(s, at, die, byPlayer, cause);
   return die;
@@ -298,6 +303,7 @@ export function relocate(s, path) {
 export function doMove(s, from, to) {
   const die = relocate(s, [from, to]);
   s.turn.movedDieId = die.id;
+  s.turn.lastStep = { from, to, attack: false };
   finishMoveOrAttack(s, to);
 }
 
@@ -306,6 +312,7 @@ export function doAttack(s, from, to, path = [from, to]) {
   emit(s, { t: "move", path }); // the attacker moves in, then the defeated die leaves
   const die = s.board[from];
   s.board[from] = null;
+  s.turn.lastStep = { from, to, attack: true };
   resolveAttack(s, die, to);
   finishMoveOrAttack(s, to);
 }
@@ -396,7 +403,7 @@ export function isLegal(s, action) {
  * @param {{col:number, level:number, dir?:number}[]} placements
  * @returns {string|null} error message, or null if valid
  */
-export function validateSetup(s, player, placements) {
+export function validateSetup(s, player, placements, extra = {}) {
   if (s.phase !== "setup") return "Not in the setup phase.";
   if (player !== s.current) return "It is not this player's setup.";
   if (!placements.length) return "Place at least one die.";
@@ -411,6 +418,11 @@ export function validateSetup(s, player, placements) {
   }
   if (placements.length > s.players[player].reserve) return "Not enough dice in the Reserve.";
   if (sum !== SETUP_POWER) return `The combined Power Level must be exactly ${SETUP_POWER} (currently ${sum}).`;
+  for (const id of s.locations) {
+    const loc = getLocation(id);
+    const err = loc.validateSetup && loc.validateSetup(s, player, placements, extra);
+    if (err) return err;
+  }
   return null;
 }
 
@@ -428,11 +440,15 @@ export function setupLevelCombinations() {
 
 function applySetup(s, action) {
   const player = s.current;
-  const err = validateSetup(s, player, action.placements);
+  const err = validateSetup(s, player, action.placements, action);
   if (err) throw new Error(err);
   const row = supplyRow(player);
   for (const { col, level, dir } of action.placements) {
     placeDie(s, sq(row, col), player, level, { dir: dir ?? defaultDir(player), cause: "setup" });
+  }
+  for (const id of s.locations) {
+    const loc = getLocation(id);
+    if (loc.onSetup) loc.onSetup(s, player, action);
   }
   const other = opponent(player);
   if (player === s.startingPlayer) {

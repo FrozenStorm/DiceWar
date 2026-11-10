@@ -259,6 +259,18 @@ function bookAbility(s, me) {
 
 /** Choose a starting lineup (Power Level 10 in the Supply Zone). */
 export function chooseSetup(s, opts = {}) {
+  const action = chooseLineup(s, opts);
+  if (s.locations.includes("camp")) {
+    // The Camp: on a free field of the Supply Zone, preferably at the side.
+    const random = opts.random || Math.random;
+    const used = new Set(action.placements.map((p) => p.col));
+    const free = [0, 6, 1, 5, 2, 4, 3].filter((c) => !used.has(c));
+    action.camp = free[Math.min(free.length - 1, Math.floor(random() * 2))];
+  }
+  return action;
+}
+
+function chooseLineup(s, opts) {
   const random = opts.random || Math.random;
   const book = getSet(s.players[s.current].set).aiBook;
   if (book && book.setups && opts.level !== "easy") {

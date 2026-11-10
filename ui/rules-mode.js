@@ -18,8 +18,8 @@ import { SIZE, sq, rowOf, colOf, supplyRow } from "../engine/board.js";
 import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animate.js";
 
 // UI dice set id -> engine set id
-const ENGINE_SET = { numbers: "plain", RoX: "RoX", BoD: "BoD", LoD: "LoD" };
-const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD", ruins: "LoD" };
+const ENGINE_SET = { numbers: "plain", RoX: "RoX", BoD: "BoD", LoD: "LoD", RoM: "RoM" };
+const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD", ruins: "LoD", camp: "RoM" };
 
 const rm = {
   active: false,
@@ -270,8 +270,13 @@ function onSetupClick(r, c) {
     rm.message = "Place your starting lineup in your Supply Zone (your back row).";
     return render();
   }
-  const level = ((rm.setupDraft[c] || 0) + 1) % 7; // empty -> 1 .. 6 -> empty
-  if (level) rm.setupDraft[c] = level;
+  // Each click cycles the field: empty -> 1 .. 6 -> (camp, with The Camp) -> empty.
+  const cycle = [1, 2, 3, 4, 5, 6];
+  if (rm.game.locations.includes("camp")) cycle.push("camp");
+  const cur = rm.setupDraft[c];
+  const next = cur === undefined ? cycle[0] : cycle[cycle.indexOf(cur) + 1];
+  if (next === "camp") for (const k of Object.keys(rm.setupDraft)) if (rm.setupDraft[k] === "camp") delete rm.setupDraft[k];
+  if (next !== undefined) rm.setupDraft[c] = next;
   else delete rm.setupDraft[c];
   rm.message = "";
   render();
@@ -279,11 +284,14 @@ function onSetupClick(r, c) {
 
 function confirmSetup() {
   const player = rm.game.current;
-  const placements = Object.entries(rm.setupDraft).map(([col, level]) => ({ col: Number(col), level }));
-  const err = validateSetup(rm.game, player, placements);
+  const entries = Object.entries(rm.setupDraft);
+  const placements = entries.filter(([, v]) => v !== "camp").map(([col, level]) => ({ col: Number(col), level }));
+  const campEntry = entries.find(([, v]) => v === "camp");
+  const extra = campEntry ? { camp: Number(campEntry[0]) } : {};
+  const err = validateSetup(rm.game, player, placements, extra);
   if (err) { rm.message = err; return render(); }
   rm.setupDraft = {};
-  perform({ type: "setup", placements });
+  perform({ type: "setup", placements, ...extra });
 }
 
 // ---------------------------------------------------------------------------
@@ -307,7 +315,8 @@ function project() {
   if (g.phase === "setup") {
     const row = supplyRow(g.current);
     for (const [col, level] of Object.entries(rm.setupDraft)) {
-      state.board[row][Number(col)] = { ...state.board[row][Number(col)], owner: g.current, value: level };
+      const cell = state.board[row][Number(col)];
+      state.board[row][Number(col)] = level === "camp" ? { ...cell, type: "RoM" } : { ...cell, owner: g.current, value: level };
     }
   }
   for (const p of [1, 2]) {
@@ -395,9 +404,13 @@ function renderPanel() {
   const buttons = [];
 
   if (g.phase === "setup") {
-    const sum = Object.values(rm.setupDraft).reduce((a, b) => a + b, 0);
+    const values = Object.values(rm.setupDraft);
+    const sum = values.filter((v) => v !== "camp").reduce((a, b) => a + b, 0);
+    const needsCamp = g.locations.includes("camp");
+    const hasCamp = values.includes("camp");
     lines.push(`Click fields in your back row to place dice (each click raises the level). Total Power Level: ${sum} / ${SETUP_POWER}.`);
-    if (localCanAct()) buttons.push(["Confirm lineup", confirmSetup, sum === SETUP_POWER]);
+    if (needsCamp) lines.push(`Camp: click a field past level 6 to place your camp there (${hasCamp ? "placed" : "not placed yet"}).`);
+    if (localCanAct()) buttons.push(["Confirm lineup", confirmSetup, sum === SETUP_POWER && (!needsCamp || hasCamp)]);
     else if (isAiTurn()) lines.push("The AI is setting up…");
   } else if (g.phase === "war") {
     if (g.endOfWar) {
