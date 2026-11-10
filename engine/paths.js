@@ -8,11 +8,14 @@ import { getSet } from "./sets/index.js";
 const setOfId = (id) => getSet(id.split(".")[0]);
 
 export const FACE_LABELS = ["Face ↑", "Face →", "Face ↓", "Face ←"];
+export const TURN_LABELS = ["Turn ↑", "Turn →", "Turn ↓", "Turn ←"];
 
 export function actionPath(a) {
-  const base = basePath(a);
-  // Alignment chosen with the action (KoS) is the last click.
-  return a.face !== undefined ? [...base, FACE_LABELS[a.face]] : base;
+  let path = basePath(a);
+  // Turning before the action (KoS) comes right after clicking the die.
+  if (a.pre !== undefined) path = [path[0], TURN_LABELS[a.pre], ...path.slice(1)];
+  // Alignment chosen after the action (KoS) is the last click.
+  return a.face !== undefined ? [...path, FACE_LABELS[a.face]] : path;
 }
 
 function basePath(a) {

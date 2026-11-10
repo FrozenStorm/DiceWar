@@ -12,11 +12,44 @@ const face = (s, f, dir) => { s.board[at(f)].dir = dir; return s; };
 
 test("KoS alignment: Shield, Spear and Stag choose their alignment with every Movement", () => {
   const s = position(["......f", ".......", ".......", "...3...", ".......", ".......", "......."], KOS);
-  const moves = legalActions(s).filter((a) => a.type === "move" && a.from === at("d4") && a.to === at("d5"));
+  const moves = legalActions(s).filter((a) => a.type === "move" && a.from === at("d4") && a.to === at("d5") && a.pre === undefined);
   assert.deepEqual(moves.map((a) => a.face).sort(), [0, 1, 2, 3]);
   assert.deepEqual(actionPath(moves[1]), [at("d4"), at("d5"), "Face →"]);
   const t = applyAction(s, moves.find((a) => a.face === RIGHT));
   assert.equal(t.board[at("d5")].dir, RIGHT);
+});
+
+test("KoS alignment: the Loyal Shield turns before OR after, the Silver Spear before and/or after", () => {
+  // Loyal Shield (2) on d4, facing up.
+  let s = position(["......f", ".......", ".......", "...2...", ".......", ".......", "......."], KOS);
+  let moves = legalActions(s).filter((a) => a.from === at("d4") && a.to === at("d5"));
+  assert.equal(moves.filter((a) => a.pre === undefined).length, 4, "no turn before: any alignment after");
+  const pre = moves.filter((a) => a.pre !== undefined);
+  assert.deepEqual(pre.map((a) => a.pre).sort(), [1, 2, 3], "turned before: no turn after");
+  assert.ok(pre.every((a) => a.face === undefined));
+  assert.deepEqual(actionPath(pre[0]), [at("d4"), "Turn →", at("d5")]);
+  assert.equal(applyAction(s, pre[0]).board[at("d5")].dir, RIGHT);
+  // Silver Spear (3): turned before and afterwards again.
+  s = position(["......f", ".......", ".......", "...3...", ".......", ".......", "......."], KOS);
+  moves = legalActions(s).filter((a) => a.from === at("d4") && a.to === at("d5"));
+  assert.equal(moves.length, 4 + 3 * 4);
+  const both = moves.find((a) => a.pre === RIGHT && a.face === LEFT);
+  assert.deepEqual(actionPath(both), [at("d4"), "Turn →", at("d5"), "Face ←"]);
+  assert.equal(applyAction(s, both).board[at("d5")].dir, LEFT);
+});
+
+test("KoS.shield.shield_strike: sideways only after turning, then no turn afterwards", () => {
+  // Shield d3 facing up, opposing 4 on e3 (to the right).
+  const s = position(["......f", ".......", ".......", ".......", "...2d..", ".......", "......."], KOS);
+  const strikes = byAbility(s, "KoS.shield.shield_strike").filter((a) => a.target === at("e3"));
+  assert.equal(strikes.length, 1);
+  assert.equal(strikes[0].pre, RIGHT);
+  assert.equal(strikes[0].face, undefined);
+  assert.deepEqual(actionPath(strikes[0]), [at("d3"), "Turn →", "Shield Strike", at("e3")]);
+  const t = applyAction(s, strikes[0]);
+  assert.equal(t.board[at("e3")].level, 2);
+  assert.equal(t.board[at("e3")].dir, RIGHT);
+  assert.equal(t.board[at("f3")].level, 4);
 });
 
 test("KoS.sword.agile and relentless: diagonal moves, then another First Sword may act", () => {

@@ -111,7 +111,7 @@ function relentlessOptions(s, pending) {
 function strikeActions(s, from) {
   const shield = s.board[from];
   const out = [];
-  for (let d = 0; d < 4; d++) { // the Shield may orient before the action
+  for (let d = 0; d < 4; d++) { // turned before the action (pre) or already facing d
     const target = step(from, d);
     if (target < 0) continue;
     const t = s.board[target];
@@ -120,7 +120,9 @@ function strikeActions(s, from) {
     if (isKoS(s, t) && t.level === SHIELD && step(target, t.dir) === from) continue;
     const dest = step(target, d);
     if (dest >= 0 && s.board[dest] && s.board[dest].owner === t.owner) continue; // not onto its own creatures
-    out.push({ type: "move", ability: A.strike, from, target, dir: d, to: target });
+    const strike = { type: "move", ability: A.strike, from, target, dir: d, to: target };
+    // Facing another way: the Shield turns first and then may not turn afterwards.
+    out.push(d === shield.dir ? strike : { ...strike, pre: d });
   }
   return out;
 }
@@ -146,7 +148,7 @@ function thrustActions(s, from) {
     const over = step(from, d);
     if (over < 0 || !isOwn(s, over, spear.owner, SHIELD)) continue;
     const to = step(over, d);
-    if (to >= 0 && canDefeatWith(s, spear, from, to)) out.push({ type: "attack", ability: A.thrust, from, over, to, face: d });
+    if (to >= 0 && canDefeatWith(s, spear, from, to)) out.push({ type: "attack", ability: A.thrust, from, over, to });
   }
   return out;
 }
@@ -280,15 +282,28 @@ function reinforcementOptions(s, pending) {
 
 // --- Orientation ---------------------------------------------------------------------------
 
-/** Every Movement and Attack of a Loyal Shield, Silver Spear or Burning Stag
- *  comes with the alignment the creature has afterwards. */
+/** Alignment with every Movement and Attack (a.pre: turned before the action,
+ *  a.face: alignment after it):
+ *  - Loyal Shield (Mindfulness): before OR after the action, not both.
+ *  - Silver Spear (Impatience, Daniel 2026-11-11): before and/or after.
+ *  - Burning Stag (Cautiousness): after the action.
+ *  Turning before a Movement or Attack that does not depend on the alignment
+ *  gives the same result as turning afterwards; these variants are marked
+ *  `redundant` so the AI skips them (the UI offers them when a die is clicked). */
 function decorate(s, player, actions) {
   const out = [];
   for (const a of actions) {
     if ((a.type === "move" || a.type === "attack") && a.face === undefined) {
       const d = s.board[actionOrigin(a)];
       if (d && d.owner === player && ORIENTING.includes(d.level)) {
-        for (let face = 0; face < 4; face++) out.push({ ...a, face });
+        if (d.level === SHIELD && a.pre !== undefined) { out.push(a); continue; } // Shield Strike after turning
+        for (const face of FACES) out.push({ ...a, face });
+        if (d.level === STAG) continue;
+        for (const pre of FACES) {
+          if (pre === d.dir) continue;
+          if (d.level === SHIELD) out.push({ ...a, pre, redundant: true });
+          else for (const face of FACES) out.push({ ...a, pre, face, redundant: true });
+        }
         continue;
       }
     }
@@ -471,7 +486,7 @@ export const KoS = {
       case A.agile: return [a.from, a.to];
       case A.back: return [a.from, a.to];
       case A.support: return [a.at, "Support", a.target];
-      case A.strike: return [a.from, a.target, "Shield Strike"];
+      case A.strike: return [a.from, "Shield Strike", a.target];
       case A.thrust: return [a.from, a.to];
       case A.leadership: return a.finish ? ["Finish Leadership"] : a.at !== undefined ? [a.at, "Leadership"] : ["Skip"];
       case A.supply: return a.place !== undefined ? [a.place] : [a.at, "Supply"];

@@ -533,10 +533,13 @@ function applyMain(s, action) {
 
 /** Resolve a standard action or ability (also used for additional actions). */
 export function performAction(s, action) {
-  // Alignment (KoS): the die faces `face` (orientation is part of the action).
-  if (action.face !== undefined) {
+  // Alignment (KoS): turned before the action (`pre`) and/or the alignment
+  // afterwards (`face`). Nothing during the action reads the alignment of the
+  // acting die, so both are applied right away (face wins).
+  const turned = action.face !== undefined ? action.face : action.pre;
+  if (turned !== undefined) {
     const d = s.board[actionOrigin(action)];
-    if (d) d.dir = action.face;
+    if (d) d.dir = turned;
   }
   if (action.ability) {
     setOf(s, s.current).applyAbility(s, action);

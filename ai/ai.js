@@ -115,8 +115,12 @@ function quickScore(s, a) {
   }
 }
 
+/** Variants with the same result as another action (e.g. KoS: turning before
+ *  instead of after a Movement) are left out of the search. */
+const isRedundant = (a) => !!(a.redundant || (a.sub && a.sub.redundant));
+
 function orderedActions(s, width) {
-  const acts = legalActions(s).filter((a) => a.type !== "declareEndOfWar");
+  const acts = legalActions(s).filter((a) => a.type !== "declareEndOfWar" && !isRedundant(a));
   acts.sort((x, y) => quickScore(s, y) - quickScore(s, x));
   if (width && acts.length > width) {
     // Keep all captures plus the best-ranked rest.
@@ -147,6 +151,7 @@ function greedyChoice(s, W) {
   const who = actor(s);
   let best = null, bestV = -Infinity;
   for (const a of legalActions(s)) {
+    if (isRedundant(a)) continue;
     const v = evaluate(applyAction(s, a), who, W);
     if (v > bestV) { bestV = v; best = a; }
   }
