@@ -11,14 +11,21 @@ import {
 } from "../engine/core.js";
 import { opponent, fieldBonus, rowOf, colOf } from "../engine/board.js";
 import { getLocation } from "../engine/locations/index.js";
+import { getSet } from "../engine/sets/index.js";
 
 export const LEVELS = {
-  easy: { maxDepth: 1, timeMs: 400, noise: 120, width: 12 },
-  medium: { maxDepth: 2, timeMs: 1500, noise: 15, width: 24 },
-  hard: { maxDepth: 3, timeMs: 4000, noise: 0, width: 30 },
+  easy: { maxDepth: 2, timeMs: 800, noise: 30, width: 16, book: false },
+  medium: { maxDepth: 4, timeMs: 2500, noise: 0, width: 20, book: false },
+  hard: { maxDepth: 8, timeMs: 5000, noise: 0, width: 24, book: false },
 };
 
 const WIN = 1_000_000;
+
+/** Evaluation weights in "VP x 100" units. */
+export const DEFAULT_WEIGHTS = {
+  tp: 12, reserve: 3, advance: 6, fieldBonus: 10, nearPrey: 12,
+  craterOne: 35, craterBoth: 100, threatToMove: 70, threatOther: 20,
+};
 const LEVEL_VALUE = [0, 20, 30, 45, 55, 65, 80];
 
 // ---------------------------------------------------------------------------
@@ -37,37 +44,47 @@ function bestCapture(s, p) {
   return best;
 }
 
-function sideValue(s, p) {
+function sideValue(s, p, W) {
   const pl = s.players[p];
-  let v = 100 * totalVP(s, p) + 12 * pl.tp + 3 * pl.reserve;
+  let v = 100 * totalVP(s, p) + W.tp * pl.tp + W.reserve * pl.reserve;
+  const enemies = diceOf(s, opponent(p));
   for (const at of diceOf(s, p)) {
     const d = s.board[at];
     v += LEVEL_VALUE[d.level];
-    v += 4 * fieldBonus(p, at); // pressure on the opposing half
     const c = colOf(at), r = rowOf(at);
-    v += 3 - Math.abs(3 - c) * 0.5 - Math.abs(3 - r) * 0.5; // central squares
-  }
-  for (const id of s.locations) {
-    const loc = getLocation(id);
-    if (id === "craters" && loc.squares.every((at) => s.board[at] && s.board[at].owner === p && s.board[at].level >= 2)) {
-      v += 60;
+    v += 3 - Math.abs(3 - c) * 0.5; // central columns
+    if (d.level >= 2) {
+      // Pressure: advance into the opposing half, where defeats give the Field Bonus.
+      const advanced = p === 1 ? 6 - r : r;
+      v += W.advance * advanced + W.fieldBonus * fieldBonus(p, at);
+      // Attack potential: weaker enemies close by.
+      for (const e of enemies) {
+        const dist = Math.abs(rowOf(e) - r) + Math.abs(colOf(e) - c);
+        if (dist <= 2 && s.board[e].level < d.level) v += W.nearPrey;
+      }
     }
+  }
+  if (s.locations.includes("craters")) {
+    // Craters give 1 VP every turn while both are held with level 2+.
+    const held = getLocation("craters").squares
+      .filter((at) => s.board[at] && s.board[at].owner === p && s.board[at].level >= 2).length;
+    v += W.craterOne * held + (held === 2 ? W.craterBoth : 0);
   }
   return v;
 }
 
 /** Static evaluation of state `s` from the point of view of `me`. */
-export function evaluate(s, me) {
+export function evaluate(s, me, W = DEFAULT_WEIGHTS) {
   if (s.phase === "over") {
     const w = s.result.winner;
     return w === 0 ? 0 : w === me ? WIN : -WIN;
   }
   const opp = opponent(me);
-  let v = sideValue(s, me) - sideValue(s, opp);
+  let v = sideValue(s, me, W) - sideValue(s, opp, W);
   // Threats: the side to move can cash in its best capture, the other side less likely.
   const toMove = s.pending.length ? actor(s) : s.current;
   const mine = bestCapture(s, me), theirs = bestCapture(s, opp);
-  v += toMove === me ? 70 * mine - 20 * theirs : 20 * mine - 70 * theirs;
+  v += toMove === me ? W.threatToMove * mine - W.threatOther * theirs : W.threatOther * mine - W.threatToMove * theirs;
   return v;
 }
 
@@ -108,9 +125,9 @@ class Timeout extends Error {}
 
 function minimax(s, depth, alpha, beta, me, ctx) {
   if (++ctx.nodes % 256 === 0 && Date.now() > ctx.deadline) throw new Timeout();
-  if (s.phase === "over" || depth === 0) return evaluate(s, me);
+  if (s.phase === "over" || depth === 0) return evaluate(s, me, ctx.W);
   const acts = orderedActions(s, ctx.width);
-  if (!acts.length) return evaluate(s, me);
+  if (!acts.length) return evaluate(s, me, ctx.W);
   const maximizing = actor(s) === me;
   let best = maximizing ? -Infinity : Infinity;
   for (const a of acts) {
@@ -139,14 +156,21 @@ export function chooseAction(s, opts = {}) {
   const cfg = { ...LEVELS[opts.level || "medium"], ...(opts.overrides || {}) };
   const random = opts.random || Math.random;
   const me = actor(s);
-  const ctx = { nodes: 0, deadline: Date.now() + cfg.timeMs, width: cfg.width };
-  const root = orderedActions(s, 0);
+  const W = { ...DEFAULT_WEIGHTS, ...(cfg.weights || {}) };
+  const ctx = { nodes: 0, deadline: Date.now() + cfg.timeMs, width: cfg.width, W };
+  let root = orderedActions(s, 0);
+  if (cfg.book) {
+    const preferred = bookAbility(s, me);
+    const inBook = preferred && root.filter((a) => a.ability === preferred);
+    // Follow the book, but never miss a capture.
+    if (inBook && inBook.length) root = [...inBook, ...root.filter((a) => quickScore(s, a) >= 900)];
+  }
   if (root.length === 1) return { action: root[0], score: 0, depth: 0, nodes: 0 };
 
   // Evaluate every root action once (depth 1 = finish my turn) for ordering and as fallback.
   let scored = root.map((a) => {
     const child = applyAction(s, a);
-    return { a, child, v: evaluate(child, me) + (cfg.noise ? (random() - 0.5) * 2 * cfg.noise : 0) };
+    return { a, child, v: evaluate(child, me, W) + (cfg.noise ? (random() - 0.5) * 2 * cfg.noise : 0) };
   });
   scored.sort((x, y) => y.v - x.v);
   let best = scored[0];
@@ -182,9 +206,21 @@ export function chooseAction(s, opts = {}) {
 
 const PREFERRED_LINEUPS = [[6, 4], [5, 3, 2], [6, 2, 2], [4, 3, 2, 1], [5, 4, 1], [3, 3, 2, 2]];
 
+/** Opening book of a dice set: ability to play in this own turn, if any. */
+function bookAbility(s, me) {
+  const book = getSet(s.players[me].set).aiBook;
+  if (!book || !book.opening || s.pending.length) return null;
+  const ownTurn = Math.ceil((s.turnNumber + (s.startingPlayer === me ? 0 : -1)) / 2);
+  return book.opening[ownTurn - 1] || null;
+}
+
 /** Choose a starting lineup (Power Level 10 in the Supply Zone). */
 export function chooseSetup(s, opts = {}) {
   const random = opts.random || Math.random;
+  const book = getSet(s.players[s.current].set).aiBook;
+  if (book && book.setups && opts.level !== "easy") {
+    return { type: "setup", placements: book.setups[Math.floor(random() * book.setups.length)] };
+  }
   const pool = opts.level === "easy" ? setupLevelCombinations().filter((c) => c.length <= 5) : PREFERRED_LINEUPS;
   const levels = [...pool[Math.floor(random() * pool.length)]];
   // Strongest creatures in the centre, spread out.

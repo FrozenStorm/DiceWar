@@ -63,7 +63,20 @@ function freshTurnInfo() {
   return { main: null, movedDieId: null, onlyMovement: true, declared: false, flags: {} };
 }
 
-export const clone = (s) => structuredClone(s);
+/** Fast structural copy of a game state (much faster than structuredClone,
+ *  which matters for the AI search). Tiles and locations never change during
+ *  a game and are shared; actions stored in the state are never mutated. */
+export function clone(s) {
+  return {
+    ...s,
+    board: s.board.map((d) => (d ? { ...d } : null)),
+    players: { 1: { ...s.players[1] }, 2: { ...s.players[2] } },
+    pending: s.pending.map((p) => ({ ...p, data: { ...p.data } })),
+    turn: { ...s.turn, flags: { ...s.turn.flags } },
+    endOfWar: s.endOfWar ? { ...s.endOfWar } : null,
+    result: s.result ? { ...s.result } : null,
+  };
+}
 
 export const setOf = (s, player) => getSet(s.players[player].set);
 
