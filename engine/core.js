@@ -218,7 +218,11 @@ export function canDefeatWith(s, att, from, to) {
   const def = s.board[to];
   if (!att || !def || att.owner === def.owner) return false;
   const attSet = setOf(s, att.owner);
-  const beats = attSet.beats ? attSet.beats(s, from, att, def) : undefined;
+  let beats = attSet.beats ? attSet.beats(s, from, att, def) : undefined;
+  for (const id of s.locations) {
+    const loc = getLocation(id);
+    if (!beats && loc.beats && loc.beats(s, from, att, def)) beats = true; // e.g. KoS Knoll
+  }
   if (!(beats ?? defaultBeats(att.level, def.level))) return false;
   const defSet = setOf(s, def.owner);
   if (defSet.isImmuneToAttack && defSet.isImmuneToAttack(s, to, from)) return false;

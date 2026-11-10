@@ -136,3 +136,15 @@ test("applyAction does not mutate its input", () => {
   applyAction(s, { type: "move", from: at("d4"), to: at("d5") });
   assert.equal(JSON.stringify(s), before);
 });
+
+test("KoS Knoll: from a knoll a creature defeats opposing creatures of the same level", async () => {
+  const { position, at } = await import("./helpers.js");
+  // c5 is a knoll (row 3, column 3 from the top).
+  let s = position(["......f", ".......", "..3....", "..c....", ".......", ".......", "......."], { locations: ["knoll"] });
+  assert.ok(isLegal(s, { type: "attack", from: at("c5"), to: at("c4") }));
+  const t = applyAction(s, { type: "attack", from: at("c5"), to: at("c4") });
+  assert.equal(t.players[1].vp, 3); // level 3, no Field Bonus in the middle row
+  // Not from a normal field.
+  s = position(["......f", ".......", "...3...", "...c...", ".......", ".......", "......."], { locations: ["knoll"] });
+  assert.ok(!isLegal(s, { type: "attack", from: at("d5"), to: at("d4") }));
+});

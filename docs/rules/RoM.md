@@ -91,5 +91,6 @@ Rules:
 - If you move a creature into your own camp, return this creature instantly to your Reserve.
 - If you move a creature into your opponent's camp, put this creature instantly into your Exile. Your opponent has to put creature dice into their Exile equal to the Power Level of the creature you exiled.
 - Confirmed (RoM4): the opponent takes these dice from their Reserve.
+- Note: The Camp is the RoM location card only (the KoS card is The Knoll).
 - Confirmed (RoM5): when this location is used, both players always have a camp, whatever dice sets they play.
 - Engine: only *moving* into a camp (Movement, Attack or any ability that moves the creature) triggers it; placing a die there does not. If the opponent has fewer Reserve Dice, they exile as many as they have.

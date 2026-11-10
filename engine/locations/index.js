@@ -106,7 +106,18 @@ const camp = {
   },
 };
 
-const LOCATIONS = { craters, oracle, ruins, camp };
+/** KoS: The Knoll. Rules: docs/rules/KoS.md, "Location: The Knoll". */
+const knoll = {
+  id: "knoll",
+  name: "The Knoll",
+  squares: [sq(2, 2), sq(2, 4), sq(4, 2), sq(4, 4)],
+  // From a knoll a creature also defeats opposing creatures of the same Power Level.
+  beats(s, from, att, def) {
+    return this.squares.includes(from) && att.level === def.level ? true : undefined;
+  },
+};
+
+const LOCATIONS = { craters, oracle, ruins, camp, knoll };
 
 export const IMPLEMENTED_LOCATIONS = Object.keys(LOCATIONS);
 
