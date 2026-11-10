@@ -352,7 +352,9 @@
 
     #rules-options label {
       display: flex;
+      flex-direction: row;
       align-items: center;
+      justify-content: center;
       gap: 6px;
     }
 
@@ -622,6 +624,7 @@
           <label>
             Game Mode
             <select id="game-mode-select">
+              <option value="ai">Single player vs AI</option>
               <option value="solo">Solo</option>
               <option value="duel">Duel</option>
               <option value="online-host">Online – Host</option>
@@ -644,9 +647,20 @@
       </div>
 
       <div class="lobby-player-config" id="rules-options">
-        <label><input type="checkbox" id="enforce-rules" checked> Enforce rules (beta)</label>
+        <label id="enforce-rules-label"><input type="checkbox" id="enforce-rules" checked> Enforce rules (beta)</label>
+        <label id="ai-level-label">AI strength
+          <select id="ai-level">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
         <label><input type="checkbox" id="use-craters"> Location tiles: The Craters</label>
       </div>
+
+      <p id="ai-note" style="display: none; font-size: 0.8rem; color: var(--muted); max-width: 320px;">
+        The AI opponent is available for Rise of Xeladron and Numbers so far. You play Player 1 (bottom), the AI plays Player 2.
+      </p>
 
       <button class="btn primary" id="start-game-btn">Start Game</button>
     </div>
@@ -1545,7 +1559,7 @@
           opt.textContent = set.label;
           select.appendChild(opt);
         });
-        select.value = "LoD";
+        select.value = "RoX";
       });
     }
 
@@ -2243,6 +2257,18 @@
       const p2Set = p2Select ? p2Select.value : "numbers";
 
       if (window.RulesMode) RulesMode.stop();
+      if (gameMode === "ai") {
+        if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
+          alert("The AI opponent is available for Rise of Xeladron and Numbers so far.");
+          return;
+        }
+        originalStartNewGame(p1Set, p2Set, "ai");
+        document.getElementById("lobby-overlay").style.display = "none";
+        const locations = document.getElementById("use-craters").checked ? ["craters"] : [];
+        const level = document.getElementById("ai-level").value;
+        RulesMode.start(p1Set, p2Set, { locations, ai: { player: 2, level } });
+        return;
+      }
       if (gameMode === "online-host") {
         await startGameAsHost(p1Set, p2Set);
         startRulesModeIfChosen(p1Set, p2Set);
@@ -2276,6 +2302,9 @@
       const mode = document.getElementById("game-mode-select").value;
       const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && mode !== "online-join";
       document.getElementById("rules-options").style.display = available ? "flex" : "none";
+      document.getElementById("enforce-rules-label").style.display = mode === "ai" ? "none" : "flex";
+      document.getElementById("ai-level-label").style.display = mode === "ai" ? "flex" : "none";
+      document.getElementById("ai-note").style.display = mode === "ai" ? "block" : "none";
     }
 
     ["p1-dice-set", "p2-dice-set", "game-mode-select"].forEach((id) =>
