@@ -3,7 +3,7 @@
 import { adjacent, diagonal, surrounding, inOwnZone, SQUARES } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, defeat, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP,
+  pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP, canRaise,
 } from "../core.js";
 
 const PORTAL = 1, BEARER = 2, GUARDIAN = 3, EMISSARY = 4, ENCHANTRESS = 5, XELADRON = 6;
@@ -155,7 +155,9 @@ function balanceOptions(s, player) {
   if (s.players[player].reserve > 0) {
     for (let at = 0; at < SQUARES; at++) if (empty(s, at)) out.push({ type: "choice", kind: A.balance, place: at });
   }
-  for (const at of diceOf(s, player, PORTAL)) out.push({ type: "choice", kind: A.balance, upgrade: at });
+  for (const at of diceOf(s, player, PORTAL)) {
+    if (canRaise(s, at)) out.push({ type: "choice", kind: A.balance, upgrade: at });
+  }
   return out;
 }
 

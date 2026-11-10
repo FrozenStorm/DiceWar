@@ -1,8 +1,9 @@
 // Location tiles (optional variants). Each location lists the squares it
-// occupies and may hook into the start or end of a turn.
+// occupies and may hook into the start or end of a turn, and may forbid
+// raising the Power Level of a creature (blocksRaise).
 
 import { sq } from "../board.js";
-import { removeDie, gainVP } from "../core.js";
+import { removeDie, gainVP, gainTP, setLevel } from "../core.js";
 
 /** RoX: The Craters. Rules: docs/rules/RoX.md, "Location: The Craters". */
 const craters = {
@@ -26,7 +27,29 @@ const craters = {
   },
 };
 
-const LOCATIONS = { craters };
+/** BoD: The Oracle. Rules: docs/rules/BoD.md, "Location: The Oracle". */
+const oracle = {
+  id: "oracle",
+  name: "The Oracle",
+  squares: [sq(3, 3)],
+  onTurnStart(s, player) {
+    // 1 additional TP at the beginning of your turn while you own the Oracle.
+    const d = s.board[this.squares[0]];
+    if (d && d.owner === player) gainTP(s, player, 1);
+  },
+  onTurnEnd(s, player) {
+    // Your creature on the Oracle at the end of your turn rises or falls to 4.
+    const at = this.squares[0];
+    const d = s.board[at];
+    if (d && d.owner === player && d.level !== 4) setLevel(s, at, 4);
+  },
+  // Creatures on the Oracle cannot raise their Power Level.
+  blocksRaise(s, at) {
+    return at === this.squares[0];
+  },
+};
+
+const LOCATIONS = { craters, oracle };
 
 export const IMPLEMENTED_LOCATIONS = Object.keys(LOCATIONS);
 

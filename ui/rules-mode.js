@@ -16,8 +16,8 @@ import { getSet } from "../engine/sets/index.js";
 import { SIZE, sq, rowOf, colOf, supplyRow } from "../engine/board.js";
 
 // UI dice set id -> engine set id
-const ENGINE_SET = { numbers: "plain", RoX: "RoX" };
-const LOCATION_TILE_TYPE = { craters: "RoX" };
+const ENGINE_SET = { numbers: "plain", RoX: "RoX", BoD: "BoD" };
+const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD" };
 
 const rm = {
   active: false,

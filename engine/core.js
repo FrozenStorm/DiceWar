@@ -222,9 +222,19 @@ const canAttackFrom = (s, at) => {
   const set = setOf(s, s.board[at].owner);
   return set.canAttack ? set.canAttack(s, at, s.board[at]) : canMove(s, at);
 };
+/** May the Power Level of the die on `at` be raised? Locations can forbid it
+ *  (e.g. BoD Oracle). Applies to Upgrades and to abilities that raise levels. */
+export function canRaise(s, at) {
+  for (const id of s.locations) {
+    const loc = getLocation(id);
+    if (loc.blocksRaise && loc.blocksRaise(s, at)) return false;
+  }
+  return true;
+}
+
 const canUpgrade = (s, at) => {
   const d = s.board[at];
-  if (d.level >= MAX_LEVEL) return false;
+  if (d.level >= MAX_LEVEL || !canRaise(s, at)) return false;
   const set = setOf(s, d.owner);
   return set.canUpgrade ? set.canUpgrade(s, at, d) : true;
 };
@@ -294,16 +304,27 @@ export function legalActions(s) {
 /** Standard actions (and set abilities) of the current player. */
 export function mainActions(s) {
   const player = s.current;
-  const out = [];
-  for (const from of diceOf(s, player)) {
-    for (const to of standardMoves(s, from)) out.push({ type: "move", from, to });
-    for (const to of standardAttacks(s, from)) out.push({ type: "attack", from, to });
-    if (canUpgrade(s, from)) out.push({ type: "upgrade", at: from });
-  }
+  let out = [];
+  for (const from of diceOf(s, player)) out.push(...standardActionsOf(s, from));
   const set = setOf(s, player);
   if (set.extraActions) out.push(...set.extraActions(s, player));
+  // The opponent's creatures may restrict the choice (e.g. BoD Temptation).
+  const other = setOf(s, opponent(player));
+  if (other.constrainOpponent) out = other.constrainOpponent(s, player, out);
   return out;
 }
+
+/** Standard Movement, Attack and Upgrade actions of the die on `from`. */
+export function standardActionsOf(s, from, { upgrade = true } = {}) {
+  const out = [];
+  for (const to of standardMoves(s, from)) out.push({ type: "move", from, to });
+  for (const to of standardAttacks(s, from)) out.push({ type: "attack", from, to });
+  if (upgrade && canUpgrade(s, from)) out.push({ type: "upgrade", at: from });
+  return out;
+}
+
+/** Square an action starts from (the die that performs it). */
+export const actionOrigin = (a) => (a.from !== undefined ? a.from : a.at);
 
 export const actionKey = (a) => JSON.stringify(a);
 
@@ -402,6 +423,11 @@ export function applyAction(state, action) {
 function applyMain(s, action) {
   s.turn.main = action;
   if (action.type !== "move") s.turn.onlyMovement = false;
+  performAction(s, action);
+}
+
+/** Resolve a standard action or ability (also used for additional actions). */
+export function performAction(s, action) {
   if (action.ability) {
     setOf(s, s.current).applyAbility(s, action);
     return;

@@ -8,13 +8,14 @@ import { getSet } from "./sets/index.js";
 const setOfId = (id) => getSet(id.split(".")[0]);
 
 export function actionPath(a) {
+  if (a.ability) return setOfId(a.ability).actionPath(a);
   switch (a.type) {
     case "declareEndOfWar": return ["Declare End of War"];
     case "upgrade": return [a.at, "Upgrade"];
-    case "choice": return setOfId(a.kind).actionPath(a);
-    default:
-      if (a.ability) return setOfId(a.ability).actionPath(a);
-      return [a.from, a.to]; // move, attack
+    case "choice":
+      if (a.sub) return actionPath(a.sub); // additional action of a die
+      return setOfId(a.kind).actionPath(a);
+    default: return [a.from, a.to]; // move, attack
   }
 }
 

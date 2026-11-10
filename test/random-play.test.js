@@ -30,10 +30,16 @@ function randomSetup(rand) {
   return { type: "setup", placements: levels.map((level, i) => ({ col: cols[i], level })) };
 }
 
-test("random RoX games always reach a valid end without errors", () => {
+const MATCHUPS = [
+  { name: "RoX vs RoX", set1: "RoX", set2: "RoX", locations: (g) => (g % 2 ? ["craters"] : []) },
+  { name: "BoD vs BoD", set1: "BoD", set2: "BoD", locations: (g) => (g % 2 ? ["oracle"] : []) },
+  { name: "BoD vs RoX", set1: "BoD", set2: "RoX", locations: (g) => [["oracle"], ["craters"], []][g % 3] },
+];
+
+for (const m of MATCHUPS) test(`random ${m.name} games always reach a valid end without errors`, () => {
   for (let g = 0; g < 40; g++) {
     const rand = rng(g + 1);
-    let s = createGame({ set1: "RoX", set2: "RoX", startingPlayer: (g % 2) + 1, locations: g % 2 ? ["craters"] : [], maxTurns: 300 });
+    let s = createGame({ set1: m.set1, set2: m.set2, startingPlayer: (g % 2) + 1, locations: m.locations(g), maxTurns: 300 });
     s = applyAction(s, randomSetup(rand));
     s = applyAction(s, randomSetup(rand));
     let steps = 0;

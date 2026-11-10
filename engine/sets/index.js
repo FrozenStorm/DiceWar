@@ -17,10 +17,12 @@
 //   choiceOptions(s, pending)            -> legal answers to a queued decision
 //   resolveChoice(s, pending, action)
 //   virtualVP(s, player)
+//   constrainOpponent(s, player, actions) -> restrict the opponent's main actions
 //
 // Rule texts: docs/rules/<SET>.md. Ability IDs in the code match the docs.
 
 import { RoX } from "./rox.js";
+import { BoD } from "./bod.js";
 
 const plain = {
   id: "plain",
@@ -28,7 +30,7 @@ const plain = {
   creatures: { 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6" },
 };
 
-const SETS = { plain, RoX };
+const SETS = { plain, RoX, BoD };
 
 const defaults = {
   choiceOptions: () => [],

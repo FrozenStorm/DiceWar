@@ -655,11 +655,17 @@
             <option value="hard">Hard</option>
           </select>
         </label>
-        <label><input type="checkbox" id="use-craters"> Location tiles: The Craters</label>
+        <label>Location tile
+          <select id="use-location">
+            <option value="">None</option>
+            <option value="craters">The Craters (RoX)</option>
+            <option value="oracle">The Oracle (BoD)</option>
+          </select>
+        </label>
       </div>
 
       <p id="ai-note" style="display: none; font-size: 0.8rem; color: var(--muted); max-width: 320px;">
-        The AI opponent is available for Rise of Xeladron and Numbers so far. You play Player 1 (bottom), the AI plays Player 2.
+        The AI opponent is available for Rise of Xeladron, Bond of Demons and Numbers so far. You play Player 1 (bottom), the AI plays Player 2.
       </p>
 
       <button class="btn primary" id="start-game-btn">Start Game</button>
@@ -2259,12 +2265,12 @@
       if (window.RulesMode) RulesMode.stop();
       if (gameMode === "ai") {
         if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
-          alert("The AI opponent is available for Rise of Xeladron and Numbers so far.");
+          alert("The AI opponent is available for Rise of Xeladron, Bond of Demons and Numbers so far.");
           return;
         }
         originalStartNewGame(p1Set, p2Set, "ai");
         document.getElementById("lobby-overlay").style.display = "none";
-        const locations = document.getElementById("use-craters").checked ? ["craters"] : [];
+        const locations = chosenLocations();
         const level = document.getElementById("ai-level").value;
         RulesMode.start(p1Set, p2Set, { locations, ai: { player: 2, level } });
         return;
@@ -2284,6 +2290,11 @@
     }
 
     // --- Rules mode (engine/ + ui/rules-mode.js) ---
+    function chosenLocations() {
+      const v = document.getElementById("use-location").value;
+      return v ? [v] : [];
+    }
+
     function rulesModeChosen(p1Set, p2Set) {
       return window.RulesMode
         && RulesMode.isAvailable(p1Set, p2Set)
@@ -2292,7 +2303,7 @@
 
     function startRulesModeIfChosen(p1Set, p2Set) {
       if (!rulesModeChosen(p1Set, p2Set)) return;
-      const locations = document.getElementById("use-craters").checked ? ["craters"] : [];
+      const locations = chosenLocations();
       RulesMode.start(p1Set, p2Set, { locations });
     }
 

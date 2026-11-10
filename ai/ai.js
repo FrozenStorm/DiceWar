@@ -24,7 +24,7 @@ const WIN = 1_000_000;
 /** Evaluation weights in "VP x 100" units. */
 export const DEFAULT_WEIGHTS = {
   tp: 12, reserve: 3, advance: 6, fieldBonus: 10, nearPrey: 12,
-  craterOne: 35, craterBoth: 100, threatToMove: 70, threatOther: 20,
+  craterOne: 35, craterBoth: 100, oracle: 40, threatToMove: 70, threatOther: 20,
 };
 const LEVEL_VALUE = [0, 20, 30, 45, 55, 65, 80];
 
@@ -70,6 +70,11 @@ function sideValue(s, p, W) {
       .filter((at) => s.board[at] && s.board[at].owner === p && s.board[at].level >= 2).length;
     v += W.craterOne * held + (held === 2 ? W.craterBoth : 0);
   }
+  if (s.locations.includes("oracle")) {
+    // The Oracle gives 1 TP per turn and sets its occupant to level 4.
+    const d = s.board[getLocation("oracle").squares[0]];
+    if (d && d.owner === p) v += W.oracle;
+  }
   return v;
 }
 
@@ -96,8 +101,8 @@ function quickScore(s, a) {
   switch (a.type) {
     case "attack": return 1000 + 10 * (s.board[a.to] ? s.board[a.to].level : 0);
     case "spell": return 500;
-    case "choice": return 400;
-    case "upgrade": return 200 + s.board[a.at].level;
+    case "choice": return a.sub ? quickScore(s, a.sub) : 400;
+    case "upgrade": return a.ability ? 600 : 200 + s.board[a.at].level;
     case "move":
       if (a.follow && a.follow.type === "attack") return 900;
       return 100;

@@ -2,7 +2,7 @@
 
 Source: `img/BoD/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
-**Status: validated.** All open questions were answered by the rules owner.
+**Status: validated, implemented.** All open questions were answered by the rules owner. A few details the cards leave open were decided during the implementation and are marked [Assumption] (BoD4 to BoD6).
 
 Errata: the official errata cards for Hunter of Death (E233) and Swamp Hag (E234) were compared with the cards in the repo. The text is identical, so the repo cards already are the corrected version. Confirmed (BoD0).
 
@@ -42,6 +42,7 @@ Card note: you can still only attack adjacent fields.
 
 ### `BoD.hunter.dark_fusion` (upgrade)
 Yellow bar, i.e. a variant of the Upgrade standard action: move your Hunter of Death to the field of another friendly Hunter of Death. Put one of them into the Exile. Upgrade the other to a Demon of Darkness (6). If there is no other friendly Hunter of Death in the Warlands, you may take an additional action with this Demon of Darkness.
+- **[Assumption BoD5]** The additional action after Dark Fusion is any standard action or spell of the new Demon (Movement, Attack, Allegiance). It is optional.
 - Confirmed: Dark Fusion is possible as long as the Hunter can move onto the other Hunter's field, either adjacent or with Hunter's Path (up to 2 fields, e.g. 2 fields away in a straight line with a free field in between).
 
 ## 4 · Swamp Hag
@@ -55,6 +56,7 @@ Put 1 Reserve Die into your Exile and choose one or both options for different P
 - Use 3 TP to move one of your Possessed by 3 fields, also around corners.
 - Use 2 TP to increase one of your Possessed by 2 Power Levels.
 - Confirmed (BoD2): the 3-field move is a movement only, it cannot attack. All fields passed and the target field must be free.
+- **[Assumption BoD4]** "By 3 fields" means exactly 3 steps (unlike Hunter's Path, which says "up to"). The path may turn but may not visit a field twice.
 
 ### `BoD.hag.servitude` (spell)
 Split the Swamp Hag into 2 Possessed.
@@ -86,4 +88,5 @@ Rules:
 - If one of your creatures occupies the Oracle at the end of your turn, its Power Level rises or falls to 4.
 - Get 1 additional TP each turn as long as you own the Oracle (one of your creatures stands on it).
 Card note: creatures that occupy the Oracle cannot raise their Power Level.
+- **[Assumption BoD6]** This blocks every way of raising the level on the Oracle: Upgrade, Voodoo, fusing onto a Hunter there and RoX Balance. The Oracle itself still sets the level to 4.
 - Confirmed (BoD3): the TP is credited at the beginning of your turn.
