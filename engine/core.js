@@ -56,6 +56,7 @@ export function createGame({ set1, set2, startingPlayer = 1, locations = [], max
     endOfWar: null,
     nextDieId: 1,
     result: null,
+    events: [],
   };
 }
 
@@ -75,7 +76,15 @@ export function clone(s) {
     turn: { ...s.turn, flags: { ...s.turn.flags } },
     endOfWar: s.endOfWar ? { ...s.endOfWar } : null,
     result: s.result ? { ...s.result } : null,
+    events: [], // events of the next applyAction only
   };
+}
+
+/** Record what happened during the current action, for animations in the UI:
+ *  move {path}, place {at,owner,level}, remove {at,owner,level,dest},
+ *  level {at,from,to}, reserveToExile {player,n}. */
+export function emit(s, event) {
+  s.events.push(event);
 }
 
 export const setOf = (s, player) => getSet(s.players[player].set);
@@ -120,6 +129,7 @@ export function placeDie(s, at, owner, level, { dir = defaultDir(owner), cause =
   s.players[owner].reserve--;
   const die = { id: s.nextDieId++, owner, level, dir };
   s.board[at] = die;
+  emit(s, { t: "place", at, owner, level, cause });
   const set = setOf(s, owner);
   if (set.onPlaced) set.onPlaced(s, at, die, cause);
   return die;
@@ -131,6 +141,7 @@ export function removeDie(s, at, dest, cause = "ability") {
   if (!die) throw new Error("removeDie: empty square");
   s.board[at] = null;
   s.players[die.owner][dest]++;
+  emit(s, { t: "remove", at, owner: die.owner, level: die.level, dest, cause });
   const set = setOf(s, die.owner);
   if (set.onLeave) set.onLeave(s, at, die, cause);
   return die;
@@ -142,6 +153,7 @@ export function exileFromReserve(s, player, n = 1) {
   if (p.reserve < n) throw new Error("exileFromReserve: not enough dice");
   p.reserve -= n;
   p.exile += n;
+  emit(s, { t: "reserveToExile", player, n });
 }
 
 /**
@@ -172,6 +184,7 @@ export function setLevel(s, at, level, { byPlayer } = {}) {
   const oldLevel = die.level;
   die.level = Math.min(MAX_LEVEL, level);
   const set = setOf(s, die.owner);
+  if (die.level !== oldLevel) emit(s, { t: "level", at, from: oldLevel, to: die.level });
   if (die.level !== oldLevel && set.onLevelChange) set.onLevelChange(s, at, die, oldLevel);
 }
 
@@ -251,11 +264,20 @@ export function standardAttacks(s, from) {
   return adjacent(from).filter((t) => s.board[t] && canDefeat(s, from, t));
 }
 
-/** Resolve a movement of the die on `from` to the empty square `to`. */
-export function doMove(s, from, to) {
+/** Move a die along `path` (squares, first = current field) to the last,
+ *  empty square without triggering anything. */
+export function relocate(s, path) {
+  const from = path[0], to = path[path.length - 1];
   const die = s.board[from];
   s.board[from] = null;
   s.board[to] = die;
+  emit(s, { t: "move", path });
+  return die;
+}
+
+/** Resolve a movement of the die on `from` to the empty square `to`. */
+export function doMove(s, from, to) {
+  const die = relocate(s, [from, to]);
   s.turn.movedDieId = die.id;
   finishMoveOrAttack(s, to);
 }
@@ -263,6 +285,7 @@ export function doMove(s, from, to) {
 /** Resolve an attack of the die on `from` against the die on `to`. */
 export function doAttack(s, from, to) {
   const die = s.board[from];
+  emit(s, { t: "move", path: [from, to] }); // the attacker moves in, then the defeated die leaves
   defeat(s, to, die.owner);
   s.board[from] = null;
   s.board[to] = die;

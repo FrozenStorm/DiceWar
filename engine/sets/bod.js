@@ -3,7 +3,7 @@
 import { adjacent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, canRaise, standardActionsOf, actionOrigin, performAction,
+  pushChoice, doMove, canRaise, standardActionsOf, actionOrigin, performAction, relocate,
 } from "../core.js";
 
 const GNOME = 1, POSSESSED = 2, HUNTER = 3, HAG = 4, GATHERER = 5, DEMON = 6;
@@ -106,8 +106,7 @@ function applyVoodoo(s, a) {
   exileFromReserve(s, player, 1);
   if (a.move) {
     gainTP(s, player, -VOODOO_MOVE_TP);
-    s.board[a.move.to] = s.board[a.move.from];
-    s.board[a.move.from] = null;
+    relocate(s, [a.move.from, a.move.to]);
   }
   if (a.raise !== undefined) {
     gainTP(s, player, -VOODOO_RAISE_TP);

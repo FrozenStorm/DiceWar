@@ -14,6 +14,7 @@ import { IMPLEMENTED_SETS } from "../engine/sets/index.js";
 import { actionPath, pendingPrompt, abilityName } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
 import { SIZE, sq, rowOf, colOf, supplyRow } from "../engine/board.js";
+import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animate.js";
 
 // UI dice set id -> engine set id
 const ENGINE_SET = { numbers: "plain", RoX: "RoX", BoD: "BoD" };
@@ -30,6 +31,7 @@ const rm = {
   ai: null,          // { player, level } when playing against the AI
   aiToken: 0,        // invalidates running AI requests (undo, new game)
   thinking: false,
+  animating: Promise.resolve(), // animation of the last action
 };
 
 const engineSet = (uiSet) => ENGINE_SET[uiSet];
@@ -140,6 +142,7 @@ async function maybeRunAI() {
     const action = await askAI(rm.game, rm.ai.level);
     const wait = 500 - (Date.now() - started); // let the human see what happens
     if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    await rm.animating; // let the previous action finish its animation first
     if (token !== rm.aiToken) return;
     rm.thinking = false;
     perform(action);
@@ -158,8 +161,11 @@ async function maybeRunAI() {
 // ---------------------------------------------------------------------------
 
 function perform(action) {
+  const before = captureDice();
+  const byAI = isAiTurn();
+  let next = null;
   try {
-    const next = applyAction(rm.game, action);
+    next = applyAction(rm.game, action);
     rm.undo.push(rm.game);
     if (rm.undo.length > 200) rm.undo.shift();
     rm.redo = [];
@@ -171,6 +177,7 @@ function perform(action) {
     rm.message = err.message;
   }
   render();
+  if (next) rm.animating = playAnimation(next.events, before, { slow: byAI }).catch((e) => console.error(e));
   if (state.gameMode === "online") sendGameState();
 }
 
@@ -201,12 +208,17 @@ function redo() {
 
 /** State received from the online opponent or loaded from a file. */
 function load(game, { resetHistory = false } = {}) {
+  const before = captureDice();
+  const isUpdate = rm.active && rm.game && !resetHistory && game.turnNumber >= rm.game.turnNumber
+    && JSON.stringify(game.board) !== JSON.stringify(rm.game.board);
   rm.active = true;
   document.getElementById("app").classList.add("rules-mode");
   rm.game = game;
   rm.prefix = [];
   if (resetHistory) { rm.undo = []; rm.redo = []; }
   render();
+  // Online: show the opponent's action as an animation.
+  if (isUpdate) rm.animating = playAnimation(game.events, before, { slow: true }).catch((e) => console.error(e));
 }
 
 // ---------------------------------------------------------------------------
@@ -430,6 +442,7 @@ window.RulesMode = {
   get game() { return rm.game; },
   get prefix() { return [...rm.prefix]; },
   isAvailable, start, stop, load, render, onCellClick, undo, redo, localCanAct,
+  getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
   canUndo: () => rm.undo.length > 0 && state.gameMode !== "online",
   canRedo: () => rm.redo.length > 0 && state.gameMode !== "online",
 };

@@ -12,4 +12,5 @@ https://www.z-craft.ch/
 - `engine/` – rules engine (plain ES modules, no build step): `core.js` for the base rules, `sets/<SET>.js` per dice set, `locations/` for location tiles
 - `ai/ai.js` – AI opponent (minimax search with alpha-beta pruning, levels easy/medium/hard); runs in a Web Worker (`ui/ai-worker.js`)
 - `ui/rules-mode.js` – connects the engine and the AI to the board in `index.html`
+- `ui/animate.js` – animations of moves, level changes, defeats and spell costs (from the engine event log)
 - `test/` – automated tests, run with `npm test` (Node.js 20 or newer, no dependencies)

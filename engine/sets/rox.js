@@ -3,7 +3,7 @@
 import { adjacent, diagonal, surrounding, inOwnZone, SQUARES } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, defeat, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP, canRaise,
+  pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP, canRaise, emit, relocate,
 } from "../core.js";
 
 const PORTAL = 1, BEARER = 2, GUARDIAN = 3, EMISSARY = 4, ENCHANTRESS = 5, XELADRON = 6;
@@ -69,6 +69,7 @@ function wormholeMoves(s, player) {
 
 function applyWormhole(s, a) {
   const die = s.board[a.from];
+  emit(s, { t: "move", path: [a.from, a.to, a.bearer, a.follow.to] });
   s.board[a.from] = null;
   if (a.follow.type === "attack") defeat(s, a.follow.to, die.owner);
   s.board[a.follow.to] = die;
@@ -311,10 +312,7 @@ export const RoX = {
       if (a.place !== undefined) placeDie(s, a.place, pending.player, PORTAL, { cause: "balance" });
       else setLevel(s, a.upgrade, levelAt(s, a.upgrade) + 1);
     } else if (pending.kind === A.attraction) {
-      if (!a.skip) {
-        s.board[a.to] = s.board[a.from];
-        s.board[a.from] = null;
-      }
+      if (!a.skip) relocate(s, [a.from, a.to]);
     }
   },
 

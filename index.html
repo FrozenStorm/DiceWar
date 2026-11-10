@@ -662,6 +662,13 @@
             <option value="oracle">The Oracle (BoD)</option>
           </select>
         </label>
+        <label>Animations
+          <select id="anim-speed">
+            <option value="normal">Normal</option>
+            <option value="fast">Fast</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
       </div>
 
       <p id="ai-note" style="display: none; font-size: 0.8rem; color: var(--muted); max-width: 320px;">
@@ -2321,6 +2328,11 @@
     ["p1-dice-set", "p2-dice-set", "game-mode-select"].forEach((id) =>
       document.getElementById(id).addEventListener("change", updateRulesOptions));
     window.addEventListener("rules-mode-ready", updateRulesOptions);
+    window.addEventListener("rules-mode-ready", () => {
+      const sel = document.getElementById("anim-speed");
+      sel.value = RulesMode.getAnimationSpeed();
+      sel.addEventListener("change", () => RulesMode.setAnimationSpeed(sel.value));
+    });
 
     // In rules mode, Reserve and Exile are managed by the engine only.
     document.addEventListener("click", (e) => {
