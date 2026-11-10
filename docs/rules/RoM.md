@@ -47,7 +47,7 @@ Card note: the attack may be performed even if the opponent has fewer than 2 or 
 Move or attack by leaping over one or more of your creatures of Power Level 1, 2 and 6 that are adjacent to each other. Put the leaped-over creatures back into your Reserve.
 - Picture: the Torch Bearer leaps over a row of Golden Fruit (1), Sprout (2) and Mali (6). It lands diagonally above the Mali, to the right of a Golden Fruit. Leaped-over creatures are shown grey (removed), the Golden Fruit above the Mali stays black.
 - Confirmed (RoM3): the Torch Bearer can follow the chain around corners, and all leaped-over creatures go back into the Reserve, including a Mali (6).
-- **[Assumption RoM6]** The Torch Bearer lands on a field orthogonally adjacent to the last leaped-over creature (free field = Movement, defeatable opposing creature = Attack).
+- Confirmed (RoM6): the Torch Bearer lands on a field orthogonally adjacent to the last leaped-over creature (free field = Movement, defeatable opposing creature = Attack).
 
 ## 4 · Protectress of the Woods
 
