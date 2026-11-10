@@ -1,4 +1,4 @@
-const CACHE_NAME = "dicewar-v15";
+const CACHE_NAME = "dicewar-v16";
 
 const PRECACHE_ASSETS = [
   "./",
@@ -13,6 +13,7 @@ const PRECACHE_ASSETS = [
   "engine/sets/lod.js",
   "engine/sets/rom.js",
   "engine/sets/kos.js",
+  "engine/sets/doa.js",
   "engine/locations/index.js",
   "ui/rules-mode.js",
   "ui/animate.js",

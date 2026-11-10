@@ -3,8 +3,8 @@
 // raising the Power Level of a creature (blocksRaise).
 
 import { sq } from "../board.js";
-import { removeDie, gainVP, gainTP, setLevel, exileFromReserve } from "../core.js";
-import { supplyRow, opponent } from "../board.js";
+import { removeDie, gainVP, gainTP, setLevel, exileFromReserve, defeat, emit } from "../core.js";
+import { supplyRow, opponent, colOf, SIZE } from "../board.js";
 
 /** RoX: The Craters. Rules: docs/rules/RoX.md, "Location: The Craters". */
 const craters = {
@@ -117,7 +117,48 @@ const knoll = {
   },
 };
 
-const LOCATIONS = { craters, oracle, ruins, camp, knoll };
+/** DoA: The River. Rules: docs/rules/DoA.md, "Location: The River".
+ *  The tile covers the three middle rows of one column (any column, DoA4);
+ *  the flow always points to the right (seen from player 1). */
+const RIVER_ROWS = [2, 3, 4];
+const river = {
+  id: "river",
+  name: "The River",
+  squares: RIVER_ROWS.map((r) => sq(r, 1)),
+  squaresFor: (options) => RIVER_ROWS.map((r) => sq(r, options.riverCol ?? 1)),
+  // At the end of each turn of the starting player, creatures on free fields
+  // (no location tile) in the three middle rows are pushed 1 field downstream.
+  onTurnEnd(s, player) {
+    if (player !== s.startingPlayer) return;
+    for (const r of RIVER_ROWS) {
+      for (let c = SIZE - 1; c >= 0; c--) {
+        const at = sq(r, c);
+        if (s.board[at] && !s.tiles[at]) riverPush(s, at);
+      }
+    }
+  },
+};
+
+/** Push the creature on `at` 1 field downstream. A creature in the way is
+ *  pushed on first (e.g. one standing on a location tile). Over the edge it
+ *  goes into Exile and the opponent of its owner receives its Power Level as
+ *  VP, without Field Bonus (DoA5). Pushing is not a Movement: it also moves
+ *  creatures that cannot move themselves. */
+function riverPush(s, at) {
+  const die = s.board[at];
+  if (colOf(at) === SIZE - 1) {
+    defeat(s, at, opponent(die.owner), { fieldBonus: false, cause: "river" });
+    return;
+  }
+  const to = at + 1;
+  if (s.board[to]) riverPush(s, to);
+  if (s.board[to]) return; // cannot happen, kept as a safety net
+  s.board[at] = null;
+  s.board[to] = die;
+  emit(s, { t: "move", path: [at, to] });
+}
+
+const LOCATIONS = { craters, oracle, ruins, camp, knoll, river };
 
 export const IMPLEMENTED_LOCATIONS = Object.keys(LOCATIONS);
 

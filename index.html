@@ -303,6 +303,11 @@
       background-image: url("img/DoA/marker.png");
     }
 
+    /* DoA River: fields in the three middle rows where the flow pushes creatures */
+    .cell.flow {
+      background-image: linear-gradient(90deg, rgba(70, 150, 200, 0.10), rgba(70, 150, 200, 0.28));
+    }
+
     /* Rules mode: legal targets and the current selection */
     .cell.hint {
       box-shadow: inset 0 0 0 3px rgba(92, 184, 92, 0.9);
@@ -657,6 +662,18 @@
               <option value="river">The River (DoA)</option>
             </select>
           </label>
+          <label id="river-col-label" style="display: none;">
+            River column
+            <select id="river-col">
+              <option value="0">a</option>
+              <option value="1" selected>b</option>
+              <option value="2">c</option>
+              <option value="3">d</option>
+              <option value="4">e</option>
+              <option value="5">f</option>
+              <option value="6">g</option>
+            </select>
+          </label>
         </div>
       </div>
 
@@ -679,7 +696,7 @@
       </div>
 
       <p id="ai-note" style="display: none; font-size: 0.8rem; color: var(--muted); max-width: 320px;">
-        The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali and Knights of Steel so far. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
+        The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
       </p>
 
       <button class="btn primary" id="start-game-btn">Start Game</button>
@@ -1057,6 +1074,7 @@
             "selected"
           );
           cellEl.classList.add("type-" + data.type);
+          cellEl.classList.toggle("flow", !!data.flow);
 
           if (
             state.selected &&
@@ -2279,14 +2297,14 @@
       if (window.RulesMode) RulesMode.stop();
       if (gameMode === "ai") {
         if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
-          alert("The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali and Knights of Steel so far. Numbers is played without rules, by humans only.");
+          alert("The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only.");
           return;
         }
         originalStartNewGame(p1Set, p2Set, "ai");
         document.getElementById("lobby-overlay").style.display = "none";
         const locations = chosenLocations();
         const level = document.getElementById("ai-level").value;
-        RulesMode.start(p1Set, p2Set, { locations, ai: { player: 2, level } });
+        RulesMode.start(p1Set, p2Set, { locations, ai: { player: 2, level }, riverCol: chosenRiverCol() });
         return;
       }
       if (gameMode === "online-host") {
@@ -2306,7 +2324,8 @@
     }
 
     // Fixed tile positions of the landscapes (row, column from the top-left).
-    // The Camp and the River are placed by the players (click a field in round 1).
+    // The Camp is placed by the players (click a field in round 1); the River
+    // lies in the three middle rows of the column chosen in the lobby.
     const LANDSCAPE_TILES = {
       craters: { type: "RoX", fields: [[2, 1], [4, 5]] },
       oracle: { type: "BoD", fields: [[3, 3]] },
@@ -2316,7 +2335,10 @@
 
     /** Without rules mode: show the chosen landscape's tiles on the board. */
     function placeLandscapeTiles() {
-      const l = LANDSCAPE_TILES[document.getElementById("use-location").value];
+      const v = document.getElementById("use-location").value;
+      const l = v === "river"
+        ? { type: "DoA", fields: [2, 3, 4].map((r) => [r, chosenRiverCol()]) }
+        : LANDSCAPE_TILES[v];
       if (!l) return;
       for (const [r, c] of l.fields) state.board[r][c].type = l.type;
       updateBoardDOM();
@@ -2329,6 +2351,10 @@
       return v ? [v] : [];
     }
 
+    function chosenRiverCol() {
+      return Number(document.getElementById("river-col").value);
+    }
+
     function rulesModeChosen(p1Set, p2Set) {
       return window.RulesMode
         && RulesMode.isAvailable(p1Set, p2Set)
@@ -2338,7 +2364,7 @@
     function startRulesModeIfChosen(p1Set, p2Set) {
       if (!rulesModeChosen(p1Set, p2Set)) return;
       const locations = chosenLocations();
-      RulesMode.start(p1Set, p2Set, { locations });
+      RulesMode.start(p1Set, p2Set, { locations, riverCol: chosenRiverCol() });
     }
 
     function updateRulesOptions() {
@@ -2362,9 +2388,10 @@
         opt.textContent = opt.dataset.label + (ok ? "" : " – coming soon");
       }
       if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) sel.value = "";
+      document.getElementById("river-col-label").style.display = sel.value === "river" ? "flex" : "none";
     }
 
-    ["p1-dice-set", "p2-dice-set", "game-mode-select", "enforce-rules"].forEach((id) =>
+    ["p1-dice-set", "p2-dice-set", "game-mode-select", "enforce-rules", "use-location"].forEach((id) =>
       document.getElementById(id).addEventListener("change", updateRulesOptions));
     window.addEventListener("rules-mode-ready", updateRulesOptions);
     window.addEventListener("rules-mode-ready", () => {

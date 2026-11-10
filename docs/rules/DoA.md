@@ -2,6 +2,8 @@
 
 Source: `img/DoA/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 
+Status: validated by Daniel (all questions answered). Implemented in `engine/sets/doa.js` and `engine/locations/index.js` (river).
+
 ## Overview
 
 | Level | Creature | Abilities | Defeats |
@@ -25,13 +27,13 @@ Power hierarchy according to the card:
 - 2 Fishers: defeats 1
 - 3 Fishers: defeats 1, 2 and 6
 - 4 Fishers: defeats 1, 2 and 3
-- **[Assumption]** The level only applies when attacking. As a defender the Fisher stays level 1. More than 4 Fishers are impossible at the end of a turn because of Godcatcher, but possible during a turn (e.g. after New Beginning); then the normal hierarchy of the sum applies.
+- **[Confirmed]** The level only applies when attacking. As a defender the Fisher stays level 1. More than 4 Fishers are impossible at the end of a turn because of Godcatcher, but possible during a turn (e.g. after New Beginning); then the normal hierarchy of the sum applies.
 
 ## 2 · Dream Bringer
 
 ### `DoA.dreambringer.water_path` (movement)
 Move straight in any direction (including diagonally) up to 3 spaces.
-- **[Assumption]** Only over free fields, no attack with this.
+- **[Confirmed]** Only over free fields, no attack with this.
 
 ### `DoA.dreambringer.depth_rapture` (speciality)
 If the Dream Bringer is defeated, you receive 2 TP.
@@ -43,14 +45,14 @@ Surrounding opposing creatures (8 neighbouring fields) cannot perform Spell acti
 
 ### `DoA.riverwatch.wave_ride` (movement)
 Move any distance around a surrounding friendly creature, or any distance around multiple surrounding friendly creatures. End the movement on a surrounding space of the friendly creature, but not on the original space.
-- **[Assumption]** The path runs over free fields that surround a friendly creature (ring of 8 neighbouring fields). With several friendly creatures, the River Watch may switch from one ring to an adjacent ring.
-- **[Question DoA1]** May the movement include diagonal steps, or only orthogonal ones (the example arrows are orthogonal)?
+- **[Confirmed]** The path runs over free fields that surround a friendly creature (ring of 8 neighbouring fields). With several friendly creatures, the River Watch may switch from one ring to an adjacent ring.
+- **[Answer DoA1]** Only orthogonal steps.
 
 ## 4 · Water Weaver
 
 ### `DoA.weaver.water_pearls` (speciality)
 Gain 1 TP at the start of each round, provided there is at least 1 own Water Weaver in the Warlands. If your last Water Weaver leaves the Warlands, you lose 1 TP.
-- **[Question DoA2]** "At the start of each round" (once for both players) or at the beginning of your turn?
+- **[Answer DoA2]** Only at the beginning of your own turn.
 
 ### `DoA.weaver.ghost_call` (spell)
 Split the Water Weaver into 1 River Watch and 1 Tidal Fisher.
@@ -66,7 +68,7 @@ Put a Reserve Die into Exile and use 2 TP. Upgrade or downgrade a surrounding op
 ### `DoA.ohtilia.from_the_fog` (movement)
 Swap Ohtilia with an adjacent creature. Then immediately make a standard move with Ohtilia if possible.
 - Also works with opposing creatures (picture: opposing 6).
-- **[Question DoA3]** Is the follow-up move mandatory ("if possible"), and may it be an attack? **[Assumption]** Mandatory, movement only.
+- **[Answer DoA3]** The follow-up move is mandatory if possible, and it is a Movement only (no attack). If no Movement is possible, Ohtilia only swaps.
 
 ## 6 · Awakening
 
@@ -81,16 +83,26 @@ Card note: place 3 Reserve Dice as Tidal Fishers on any empty spaces in the game
 ### `DoA.awakening.sint_flut` (spell)
 Put 1 Reserve Die into Exile and use 10 TP. Choose a horizontal or vertical direction. Move all opposing creatures 1 space in the chosen direction. If creatures are moved over the edge of the board this way, they are put into Exile. Gain 1 VP for each creature defeated this way (no Field Bonus).
 Card note: if your own creatures block your opponent's creatures during the movement, they are not moved.
-- **[Assumption]** Opposing creatures also block each other in a chain (processed from front to back in the push direction).
+- **[Answer]** Opposing creatures only block each other where one of them could not move because of an own creature (processed from front to back in the push direction): a creature behind a moving creature moves along, a creature behind a blocked creature is blocked as well.
 
 ## Location: The River (`DoA.marker.river`)
 
-Before the setup phase, the river tile is placed. It covers 3 fields of one column in the three middle rows (rows 3 to 5). The players agree on a column in the centre of the board. In the picture the flow points to the right (seen from player 1).
+Before the setup phase, the river tile is placed. It covers 3 fields of one column in the three middle rows (rows 3 to 5). The players agree on a column; every column is allowed (DoA4). The flow always points to the right (seen from player 1).
 
 Rules:
 - Creatures on free spaces in the three middle rows are moved one space in the direction of the flow at the end of each turn of the starting player.
 - If creatures are moved over the edge of the board this way, they are put into Exile. The opponent receives VP according to the Power Level of the exiled creatures (no Field Bonus).
 - Creatures on the river tile itself or on other location tiles are not moved by the flow.
 - Creatures can be moved onto location tiles. If these are occupied, the creature on the location tile is pushed away and moved down from the tile in the direction of the flow.
-- **[Question DoA4]** Which columns are allowed (dashed in the picture: columns 2 and 5 from the left, the tile lies in column 2)? And who sets the flow direction?
-- **[Question DoA5]** "The opponent receives VP": the opponent of the creature's owner? I.e. whoever loses a creature gives the other player VP?
+- **[Answer DoA4]** Every column is allowed; the flow always points to the right.
+- **[Answer DoA5]** Yes: the opponent of the exiled creature's owner receives the VP.
+
+## Engine notes
+
+- Godcatcher is a decision at the end of your turn: choose the Fisher for the Reserve and the creature to upgrade (if any can be upgraded). It repeats while more than 3 Fishers are left.
+- World Sleep removes spell actions of opposing creatures that stand on one of the 8 fields around a Dream Bringer.
+- Wave Ride: the 1-field moves are the standard Movement; longer rides are listed as the ability.
+- Thread of Fate: a creature downgraded below 1 leaves the board (opposing: Exile, own: Reserve). A creature already at level 6 cannot be upgraded.
+- From the Fog: opposing creatures that cannot be moved or are immune against specialities (e.g. Portals, LoD Protective Barrier) cannot be swapped.
+- Sint Flut counts as moving the opposing creatures: creatures that cannot move or are immune against spells stay and block those behind them. Over the edge they are defeated (1 VP each, no Field Bonus).
+- The River is chosen in the lobby together with its column. Creatures pushed over the edge count as defeated (e.g. Depth Rapture triggers).

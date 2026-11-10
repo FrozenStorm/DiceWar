@@ -20,8 +20,9 @@ import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animat
 // UI dice set id -> engine set id
 // "Numbers" is deliberately not mapped: it is played without rules (by humans only),
 // e.g. to try out a new tribe whose rules are not in the engine yet.
-const ENGINE_SET = { RoX: "RoX", BoD: "BoD", LoD: "LoD", RoM: "RoM", KoS: "KoS" };
-const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD", ruins: "LoD", camp: "RoM", knoll: "KoS" };
+const ENGINE_SET = { RoX: "RoX", BoD: "BoD", LoD: "LoD", RoM: "RoM", KoS: "KoS", DoA: "DoA" };
+const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD", ruins: "LoD", camp: "RoM", knoll: "KoS", river: "DoA" };
+const RIVER_ROWS = [2, 3, 4]; // rows the DoA River flows through
 
 const rm = {
   active: false,
@@ -43,7 +44,7 @@ function isAvailable(p1Set, p2Set) {
   return [p1Set, p2Set].every((s) => engineSet(s) && IMPLEMENTED_SETS.includes(engineSet(s)));
 }
 
-function start(p1Set, p2Set, { locations = [], startingPlayer, ai = null } = {}) {
+function start(p1Set, p2Set, { locations = [], startingPlayer, ai = null, riverCol = 1 } = {}) {
   rm.active = true;
   rm.ai = ai;
   rm.aiToken++;
@@ -53,6 +54,7 @@ function start(p1Set, p2Set, { locations = [], startingPlayer, ai = null } = {})
     set2: engineSet(p2Set),
     startingPlayer: startingPlayer || (Math.random() < 0.5 ? 1 : 2),
     locations,
+    riverCol,
   });
   rm.undo = [];
   rm.redo = [];
@@ -320,6 +322,7 @@ function project() {
         value: d ? d.level : null,
         type: tile ? (LOCATION_TILE_TYPE[tile] || "neutral") : "neutral",
         rotation: d ? alignmentRotation(d) : 0,
+        flow: g.locations.includes("river") && RIVER_ROWS.includes(r) && !tile,
       };
     }
   }

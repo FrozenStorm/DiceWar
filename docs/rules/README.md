@@ -11,7 +11,7 @@ Goal: capture every rule that so far only exists as images of the rule cards as 
 | [LoD.md](LoD.md) | Dice set LoD (Light of Dragons, base game), implemented third | **Validated** |
 | [RoM.md](RoM.md) | Dice set RoM (Roots of Mali), implemented fourth | **Validated** |
 | [BoD.md](BoD.md) | Dice set BoD (Bond of Demons), implemented second | **Validated** |
-| [DoA.md](DoA.md) | Dice set DoA (Dawn of Awakening) | Draft, open questions |
+| [DoA.md](DoA.md) | Dice set DoA (Dawn of Awakening), implemented sixth | **Validated** |
 | [KoS.md](KoS.md) | Dice set KoS (Knights of Steel), implemented fifth | **Validated** |
 
 ## Conventions

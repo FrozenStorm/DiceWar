@@ -35,6 +35,7 @@ import { BoD } from "./bod.js";
 import { LoD } from "./lod.js";
 import { RoM } from "./rom.js";
 import { KoS } from "./kos.js";
+import { DoA } from "./doa.js";
 
 const plain = {
   id: "plain",
@@ -42,7 +43,7 @@ const plain = {
   creatures: { 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6" },
 };
 
-const SETS = { plain, RoX, BoD, LoD, RoM, KoS };
+const SETS = { plain, RoX, BoD, LoD, RoM, KoS, DoA };
 
 const defaults = {
   choiceOptions: () => [],

@@ -31,14 +31,18 @@ export const DEFAULT_MAX_TURNS = 400;
  * @param {1|2} [opts.startingPlayer=1]
  * @param {string[]} [opts.locations=[]] location tiles, e.g. ["craters"]
  * @param {number} [opts.maxTurns] safety net: after this many turns VP decide
+ * @param {number} [opts.riverCol=1] column of the DoA River tile (0..6, agreed before the setup)
  */
-export function createGame({ set1, set2, startingPlayer = 1, locations = [], maxTurns = DEFAULT_MAX_TURNS }) {
+export function createGame({ set1, set2, startingPlayer = 1, locations = [], maxTurns = DEFAULT_MAX_TURNS, riverCol = 1 }) {
   getSet(set1); getSet(set2); // throws on unknown sets
+  const options = { riverCol };
   const tiles = new Array(SQUARES).fill(null);
   for (const id of locations) {
-    for (const s of getLocation(id).squares) tiles[s] = id;
+    const loc = getLocation(id);
+    for (const s of loc.squaresFor ? loc.squaresFor(options) : loc.squares) tiles[s] = id;
   }
   return {
+    options,
     board: new Array(SQUARES).fill(null),
     tiles,
     locations: [...locations],

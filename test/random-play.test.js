@@ -48,12 +48,18 @@ const MATCHUPS = [
   { name: "LoD vs KoS", set1: "LoD", set2: "KoS", locations: (g) => [["ruins"], ["knoll"], []][g % 3] },
   { name: "KoS vs BoD", set1: "KoS", set2: "BoD", locations: (g) => [["oracle"], ["knoll"], []][g % 3] },
   { name: "RoM vs KoS", set1: "RoM", set2: "KoS", locations: (g) => [["camp"], ["knoll"], []][g % 3] },
+  { name: "DoA vs DoA", set1: "DoA", set2: "DoA", locations: (g) => (g % 2 ? ["river"] : []) },
+  { name: "DoA vs RoX", set1: "DoA", set2: "RoX", locations: (g) => [["river"], ["craters"], []][g % 3] },
+  { name: "LoD vs DoA", set1: "LoD", set2: "DoA", locations: (g) => [["river"], ["ruins"], ["knoll"]][g % 3] },
+  { name: "DoA vs RoM", set1: "DoA", set2: "RoM", locations: (g) => [["river"], ["camp"], []][g % 3] },
+  { name: "KoS vs DoA", set1: "KoS", set2: "DoA", locations: (g) => [["river"], ["knoll"], ["oracle"]][g % 3] },
+  { name: "DoA vs BoD", set1: "DoA", set2: "BoD", locations: (g) => [["river"], ["oracle"], []][g % 3] },
 ];
 
 for (const m of MATCHUPS) test(`random ${m.name} games always reach a valid end without errors`, () => {
   for (let g = 0; g < 40; g++) {
     const rand = rng(g + 1);
-    let s = createGame({ set1: m.set1, set2: m.set2, startingPlayer: (g % 2) + 1, locations: m.locations(g), maxTurns: 300 });
+    let s = createGame({ set1: m.set1, set2: m.set2, startingPlayer: (g % 2) + 1, locations: m.locations(g), maxTurns: 300, riverCol: g % 7 });
     s = applyAction(s, randomSetup(rand, s.locations.includes("camp")));
     s = applyAction(s, randomSetup(rand, s.locations.includes("camp")));
     let steps = 0;
