@@ -7,8 +7,12 @@ Ziel: Alle Regeln, die bisher nur als Bilder der Regelkarten existieren, als Tex
 | Datei | Inhalt | Status |
 |---|---|---|
 | [grundregeln.md](grundregeln.md) | Brett, Zugablauf, Standardaktionen, Machthierarchie, Glossar | Entwurf, viele offene Fragen |
-| [RoX.md](RoX.md) | Würfelset RoX (Xeladron) | Entwurf, zur Prüfung |
-| BoD.md, DoA.md, KoS.md, LoD.md, RoM.md | übrige Würfelsets | noch nicht erfasst |
+| [RoX.md](RoX.md) | Würfelset RoX (Xeladron), wird zuerst umgesetzt | Entwurf, zur Prüfung |
+| [LoD.md](LoD.md) | Würfelset LoD (Light of Dragons, Grundspiel) | Entwurf, zur Prüfung |
+| [RoM.md](RoM.md) | Würfelset RoM (Mali) | Entwurf, zur Prüfung |
+| [BoD.md](BoD.md) | Würfelset BoD (Bond of Demons) | Entwurf, zur Prüfung |
+| [DoA.md](DoA.md) | Würfelset DoA (Awakening) | Entwurf, zur Prüfung |
+| [KoS.md](KoS.md) | Würfelset KoS (King's Knight), braucht Ausrichtung pro Würfel | Entwurf, zur Prüfung |
 
 ## Konventionen
 

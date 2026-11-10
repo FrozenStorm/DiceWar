@@ -11,7 +11,10 @@ Quellen: `img/global/zugablauf.png` (Overview Turn), `img/global/glossar.png` (G
   - **[Annahme]** Der Bonus gilt für Kreaturen, die in der gegnerischen Hälfte einen Gegner besiegen (siehe Siegpunkte).
 - Ortsplättchen (z. B. RoX-Krater) werden vor der Aufstellungsphase gelegt. Im Code sind das die Feldtypen, die in Runde 1 gesetzt werden.
 
-**[Frage G1]** Was ist die „eigene Zone“ (own Zone, z. B. bei Xeladron/Decay)? Die drei Reihen auf der eigenen Seite oder nur die hinterste Reihe?
+- **Zonen** (bestätigt durch die Karten Mali und The Camp): Die **eigene Zone** sind die 3 Reihen auf der eigenen Seite, die **gegnerische Zone** die 3 Reihen auf der anderen Seite, dazwischen liegt die neutrale Mittelreihe. Die hinterste, graue Reihe jeder Seite ist die **Versorgungszone** (Supply Zone).
+- „Warlands“ auf den Karten bedeutet das Spielbrett.
+
+**[Frage G1]** Bekommt Spieler 1 den Feldbonus +1/+2/+3 also in der gegnerischen Zone (je tiefer, desto mehr)? Und welche Rolle spielt die Versorgungszone ausser beim Lager (z. B. Setzen neuer Würfel)?
 
 ## Aufstellungsphase (Setup Phase)
 
@@ -45,6 +48,17 @@ Kette laut Karte: 6 → 5 → 4 → 3 → 2 → 1.
 - **[Annahme]** Eine Kreatur besiegt alle Kreaturen mit niedrigerer Stufe (die Kreaturkarten bestätigen das: z. B. 5 besiegt 4, 3, 2, 1). Gleiche Stufe kann nicht angreifen.
 - **[Annahme]** Stufe 6 kann Stufe 3 weiterhin besiegen. Die Xeladron-Karte zeigt die 3 als rot „bedrohenden“ Gegner, also eine Kreatur, die umgekehrt auch die 6 besiegt.
 - Kreaturkarten können eigene Hierarchien haben. Beispiel RoX-Portal (1) besiegt niemanden.
+
+## Übergreifende Regeln aus den Kreaturkarten
+
+Diese Punkte stehen nicht auf den Grundkarten, folgen aber aus mehreren Kreaturkarten:
+
+- **Herabstufen** ist möglich (z. B. LoD Brotherhood, DoA New Beginning). Fällt eine gegnerische Kreatur durch Herabstufen unter Stufe 1, kommt sie ins Exil, eine eigene in die Reserve (LoD Lifepulling, KoS Phalanx).
+- **Teilen (Split)** ist ein häufiges Zaubermuster: Reservewürfel werden mit bestimmter Stufe auf bestimmte Felder gesetzt, die ursprüngliche Kreatur geht in die Reserve oder wird herabgestuft. Die Engine bekommt dafür einen gemeinsamen Baustein.
+- **Virtuelle VP** (LoD, RoM, RoX, BoD, DoA, KoS) zählen wie normale VP für die Siegbedingung, werden aber laufend aus der Brettsituation neu berechnet und nicht auf der Leiste angezeigt.
+- **Zusatzaktionen** nach bestimmten Aktionen (z. B. Inner Fire, Wormhole, Sacrifice) erlauben mehrere Schritte in einem Zug. Die Engine muss einen Zug deshalb als Folge von Teilschritten abbilden.
+- **TP-Ausgabe** für Zauber: Wer nicht genug TP hat, kann den Zauber nicht wirken.
+- **Ausrichtung** pro Würfel wird für KoS benötigt (siehe [KoS.md](KoS.md)).
 
 ## Glossar
 
