@@ -20,7 +20,7 @@ import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animat
 // UI dice set id -> engine set id
 // "Numbers" is deliberately not mapped: it is played without rules (by humans only),
 // e.g. to try out a new tribe whose rules are not in the engine yet.
-const ENGINE_SET = { RoX: "RoX", BoD: "BoD", LoD: "LoD", RoM: "RoM" };
+const ENGINE_SET = { RoX: "RoX", BoD: "BoD", LoD: "LoD", RoM: "RoM", KoS: "KoS" };
 const LOCATION_TILE_TYPE = { craters: "RoX", oracle: "BoD", ruins: "LoD", camp: "RoM", knoll: "KoS" };
 
 const rm = {
@@ -300,6 +300,15 @@ function confirmSetup() {
 // Rendering
 // ---------------------------------------------------------------------------
 
+/** KoS alignment: rotate the die image so its arrow points in die.dir (0 up,
+ *  1 right, 2 down, 3 left on screen). Player 2's dice are already turned by
+ *  180 degrees in duel and online games. */
+function alignmentRotation(d) {
+  if (rm.game.players[d.owner].set !== "KoS") return 0;
+  const base = (state.gameMode === "duel" || state.gameMode === "online") && d.owner === 2 ? 180 : 0;
+  return (d.dir * 90 - base + 360) % 360;
+}
+
 function project() {
   const g = rm.game;
   for (let r = 0; r < SIZE; r++) {
@@ -310,7 +319,7 @@ function project() {
         owner: d ? d.owner : null,
         value: d ? d.level : null,
         type: tile ? (LOCATION_TILE_TYPE[tile] || "neutral") : "neutral",
-        rotation: 0,
+        rotation: d ? alignmentRotation(d) : 0,
       };
     }
   }

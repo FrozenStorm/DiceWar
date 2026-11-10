@@ -7,7 +7,15 @@ import { getSet } from "./sets/index.js";
 
 const setOfId = (id) => getSet(id.split(".")[0]);
 
+export const FACE_LABELS = ["Face ↑", "Face →", "Face ↓", "Face ←"];
+
 export function actionPath(a) {
+  const base = basePath(a);
+  // Alignment chosen with the action (KoS) is the last click.
+  return a.face !== undefined ? [...base, FACE_LABELS[a.face]] : base;
+}
+
+function basePath(a) {
   if (a.ability) return setOfId(a.ability).actionPath(a);
   switch (a.type) {
     case "declareEndOfWar": return ["Declare End of War"];

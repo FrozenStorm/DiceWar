@@ -1,6 +1,14 @@
 # Dice set KoS (Knights of Steel)
 
-**Status: validated.** All open questions were answered by the rules owner.
+**Status: validated, implemented.** All open questions were answered by the rules owner.
+
+Engine notes (how the open details were implemented; tell us if one is wrong):
+- Alignment: dice start facing the opponent. Loyal Shield, Silver Spear and Burning Stag choose their alignment as the last click of every Movement and Attack. Heart Thrust always faces the direction of the thrust.
+- Shield Strike: the Shield may orient before the action, so it can strike any adjacent opposing creature; afterwards it faces any direction (Mindfulness).
+- Phalanx: checked after every action, for every creature that moved (also pushed or pulled). An opposing creature that ends right in front of a Silver Spear's tip loses 1 Power Level, also when the Spear itself moved there.
+- Relentless: "moves" means a Movement (not an attack). Each First Sword acts at most once per turn.
+- Leadership: each creature moves once with one of its Movements (no attacks); the Spear, Shield and Stag choose their alignment as usual. TP that are not used stay.
+- Supply, Reinforcements, Leadership and To the Spears are entered step by step (one die or move at a time).
 
 Source: `img/KoS/rules/1.png` to `6.png`, `marker.png`, `rules_1.png`, `rules_2.png`. Base terms are defined in [base-rules.md](base-rules.md).
 

@@ -24,6 +24,8 @@
 //   afterAttack(s, at, die)              -> a die of this set defeated a creature by attacking
 //   beforeTurnEnd(s, player)             -> may queue last decisions before the turn ends
 //   defeatRules(s, at, die)             -> { noVP, dest } for a defeat of this set's creature
+//   decorateActions(s, player, actions)  -> variants of the own actions (e.g. KoS alignment)
+//   afterAction(s, player)               -> after every action of either player (e.g. KoS Phalanx)
 //   aiGreedyChoices                      -> decision kinds the AI resolves greedily
 //
 // Rule texts: docs/rules/<SET>.md. Ability IDs in the code match the docs.
@@ -32,6 +34,7 @@ import { RoX } from "./rox.js";
 import { BoD } from "./bod.js";
 import { LoD } from "./lod.js";
 import { RoM } from "./rom.js";
+import { KoS } from "./kos.js";
 
 const plain = {
   id: "plain",
@@ -39,7 +42,7 @@ const plain = {
   creatures: { 1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6" },
 };
 
-const SETS = { plain, RoX, BoD, LoD, RoM };
+const SETS = { plain, RoX, BoD, LoD, RoM, KoS };
 
 const defaults = {
   choiceOptions: () => [],

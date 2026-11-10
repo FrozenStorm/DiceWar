@@ -124,10 +124,10 @@ export function gainVP(s, player, n) {
 }
 
 /** Place a die from the owner's Reserve onto an empty square. */
-export function placeDie(s, at, owner, level, { dir = defaultDir(owner), cause = "ability" } = {}) {
+export function placeDie(s, at, owner, level, { dir = defaultDir(owner), cause = "ability", source = "reserve" } = {}) {
   if (s.board[at]) throw new Error("placeDie: square occupied");
-  if (s.players[owner].reserve <= 0) throw new Error("placeDie: reserve empty");
-  s.players[owner].reserve--;
+  if (s.players[owner][source] <= 0) throw new Error(`placeDie: ${source} empty`);
+  s.players[owner][source]--;
   const die = { id: s.nextDieId++, owner, level, dir };
   s.board[at] = die;
   emit(s, { t: "place", at, owner, level, cause });
@@ -144,7 +144,7 @@ export function removeDie(s, at, dest, cause = "ability") {
   s.players[die.owner][dest]++;
   emit(s, { t: "remove", at, owner: die.owner, level: die.level, dest, cause });
   const set = setOf(s, die.owner);
-  if (set.onLeave) set.onLeave(s, at, die, cause);
+  if (set.onLeave) set.onLeave(s, at, die, cause, dest);
   return die;
 }
 
@@ -386,6 +386,8 @@ export function mainActions(s) {
   // The opponent's creatures may restrict the choice (e.g. BoD Temptation).
   const other = setOf(s, opponent(player));
   if (other.constrainOpponent) out = other.constrainOpponent(s, player, out);
+  // Variants of actions, e.g. KoS: the alignment chosen with a Movement or Attack.
+  if (set.decorateActions) out = set.decorateActions(s, player, out);
   return out;
 }
 
@@ -503,6 +505,10 @@ export function applyAction(state, action) {
     const loc = getLocation(id);
     if (loc.afterAction) loc.afterAction(s);
   }
+  for (const p of [1, 2]) {
+    const set = setOf(s, p);
+    if (set.afterAction) set.afterAction(s, p); // e.g. KoS Phalanx
+  }
   settlePending(s);
   if (!s.pending.length && s.turn.main) {
     // Last decisions before the turn ends (e.g. LoD: too many Souls in a group).
@@ -522,6 +528,11 @@ function applyMain(s, action) {
 
 /** Resolve a standard action or ability (also used for additional actions). */
 export function performAction(s, action) {
+  // Alignment (KoS): the die faces `face` (orientation is part of the action).
+  if (action.face !== undefined) {
+    const d = s.board[actionOrigin(action)];
+    if (d) d.dir = action.face;
+  }
   if (action.ability) {
     setOf(s, s.current).applyAbility(s, action);
     return;
