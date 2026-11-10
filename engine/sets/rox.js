@@ -3,7 +3,7 @@
 import { adjacent, diagonal, surrounding, inOwnZone, SQUARES } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, defeat, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, canDefeatWith, finishMoveOrAttack,
+  pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP,
 } from "../core.js";
 
 const PORTAL = 1, BEARER = 2, GUARDIAN = 3, EMISSARY = 4, ENCHANTRESS = 5, XELADRON = 6;
@@ -140,8 +140,10 @@ function applyImpact(s, a) {
   for (const t of surrounding(a.at)) {
     const d = s.board[t];
     if (!d) continue;
-    if (d.owner === player) removeDie(s, t, "exile", "impact");
-    else defeat(s, t, player, { vp: 1, fieldBonus: false, cause: "impact" });
+    // Impact does not defeat creatures, it puts them straight into the Exile
+    // (confirmed by the publisher): no Balance or other "defeated" effects.
+    removeDie(s, t, "exile", "impact");
+    if (d.owner !== player) gainVP(s, player, 1);
   }
   removeDie(s, a.at, "exile", "impact");
 }
@@ -163,7 +165,7 @@ function attractionOptions(s, at) {
   const out = [];
   for (const from of diagonal(at)) {
     const d = s.board[from];
-    if (!d || d.owner === me.owner) continue;
+    if (!d || d.owner === me.owner || !canMove(s, from)) continue; // e.g. Portals are unmovable
     for (const to of adjacent(at)) {
       if (empty(s, to) && adjacent(from).includes(to)) {
         out.push({ type: "choice", kind: A.attraction, from, to });

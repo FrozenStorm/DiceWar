@@ -103,6 +103,8 @@ A creature with a higher Power Level defeats all creatures with a lower Power Le
 - **Splitting** is a common spell pattern: Reserve Dice are placed with a given Power Level on given fields, the original creature goes to the Reserve or is downgraded. The engine gets a shared building block for this.
 - **Virtual VP** count like normal VP for the win condition, but they are recalculated from the board continuously and not shown on the VP bar.
 - **Additional actions** after certain actions (e.g. Inner Fire, Wormhole, Sacrifice) allow several steps in one turn. The engine therefore models a turn as a sequence of sub-steps.
+- **Moving vs. pushing:** an ability that *moves* a creature (also an opposing one) only works on creatures that can move (e.g. not on RoX Portals). Effects that *push* creatures (e.g. the DoA River) affect all creatures. Confirmed by the rules owner.
+- **Exile vs. defeat:** putting a creature straight into the Exile (e.g. RoX Impact) is not a defeat and triggers no "defeated" effects. Confirmed by the publisher.
 - **Alignment** per die is needed for KoS (see [KoS.md](KoS.md)).
 
 ## Glossary

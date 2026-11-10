@@ -7,7 +7,7 @@ Goal: capture every rule that so far only exists as images of the rule cards as 
 | File | Content | Status |
 |---|---|---|
 | [base-rules.md](base-rules.md) | Board, setup, turn sequence, standard actions, victory points, power hierarchy, End of War, glossary | **Validated** |
-| [RoX.md](RoX.md) | Dice set RoX (Rise of Xeladron), implemented first | **Validated** (RoX12 to be clarified with the game designer) |
+| [RoX.md](RoX.md) | Dice set RoX (Rise of Xeladron), implemented first | **Validated** |
 | [LoD.md](LoD.md) | Dice set LoD (Light of Dragons, base game) | Draft, open questions |
 | [RoM.md](RoM.md) | Dice set RoM (Roots of Mali) | Draft, open questions |
 | [BoD.md](BoD.md) | Dice set BoD (Bond of Demons) | Draft, open questions |

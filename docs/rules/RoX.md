@@ -80,6 +80,7 @@ Put 1 Reserve Die into the Exile. Then use any number of TP and place a creature
 ### `RoX.enchantress.force_of_attraction` (speciality)
 If the Enchantress of Gravity ends her Movement or Attack on a field diagonal to one or more opposing creatures, you can move one of them 1 field to a field adjacent to her.
 - Confirmed: optional ("can"), and the target field must be unoccupied.
+- Confirmed: only creatures that can move can be pulled. Portals (Unmovable) cannot be pulled. Effects that push creatures instead of moving them (e.g. the DoA River) still affect Portals.
 
 ## 6 · Xeladron
 
@@ -92,7 +93,7 @@ Card note: place 1 Emissary from your Reserve Dice diagonal to Xeladron and plac
 ### `RoX.xeladron.impact` (spell)
 Use 6 TP. Put Xeladron and all surrounding creatures (8 neighbouring fields, friendly and opposing) into the Exile. Gain 1 VP for every opposing creature put into the Exile.
 Card note: you don't gain Field Bonus Points.
-- Confirmed for now (RoX12), to be clarified with the game designer: Opposing creatures exiled by Impact count as defeated (e.g. an opposing RoX Portal Bearer triggers Balance for its owner). Your own creatures exiled by Impact are not "defeated", so your own Portal Bearers do not trigger Balance.
+- Confirmed by the publisher (RoX12): Impact does not defeat creatures, it puts them straight into the Exile. Therefore it triggers no "defeated" effects such as Balance, neither for your own nor for opposing Portal Bearers. You still gain 1 VP per opposing creature.
 
 ### `RoX.xeladron.forceful_alliance` (speciality)
 Gain 1 virtual VP for each pair of Xeladron and Portal in your possession that are adjacent to each other.

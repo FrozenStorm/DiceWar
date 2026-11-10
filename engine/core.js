@@ -198,7 +198,10 @@ export function canDefeatWith(s, att, from, to) {
 // Standard actions
 // ---------------------------------------------------------------------------
 
-const canMove = (s, at) => {
+/** Can the die on `at` be moved? Abilities that *move* a creature (also an
+ *  opposing one, e.g. Force of Attraction) respect this; effects that *push*
+ *  creatures (e.g. the DoA River) do not. */
+export const canMove = (s, at) => {
   const set = setOf(s, s.board[at].owner);
   return set.canMove ? set.canMove(s, at, s.board[at]) : true;
 };

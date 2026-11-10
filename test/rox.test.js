@@ -158,6 +158,21 @@ test("RoX.enchantress.force_of_attraction: optionally pull a diagonal opposing c
   assert.equal(s.current, 2);
 });
 
+test("RoX.enchantress.force_of_attraction cannot pull unmovable Portals", () => {
+  let s = position(["......a", "......b", "....a..", ".......", "...5...", ".......", "......."]);
+  s = applyAction(s, { type: "move", from: at("d3"), to: at("d4") });
+  assert.equal(s.current, 2); // no decision: the only diagonal creature is a Portal
+});
+
+test("RoX.xeladron.impact does not trigger Balance (exile, not defeat)", () => {
+  const s = position(["......a", ".......", ".......", "..b6...", ".......", ".......", "......."], { players: { 1: { tp: 6 } } });
+  const t = applyAction(s, { type: "spell", ability: "RoX.xeladron.impact", at: at("d4") });
+  assert.equal(t.pending.length, 0);
+  assert.equal(t.current, 2);
+  assert.equal(t.players[1].vp, 1);
+  assert.equal(t.players[2].exile, 1);
+});
+
 test("RoX.xeladron.forceful_alliance: 1 virtual VP per adjacent Xeladron/Portal pair", () => {
   // Card example: 2 Xeladrons and 2 Portals = 2 virtual VP.
   const s = position(["......a", ".......", ".......", ".......", ".......", "...616.", ".....1."]);
