@@ -11,6 +11,7 @@ import {
   SETUP_POWER, END_OF_WAR_TURNS,
 } from "../engine/core.js";
 import { IMPLEMENTED_SETS } from "../engine/sets/index.js";
+import { IMPLEMENTED_LOCATIONS } from "../engine/locations/index.js";
 import { actionPath, pendingPrompt, abilityName } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
 import { SIZE, sq, rowOf, colOf, supplyRow } from "../engine/board.js";
@@ -443,6 +444,7 @@ window.RulesMode = {
   get prefix() { return [...rm.prefix]; },
   isAvailable, start, stop, load, render, onCellClick, undo, redo, localCanAct,
   getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
+  implementedLocations: IMPLEMENTED_LOCATIONS,
   canUndo: () => rm.undo.length > 0 && state.gameMode !== "online",
   canRedo: () => rm.redo.length > 0 && state.gameMode !== "online",
 };

@@ -617,7 +617,7 @@
     <!-- Lobby -->
     <div id="lobby-overlay">
       <h1>DiceWar</h1>
-      <p>Choose a game mode and a dice set for each player, then start the match.</p>
+      <p>Choose a game mode, a dice set for each player and a landscape, then start the match.</p>
 
       <div id="lobby-config">
         <div class="lobby-player-config">
@@ -644,6 +644,19 @@
             <select id="p2-dice-set"></select>
           </label>
         </div>
+        <div class="lobby-player-config">
+          <label>
+            Landscape
+            <select id="use-location">
+              <option value="">None</option>
+              <option value="craters">The Craters (RoX)</option>
+              <option value="oracle">The Oracle (BoD)</option>
+              <option value="ruins">The Ruins (LoD)</option>
+              <option value="camp">The Camp (RoM, KoS)</option>
+              <option value="river">The River (DoA)</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div class="lobby-player-config" id="rules-options">
@@ -653,14 +666,6 @@
             <option value="easy">Easy</option>
             <option value="medium" selected>Medium</option>
             <option value="hard">Hard</option>
-          </select>
-        </label>
-        <label>Location tile
-          <select id="use-location">
-            <option value="">None</option>
-            <option value="craters">The Craters (RoX)</option>
-            <option value="oracle">The Oracle (BoD)</option>
-            <option value="ruins">The Ruins (LoD)</option>
           </select>
         </label>
         <label>Animations
@@ -2285,6 +2290,7 @@
       }
       if (gameMode === "online-host") {
         await startGameAsHost(p1Set, p2Set);
+        if (!rulesModeChosen(p1Set, p2Set)) placeLandscapeTiles();
         startRulesModeIfChosen(p1Set, p2Set);
       } else if (gameMode === "online-join") {
         // The host decides about rules mode and sends the game state.
@@ -2293,8 +2299,26 @@
         originalStartNewGame(p1Set, p2Set, gameMode);
         const lobbyOverlay = document.getElementById("lobby-overlay");
         lobbyOverlay.style.display = "none";
+        if (!rulesModeChosen(p1Set, p2Set)) placeLandscapeTiles();
         startRulesModeIfChosen(p1Set, p2Set);
       }
+    }
+
+    // Fixed tile positions of the landscapes (row, column from the top-left).
+    // The Camp and the River are placed by the players (click a field in round 1).
+    const LANDSCAPE_TILES = {
+      craters: { type: "RoX", fields: [[2, 1], [4, 5]] },
+      oracle: { type: "BoD", fields: [[3, 3]] },
+      ruins: { type: "LoD", fields: [[1, 5], [3, 3], [5, 1]] },
+    };
+
+    /** Without rules mode: show the chosen landscape's tiles on the board. */
+    function placeLandscapeTiles() {
+      const l = LANDSCAPE_TILES[document.getElementById("use-location").value];
+      if (!l) return;
+      for (const [r, c] of l.fields) state.board[r][c].type = l.type;
+      updateBoardDOM();
+      if (state.gameMode === "online") sendGameState();
     }
 
     // --- Rules mode (engine/ + ui/rules-mode.js) ---
@@ -2324,9 +2348,21 @@
       document.getElementById("enforce-rules-label").style.display = mode === "ai" ? "none" : "flex";
       document.getElementById("ai-level-label").style.display = mode === "ai" ? "flex" : "none";
       document.getElementById("ai-note").style.display = mode === "ai" ? "block" : "none";
+      // With rules enforcement only landscapes the rules engine knows can be chosen.
+      const enforced = available && (mode === "ai" || document.getElementById("enforce-rules").checked);
+      const known = window.RulesMode ? RulesMode.implementedLocations : [];
+      const sel = document.getElementById("use-location");
+      for (const opt of sel.options) {
+        if (!opt.value) continue;
+        if (!opt.dataset.label) opt.dataset.label = opt.textContent;
+        const ok = !enforced || known.includes(opt.value);
+        opt.disabled = !ok;
+        opt.textContent = opt.dataset.label + (ok ? "" : " – coming soon");
+      }
+      if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) sel.value = "";
     }
 
-    ["p1-dice-set", "p2-dice-set", "game-mode-select"].forEach((id) =>
+    ["p1-dice-set", "p2-dice-set", "game-mode-select", "enforce-rules"].forEach((id) =>
       document.getElementById(id).addEventListener("change", updateRulesOptions));
     window.addEventListener("rules-mode-ready", updateRulesOptions);
     window.addEventListener("rules-mode-ready", () => {
