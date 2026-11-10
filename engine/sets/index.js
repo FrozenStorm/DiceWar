@@ -11,6 +11,7 @@
 //   afterMoveOrAttack(s, at, die)        -> a die ended its Movement/Attack on `at`
 //   onPlaced(s, at, die, cause)          -> a die was placed from the Reserve
 //   onLeave(s, at, die, cause)           -> a die left the board
+//   onLevelChange(s, at, die, oldLevel)  -> a die was upgraded or downgraded
 //   onDefeated(s, at, die, byPlayer, cause)
 //   onTurnStart(s, player) / onTurnEnd(s, player)
 //   choiceOptions(s, pending)            -> legal answers to a queued decision

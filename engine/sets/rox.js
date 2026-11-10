@@ -274,6 +274,11 @@ export const RoX = {
     if (die.level === EMISSARY && countLevel(s, die.owner, EMISSARY) === 0) gainTP(s, die.owner, -4);
   },
 
+  // RoX.emissary.energy_circle: upgrading or downgrading the last Emissary also costs 4 TP.
+  onLevelChange(s, at, die, oldLevel) {
+    if (oldLevel === EMISSARY && countLevel(s, die.owner, EMISSARY) === 0) gainTP(s, die.owner, -4);
+  },
+
   // RoX.bearer.balance
   onDefeated(s, at, die) {
     if (die.level === BEARER) pushChoice(s, die.owner, A.balance);

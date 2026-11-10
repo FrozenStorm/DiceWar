@@ -124,6 +124,14 @@ test("RoX.emissary.energy_circle: +1 TP per turn with Portal, Bearer and Emissar
   assert.equal(s.players[1].tp, 0); // 3 - 4, floored at 0; no Energy Circle without Emissary
 });
 
+test("RoX.emissary.energy_circle: upgrading the last Emissary also costs 4 TP", () => {
+  const s = position(["......a", ".......", ".......", "...4...", ".......", ".......", "......."], { players: { 1: { tp: 5 } } });
+  const t = applyAction(s, { type: "upgrade", at: at("d4") });
+  assert.equal(t.players[1].tp, 1);
+  const s2 = position(["......a", ".......", ".......", "...4...", "...4...", ".......", "......."], { players: { 1: { tp: 5 } } });
+  assert.equal(applyAction(s2, { type: "upgrade", at: at("d4") }).players[1].tp, 5); // another Emissary remains
+});
+
 test("RoX.bearer.balance: owner places a Portal or upgrades a Portal after the Bearer is defeated", () => {
   let s = position(["......a", ".......", ".......", "...4b..", ".......", ".......", "......."]);
   s = applyAction(s, { type: "attack", from: at("d4"), to: at("e4") });

@@ -156,7 +156,10 @@ export function setLevel(s, at, level, { byPlayer } = {}) {
     removeDie(s, at, byPlayer !== undefined && byPlayer !== die.owner ? "exile" : "reserve", "downgrade");
     return;
   }
+  const oldLevel = die.level;
   die.level = Math.min(MAX_LEVEL, level);
+  const set = setOf(s, die.owner);
+  if (die.level !== oldLevel && set.onLevelChange) set.onLevelChange(s, at, die, oldLevel);
 }
 
 /** Queue a decision for `player` (resolved before the turn ends). */
