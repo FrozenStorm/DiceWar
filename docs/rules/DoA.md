@@ -1,4 +1,4 @@
-# Dice set DoA (Awakening)
+# Dice set DoA (Dawn of Awakening)
 
 Source: `img/DoA/rules/1.png` to `6.png` and `marker.png`. Base terms are defined in [base-rules.md](base-rules.md).
 

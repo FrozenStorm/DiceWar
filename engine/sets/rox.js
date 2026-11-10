@@ -310,4 +310,40 @@ export const RoX = {
   },
 
   virtualVP: forcefulAlliance,
+
+  // Click paths for the user interface (see engine/paths.js).
+  actionPath(a) {
+    switch (a.ability || a.kind) {
+      case A.aerial: return [a.from, a.to];
+      case A.wormhole: return [a.from, a.to, a.bearer, a.follow.to];
+      case A.newPaths: return [a.at, "New Paths", a.bearer, a.portal];
+      case A.summoning: return [a.at, "Dimensional Summoning", `${a.level} TP`, a.target];
+      case A.decay: return [a.at, "Decay", a.emissary, a.bearer];
+      case A.impact: return [a.at, "Impact (6 TP)"];
+      case A.balance: return [a.place ?? a.upgrade];
+      case A.attraction: return a.skip ? ["Skip"] : [a.from, a.to];
+      default: throw new Error(`No click path for ${a.ability || a.kind}`);
+    }
+  },
+
+  pendingPrompt(p) {
+    if (p.kind === A.balance) {
+      return "Balance: place a Portal from the Reserve on any free field, or upgrade one of your Portals.";
+    }
+    if (p.kind === A.attraction) {
+      return "Force of Attraction: pull a diagonal opposing creature next to the Enchantress, or skip.";
+    }
+    return "Make a choice.";
+  },
+
+  // Hints shown while an ability is being entered (index = number of tokens chosen).
+  stepHint(ability, index) {
+    const hints = {
+      [A.wormhole]: { 2: "Choose the Portal Bearer to come out at.", 3: "Choose the mandatory Movement or Attack." },
+      [A.newPaths]: { 2: "Choose the field for the Portal Bearer.", 3: "Choose the field for the Portal." },
+      [A.summoning]: { 2: "How many TP do you spend (= Power Level)?", 3: "Choose a field next to a Portal Bearer." },
+      [A.decay]: { 2: "Choose the field for the Emissary (diagonal).", 3: "Choose the field for the Portal Bearer (own zone)." },
+    };
+    return hints[ability] && hints[ability][index];
+  },
 };

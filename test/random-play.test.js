@@ -1,6 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createGame, applyAction, legalActions, setupLevelCombinations, actor } from "../engine/core.js";
+import { actionPath } from "../engine/paths.js";
+
+/** Every legal action needs a unique click path, and no complete path may be a prefix of another. */
+function assertPathsUnambiguous(actions) {
+  const paths = actions.map((a) => actionPath(a).map(String));
+  const keys = new Set(paths.map((p) => p.join("|")));
+  assert.equal(keys.size, paths.length, "duplicate click paths");
+  for (const p of paths) {
+    for (let n = 1; n < p.length; n++) {
+      assert.ok(!keys.has(p.slice(0, n).join("|")), `path ${p.join(">")} has a complete path as prefix`);
+    }
+  }
+}
 
 // Small deterministic PRNG so failures are reproducible.
 function rng(seed) {
@@ -25,6 +38,7 @@ test("random RoX games always reach a valid end without errors", () => {
     s = applyAction(s, randomSetup(rand));
     let steps = 0;
     while (s.phase !== "over") {
+      assertPathsUnambiguous(legalActions(s));
       const acts = legalActions(s).filter((a) => a.type !== "declareEndOfWar");
       assert.ok(acts.length > 0, `game ${g}: no actions for player ${actor(s)} but game not over`);
       s = applyAction(s, acts[Math.floor(rand() * acts.length)]);

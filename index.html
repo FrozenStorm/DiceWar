@@ -303,6 +303,59 @@
       background-image: url("img/DoA/marker.png");
     }
 
+    /* Rules mode: legal targets and the current selection */
+    .cell.hint {
+      box-shadow: inset 0 0 0 3px rgba(92, 184, 92, 0.9);
+    }
+
+    .cell.hint-attack {
+      box-shadow: inset 0 0 0 3px rgba(217, 83, 79, 0.95);
+    }
+
+    .cell.in-path {
+      box-shadow: inset 0 0 0 3px var(--accent);
+    }
+
+    #rules-panel {
+      display: none;
+      flex: 0 0 auto;
+      font-size: 0.7rem;
+      line-height: 1.25;
+      overflow-y: auto;
+      max-height: 40vh;
+    }
+
+    #rules-panel .rules-panel-text {
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    #rules-panel .btn {
+      width: 100%;
+      margin-top: 4px;
+      font-size: 0.7rem;
+    }
+
+    #app.rules-mode button[data-counter],
+    #app.rules-mode .btn-up-card,
+    #app.rules-mode .btn-down-card,
+    #app.rules-mode #btn-end-turn {
+      display: none;
+    }
+
+    #rules-options {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+
+    #rules-options label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
     .cell-label {
       position: absolute;
       bottom: 1px;
@@ -590,6 +643,11 @@
         </div>
       </div>
 
+      <div class="lobby-player-config" id="rules-options">
+        <label><input type="checkbox" id="enforce-rules" checked> Enforce rules (beta)</label>
+        <label><input type="checkbox" id="use-craters"> Location tiles: The Craters</label>
+      </div>
+
       <button class="btn primary" id="start-game-btn">Start Game</button>
     </div>
 
@@ -638,6 +696,7 @@
           <div class="status-text" id="status-text">Player 1's turn.</div>
           <div class="status-text" id="round-text" style="margin-top: 8px; font-size: 0.75rem; color: var(--muted);">Round: 1</div>
         </div>
+        <div class="side-card" id="rules-panel"></div>
         <div class="side-card">
           <button class="btn primary" id="btn-end-turn">End Turn</button>
           <!-- NEU: Undo / Redo -->
@@ -824,13 +883,19 @@
       if (!undoBtn || !redoBtn) return;
 
       const disabledByMode = state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer;
-      undoBtn.disabled = disabledByMode || undoStack.length === 0;
-      redoBtn.disabled = disabledByMode || redoStack.length === 0;
+      if (window.RulesMode && RulesMode.active) {
+        undoBtn.disabled = !RulesMode.canUndo();
+        redoBtn.disabled = !RulesMode.canRedo();
+      } else {
+        undoBtn.disabled = disabledByMode || undoStack.length === 0;
+        redoBtn.disabled = disabledByMode || redoStack.length === 0;
+      }
       undoBtn.style.opacity = undoBtn.disabled ? "0.5" : "1";
       redoBtn.style.opacity = redoBtn.disabled ? "0.5" : "1";
     }
 
     function undo() {
+      if (window.RulesMode && RulesMode.active) return RulesMode.undo();
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
         return;  // Still deaktivieren
       }
@@ -849,6 +914,7 @@
     }
 
     function redo() {
+      if (window.RulesMode && RulesMode.active) return RulesMode.redo();
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
         return;  // Still deaktivieren
       }
@@ -1102,6 +1168,10 @@
     }
 
     function onCellClick(r, c) {
+      if (window.RulesMode && RulesMode.active) {
+        RulesMode.onCellClick(r, c);
+        return;
+      }
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
         return;
       }
@@ -1646,7 +1716,10 @@
         return;
       }
 
-      if (state.currentPlayer === onlineState.localPlayer) {
+      const localActs = window.RulesMode && RulesMode.active
+        ? RulesMode.localCanAct()
+        : state.currentPlayer === onlineState.localPlayer;
+      if (localActs) {
         enableAllGameElements();
       } else {
         disableGameElementsForInactivePlayer();
@@ -1845,6 +1918,10 @@
             const json = JSON.parse(ev.target.result);
             const snapshot = json.snapshot || json;
             applyStateSnapshot(snapshot);
+            if (window.RulesMode) {
+              if (snapshot.rulesGame) RulesMode.load(snapshot.rulesGame, { resetHistory: true });
+              else RulesMode.stop();
+            }
             updateBoardDOM();
             refreshPlayerPanels();
             updateRoundDisplay();
@@ -1867,6 +1944,7 @@
     // --- Speichern / Laden ---
     function exportGameStateToFile() {
       const snapshot = createStateSnapshot();
+      if (window.RulesMode && RulesMode.active) snapshot.rulesGame = RulesMode.game;
       const data = {
         version: 1,
         snapshot
@@ -1998,6 +2076,7 @@
           state: state,
           currentPlayer: state.currentPlayer,
           selected: state.selected,
+          rulesGame: window.RulesMode && RulesMode.active ? RulesMode.game : null,
         };
         onlineState.connection.send(gameData);
       }
@@ -2014,6 +2093,10 @@
       refreshPlayerPanels();
       updateRoundDisplay();
       setStatus("Player " + state.currentPlayer + "'s turn.");
+      if (window.RulesMode) {
+        if (data.rulesGame) RulesMode.load(data.rulesGame);
+        else if (RulesMode.active) RulesMode.stop();
+      }
     }
 
     function updatePerspective() {
@@ -2159,16 +2242,52 @@
       const p1Set = p1Select ? p1Select.value : "numbers";
       const p2Set = p2Select ? p2Select.value : "numbers";
 
+      if (window.RulesMode) RulesMode.stop();
       if (gameMode === "online-host") {
         await startGameAsHost(p1Set, p2Set);
+        startRulesModeIfChosen(p1Set, p2Set);
       } else if (gameMode === "online-join") {
+        // The host decides about rules mode and sends the game state.
         await startGameAsJoin(p1Set, p2Set);
       } else {
         originalStartNewGame(p1Set, p2Set, gameMode);
         const lobbyOverlay = document.getElementById("lobby-overlay");
         lobbyOverlay.style.display = "none";
+        startRulesModeIfChosen(p1Set, p2Set);
       }
     }
+
+    // --- Rules mode (engine/ + ui/rules-mode.js) ---
+    function rulesModeChosen(p1Set, p2Set) {
+      return window.RulesMode
+        && RulesMode.isAvailable(p1Set, p2Set)
+        && document.getElementById("enforce-rules").checked;
+    }
+
+    function startRulesModeIfChosen(p1Set, p2Set) {
+      if (!rulesModeChosen(p1Set, p2Set)) return;
+      const locations = document.getElementById("use-craters").checked ? ["craters"] : [];
+      RulesMode.start(p1Set, p2Set, { locations });
+    }
+
+    function updateRulesOptions() {
+      const p1Set = document.getElementById("p1-dice-set").value;
+      const p2Set = document.getElementById("p2-dice-set").value;
+      const mode = document.getElementById("game-mode-select").value;
+      const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && mode !== "online-join";
+      document.getElementById("rules-options").style.display = available ? "flex" : "none";
+    }
+
+    ["p1-dice-set", "p2-dice-set", "game-mode-select"].forEach((id) =>
+      document.getElementById(id).addEventListener("change", updateRulesOptions));
+    window.addEventListener("rules-mode-ready", updateRulesOptions);
+
+    // In rules mode, Reserve and Exile are managed by the engine only.
+    document.addEventListener("click", (e) => {
+      if (window.RulesMode && RulesMode.active && e.target.closest(".player-zone .block.clickable")) {
+        e.stopPropagation();
+      }
+    }, true);
 
     // --- Init ---
     initBoardState();
@@ -2185,6 +2304,7 @@
       navigator.serviceWorker.register("sw.js");
     }
   </script>
+  <script type="module" src="ui/rules-mode.js"></script>
   <!-- Cloudflare Web Analytics -->
   <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "5a155bde3a4c487ba8bcee92b8c73808"}'></script>
   <!-- End Cloudflare Web Analytics -->
