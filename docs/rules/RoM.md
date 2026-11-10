@@ -25,6 +25,7 @@ The Golden Fruit cannot move and its Power Level cannot be increased. If you def
 ### `RoM.fruit.breeding` (spell)
 Split the Golden Fruit into 2 Golden Fruits.
 Card note: place 2 Reserve Dice as Golden Fruits horizontally or vertically adjacent to this Golden Fruit. Then put this Golden Fruit back to the Reserve.
+- **[Assumption RoM7]** Same wording as BoD Servitude, so the same correction applies: both Golden Fruits on opposite sides in a horizontal or vertical line.
 
 ## 2 · Sprout
 

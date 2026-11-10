@@ -106,10 +106,11 @@ test("BoD.hag.voodoo: needs TP and a Reserve Die", () => {
 
 test("BoD.hag.servitude: split into 2 Possessed next to the Hag", () => {
   const s = position(["......f", ".......", ".......", "...4...", ".......", ".......", "......."], BOD);
-  const t = applyAction(s, { type: "spell", ability: "BoD.hag.servitude", at: at("d4"), a: at("d5"), b: at("e4") });
+  const t = applyAction(s, { type: "spell", ability: "BoD.hag.servitude", at: at("d4"), a: at("d5"), b: at("d3"), line: "vertical" });
   assert.equal(t.board[at("d4")], null);
   assert.equal(t.board[at("d5")].level, 2);
-  assert.equal(t.board[at("e4")].level, 2);
+  assert.equal(t.board[at("d3")].level, 2);
+  assert.equal(legalActions(s).filter((a) => a.ability === "BoD.hag.servitude").length, 2, "only in a line");
 });
 
 test("BoD.gatherer.mercy and sacrifice", () => {

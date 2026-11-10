@@ -61,6 +61,7 @@ Put 1 Reserve Die into your Exile and choose one or both options for different P
 ### `BoD.hag.servitude` (spell)
 Split the Swamp Hag into 2 Possessed.
 Card note: place 2 Reserve Dice as Possessed horizontally or vertically adjacent to the Swamp Hag. Then put the Swamp Hag back to the Reserve.
+- Confirmed (correction): both Possessed are placed either horizontally or vertically adjacent, i.e. on opposite sides of the Swamp Hag in a line, never one horizontally and one vertically. Both fields must be free.
 
 ## 5 · Gatherer
 

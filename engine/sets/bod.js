@@ -3,7 +3,7 @@
 import { adjacent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, canRaise, standardActionsOf, actionOrigin, performAction, relocate,
+  pushChoice, doMove, canRaise, standardActionsOf, actionOrigin, performAction, relocate, lineSplits,
 } from "../core.js";
 
 const GNOME = 1, POSSESSED = 2, HUNTER = 3, HAG = 4, GATHERER = 5, DEMON = 6;
@@ -114,13 +114,11 @@ function applyVoodoo(s, a) {
   }
 }
 
-/** BoD.hag.servitude: split into 2 Possessed on free fields adjacent to the Hag. */
+/** BoD.hag.servitude: split into 2 Possessed on opposite sides of the Hag
+ *  (both horizontally or both vertically adjacent, confirmed). */
 function servitudeActions(s, at) {
   if (s.players[s.board[at].owner].reserve < 2) return [];
-  const free = adjacent(at).filter((t) => empty(s, t));
-  const out = [];
-  for (const a of free) for (const b of free) if (a !== b) out.push({ type: "spell", ability: A.servitude, at, a, b });
-  return out;
+  return lineSplits(s, at).map((l) => ({ type: "spell", ability: A.servitude, at, ...l }));
 }
 
 // --- Gatherer ---------------------------------------------------------------------
@@ -287,7 +285,7 @@ export const BoD = {
         if (a.move && a.raise !== undefined) return [a.at, "Voodoo: move + raise (5 TP)", a.move.from, a.move.to, a.raise];
         if (a.move) return [a.at, "Voodoo: move (3 TP)", a.move.from, a.move.to];
         return [a.at, "Voodoo: raise (2 TP)", a.raise];
-      case A.servitude: return [a.at, "Servitude", a.a, a.b];
+      case A.servitude: return [a.at, `Servitude (${a.line})`];
       case A.mercy: return [a.at, "Mercy", a.target];
       case A.sacrifice: return [a.from, a.to];
       case A.allegiance: return [a.at, "Allegiance", a.hag];
@@ -309,7 +307,6 @@ export const BoD = {
     const hints = {
       [A.fusion]: { 2: "Choose the other Hunter of Death to fuse with." },
       [A.voodoo]: { 2: "Choose the Possessed.", 3: "Choose the target field (up to 3 fields).", 4: "Choose another Possessed to raise by 2." },
-      [A.servitude]: { 2: "Choose the field for the first Possessed.", 3: "Choose the field for the second Possessed." },
       [A.mercy]: { 2: "Choose a free adjacent field for the Gnome." },
       [A.allegiance]: { 2: "Choose a free field next to the new Possessed for the Swamp Hag." },
     };

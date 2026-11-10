@@ -6,7 +6,7 @@
 // state, so the UI can keep a history and the AI can search freely.
 
 import {
-  SQUARES, adjacent, opponent, supplyRow, sq, fieldBonus, defaultDir,
+  SQUARES, adjacent, opponent, supplyRow, sq, fieldBonus, defaultDir, step,
 } from "./board.js";
 import { getSet } from "./sets/index.js";
 import { getLocation } from "./locations/index.js";
@@ -257,6 +257,17 @@ const canUpgrade = (s, at) => {
   const set = setOf(s, d.owner);
   return set.canUpgrade ? set.canUpgrade(s, at, d) : true;
 };
+
+/** Two free fields on opposite sides of `at`, in a vertical or horizontal line
+ *  (splits like LoD Brotherhood, BoD Servitude, RoM Breeding). */
+export function lineSplits(s, at) {
+  const out = [];
+  for (const [d1, d2, line] of [[0, 2, "vertical"], [1, 3, "horizontal"]]) {
+    const a = step(at, d1), b = step(at, d2);
+    if (a >= 0 && b >= 0 && !s.board[a] && !s.board[b]) out.push({ a, b, line });
+  }
+  return out;
+}
 
 /** Is the creature on `at` immune against an effect of the opposing player's
  *  creatures? kind: "attack" | "spell" | "speciality" (e.g. LoD Protective Barrier). */

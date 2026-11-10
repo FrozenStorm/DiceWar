@@ -4,7 +4,7 @@ import { adjacent, step, rowOf, colOf, sq, SIZE, SQUARES, inOwnZone, opponent } 
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, doMove, doAttack, relocate, canDefeatWith, standardActionsOf, performAction,
-  finishMoveOrAttack,
+  finishMoveOrAttack, lineSplits,
 } from "../core.js";
 
 const FRUIT = 1, SPROUT = 2, TORCH = 3, PROTECTRESS = 4, RUNNER = 5, MALI = 6;
@@ -42,13 +42,11 @@ function wrapStep(at, d) {
 
 // --- Golden Fruit --------------------------------------------------------------------
 
-/** RoM.fruit.breeding: 2 Golden Fruits on free fields adjacent to this one. */
+/** RoM.fruit.breeding: 2 Golden Fruits on opposite sides of this one (both
+ *  horizontally or both vertically adjacent, like BoD Servitude). */
 function breedingActions(s, at) {
   if (s.players[s.board[at].owner].reserve < 2) return [];
-  const free = adjacent(at).filter((t) => empty(s, t));
-  const out = [];
-  for (const a of free) for (const b of free) if (a !== b) out.push({ type: "spell", ability: A.breeding, at, a, b });
-  return out;
+  return lineSplits(s, at).map((l) => ({ type: "spell", ability: A.breeding, at, ...l }));
 }
 
 // --- Sprout ----------------------------------------------------------------------------
@@ -347,7 +345,7 @@ export const RoM = {
 
   actionPath(a) {
     switch (a.ability || a.kind) {
-      case A.breeding: return [a.at, "Breeding", a.a, a.b];
+      case A.breeding: return [a.at, `Breeding (${a.line})`];
       case A.velocity: return [a.from, a.to];
       case A.fireDemon: return [a.from, ...a.chain, a.to];
       case A.breath: return [a.at, "Breath of Life", a.fruit, `+${a.tp} (${a.tp} TP)`];
@@ -372,7 +370,6 @@ export const RoM = {
 
   stepHint(ability, index) {
     const hints = {
-      [A.breeding]: { 2: "Choose the field for the first Golden Fruit.", 3: "Choose the field for the second Golden Fruit." },
       [A.breath]: { 2: "Choose your Golden Fruit.", 3: "How many TP (= levels)?" },
     };
     return hints[ability] && hints[ability][index];

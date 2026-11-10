@@ -4,7 +4,7 @@ import { adjacent, diagonal, step, opponent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, doMove, doAttack, relocate, canDefeatWith, canRaise, isProtected,
-  standardActionsOf, performAction,
+  standardActionsOf, performAction, lineSplits,
 } from "../core.js";
 
 const SOUL = 1, GHOST = 2, WARRIOR = 3, MAGE = 4, BASILISK = 5, DRAGON = 6;
@@ -133,16 +133,6 @@ function applyGhosttrail(s, a) {
 }
 
 // --- Spells ------------------------------------------------------------------------
-
-/** Two free fields on opposite sides of `at` (a vertical or horizontal line). */
-function lineSplits(s, at) {
-  const out = [];
-  for (const [d1, d2, name] of [[0, 2, "vertical"], [1, 3, "horizontal"]]) {
-    const a = step(at, d1), b = step(at, d2);
-    if (a >= 0 && b >= 0 && empty(s, a) && empty(s, b)) out.push({ a, b, line: name });
-  }
-  return out;
-}
 
 /** LoD.warrior.brotherhood: 2 Souls in a line with the Warrior, who becomes a Soul. */
 function brotherhoodActions(s, at) {

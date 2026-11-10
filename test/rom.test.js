@@ -22,10 +22,10 @@ test("RoM.fruit.fake_gold: no movement, no upgrade, no VP, back to the owner's R
 
 test("RoM.fruit.breeding: 2 Golden Fruits next to it, the original goes to the Reserve", () => {
   const s = position(["......f", ".......", ".......", "...1...", ".......", ".......", "......."], ROM);
-  const t = applyAction(s, { type: "spell", ability: "RoM.fruit.breeding", at: at("d4"), a: at("c4"), b: at("d5") });
+  const t = applyAction(s, { type: "spell", ability: "RoM.fruit.breeding", at: at("d4"), a: at("c4"), b: at("e4"), line: "horizontal" });
   assert.equal(t.board[at("d4")], null);
   assert.equal(t.board[at("c4")].level, 1);
-  assert.equal(t.board[at("d5")].level, 1);
+  assert.equal(t.board[at("e4")].level, 1);
 });
 
 test("RoM.sprout.velocity: 2 fields straight over a free field only", () => {
