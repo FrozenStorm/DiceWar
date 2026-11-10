@@ -83,11 +83,12 @@ test("BoD.hag.black_magic: +1 TP per turn with a Swamp Hag, TP lost without Hag 
   assert.equal(s.players[1].tp, 0);
 });
 
-test("BoD.hag.voodoo: move a Possessed exactly 3 fields and raise another by 2", () => {
+test("BoD.hag.voodoo: move a Possessed up to 3 fields and raise another by 2", () => {
   const s = position(["......f", ".......", ".......", ".......", ".......", ".......", "42.2..."], { ...BOD, players: { 1: { tp: 5 } } });
   const acts = byAbility(s, "BoD.hag.voodoo");
   assert.ok(acts.some((a) => a.move && a.move.from === at("b1") && a.move.to === at("b4")));
-  assert.ok(!acts.some((a) => a.move && a.move.to === at("b3")), "exactly 3 fields");
+  assert.ok(acts.some((a) => a.move && a.move.to === at("b3")), "up to 3 fields");
+  assert.ok(!acts.some((a) => a.move && a.move.to === at("b5")), "not more than 3 fields");
   const both = acts.find((a) => a.move && a.move.from === at("b1") && a.move.to === at("b4") && a.raise === at("d1"));
   const t = applyAction(s, both);
   assert.equal(t.board[at("b4")].level, 2);
@@ -138,11 +139,13 @@ test("BoD.demon.allegiance and bound", () => {
   assert.equal(virtualVP(t, 1), 1); // 1 Demon + 1 Possessed
 });
 
-test("BoD Oracle: TP for the owner, level set to 4, no raising on the Oracle", () => {
+test("BoD Oracle: TP for the owner, level set to 4 at the end of the turn", () => {
   let s = position(["......f", ".......", ".......", ".......", "...6...", ".......", "......."], { set1: "RoX", set2: "BoD", locations: ["oracle"] });
   s = applyAction(s, { type: "move", from: at("d3"), to: at("d4") });
   assert.equal(s.board[at("d4")].level, 4); // falls to 4 at the end of the turn
   s = applyAction(s, { type: "move", from: at("g7"), to: at("f7") });
   assert.equal(s.players[1].tp, 1); // owns the Oracle at the beginning of the turn
-  assert.ok(!isLegal(s, { type: "upgrade", at: at("d4") }));
+  // Upgrading on the Oracle is allowed, but the level is set back to 4.
+  s = applyAction(s, { type: "upgrade", at: at("d4") });
+  assert.equal(s.board[at("d4")].level, 4);
 });

@@ -43,10 +43,8 @@ const oracle = {
     const d = s.board[at];
     if (d && d.owner === player && d.level !== 4) setLevel(s, at, 4);
   },
-  // Creatures on the Oracle cannot raise their Power Level.
-  blocksRaise(s, at) {
-    return at === this.squares[0];
-  },
+  // Card note "cannot raise Power Level": every action is allowed, but the
+  // level is set back to 4 at the end of the turn anyway (BoD6, confirmed).
 };
 
 const LOCATIONS = { craters, oracle };

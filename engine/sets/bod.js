@@ -79,7 +79,7 @@ function applyFusion(s, a) {
 
 // --- Swamp Hag ------------------------------------------------------------------
 
-/** BoD.hag.voodoo: exile 1 Reserve Die, then move one Possessed by 3 fields
+/** BoD.hag.voodoo: exile 1 Reserve Die, then move one Possessed up to 3 fields
  *  (3 TP, movement only) and/or raise another Possessed by 2 levels (2 TP). */
 function voodooActions(s, at) {
   const player = s.board[at].owner;
@@ -87,7 +87,7 @@ function voodooActions(s, at) {
   if (p.reserve < 1 || p.tp < VOODOO_RAISE_TP) return [];
   const possessed = diceOf(s, player, POSSESSED);
   const moves = p.tp >= VOODOO_MOVE_TP
-    ? possessed.flatMap((from) => walk(s, from, 3).map((to) => ({ from, to })))
+    ? possessed.flatMap((from) => [...new Set([1, 2, 3].flatMap((n) => walk(s, from, n)))].sort((a, b) => a - b).map((to) => ({ from, to })))
     : [];
   const raises = possessed.filter((q) => canRaise(s, q));
   const out = [];
@@ -307,7 +307,7 @@ export const BoD = {
   stepHint(ability, index) {
     const hints = {
       [A.fusion]: { 2: "Choose the other Hunter of Death to fuse with." },
-      [A.voodoo]: { 2: "Choose the Possessed.", 3: "Choose the target field (exactly 3 fields).", 4: "Choose another Possessed to raise by 2." },
+      [A.voodoo]: { 2: "Choose the Possessed.", 3: "Choose the target field (up to 3 fields).", 4: "Choose another Possessed to raise by 2." },
       [A.servitude]: { 2: "Choose the field for the first Possessed.", 3: "Choose the field for the second Possessed." },
       [A.mercy]: { 2: "Choose a free adjacent field for the Gnome." },
       [A.allegiance]: { 2: "Choose a free field next to the new Possessed for the Swamp Hag." },
