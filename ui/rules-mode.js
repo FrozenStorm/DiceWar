@@ -14,7 +14,7 @@ import { IMPLEMENTED_SETS } from "../engine/sets/index.js";
 import { IMPLEMENTED_LOCATIONS } from "../engine/locations/index.js";
 import { actionPath, pendingPrompt, abilityName } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
-import { SIZE, sq, rowOf, colOf, supplyRow } from "../engine/board.js";
+import { SIZE, sq, rowOf, colOf, supplyRow, defaultDir } from "../engine/board.js";
 import { captureDice, play as playAnimation, getSpeed, setSpeed } from "./animate.js";
 
 // UI dice set id -> engine set id
@@ -31,6 +31,8 @@ const rm = {
   redo: [],
   prefix: [],        // tokens chosen so far
   setupDraft: {},    // col -> level during the setup phase
+  setupDir: {},      // col -> alignment during the setup phase (KoS)
+  setupRotate: false, // KoS setup: clicks turn the dice instead of raising the level
   message: "",
   ai: null,          // { player, level } when playing against the AI
   aiToken: 0,        // invalidates running AI requests (undo, new game)
@@ -60,6 +62,8 @@ function start(p1Set, p2Set, { locations = [], startingPlayer, ai = null, riverC
   rm.redo = [];
   rm.prefix = [];
   rm.setupDraft = {};
+  rm.setupDir = {};
+  rm.setupRotate = false;
   rm.message = `${playerName(rm.game.startingPlayer)} ${rm.ai ? (rm.game.startingPlayer === rm.ai.player ? "starts" : "start") : "starts"} (rolled the higher number).`;
   document.getElementById("app").classList.add("rules-mode");
   render();
@@ -274,6 +278,16 @@ function onSetupClick(r, c) {
     rm.message = "Place your starting lineup in your Supply Zone (your back row).";
     return render();
   }
+  // KoS: in alignment mode a click turns a placed die by 90 degrees (clockwise).
+  if (setupNeedsAlignment() && rm.setupRotate) {
+    if (typeof rm.setupDraft[c] !== "number") {
+      rm.message = "Place a die there first, then turn it.";
+      return render();
+    }
+    rm.setupDir[c] = ((rm.setupDir[c] ?? defaultDir(player)) + 1) % 4;
+    rm.message = "";
+    return render();
+  }
   // Each click cycles the field: empty -> 1 .. 6 -> (camp, with The Camp) -> empty.
   const cycle = [1, 2, 3, 4, 5, 6];
   if (rm.game.locations.includes("camp")) cycle.push("camp");
@@ -281,20 +295,28 @@ function onSetupClick(r, c) {
   const next = cur === undefined ? cycle[0] : cycle[cycle.indexOf(cur) + 1];
   if (next === "camp") for (const k of Object.keys(rm.setupDraft)) if (rm.setupDraft[k] === "camp") delete rm.setupDraft[k];
   if (next !== undefined) rm.setupDraft[c] = next;
-  else delete rm.setupDraft[c];
+  else { delete rm.setupDraft[c]; delete rm.setupDir[c]; }
   rm.message = "";
   render();
+}
+
+/** KoS dice get their alignment in the setup (they keep it when upgraded). */
+function setupNeedsAlignment(g = rm.game) {
+  return g.phase === "setup" && g.players[g.current].set === "KoS";
 }
 
 function confirmSetup() {
   const player = rm.game.current;
   const entries = Object.entries(rm.setupDraft);
-  const placements = entries.filter(([, v]) => v !== "camp").map(([col, level]) => ({ col: Number(col), level }));
+  const placements = entries.filter(([, v]) => v !== "camp").map(([col, level]) => (
+    setupNeedsAlignment() ? { col: Number(col), level, dir: rm.setupDir[col] ?? defaultDir(player) } : { col: Number(col), level }));
   const campEntry = entries.find(([, v]) => v === "camp");
   const extra = campEntry ? { camp: Number(campEntry[0]) } : {};
   const err = validateSetup(rm.game, player, placements, extra);
   if (err) { rm.message = err; return render(); }
   rm.setupDraft = {};
+  rm.setupDir = {};
+  rm.setupRotate = false;
   perform({ type: "setup", placements, ...extra });
 }
 
@@ -330,7 +352,9 @@ function project() {
     const row = supplyRow(g.current);
     for (const [col, level] of Object.entries(rm.setupDraft)) {
       const cell = state.board[row][Number(col)];
-      state.board[row][Number(col)] = level === "camp" ? { ...cell, type: "RoM" } : { ...cell, owner: g.current, value: level };
+      const dir = rm.setupDir[col] ?? defaultDir(g.current);
+      state.board[row][Number(col)] = level === "camp" ? { ...cell, type: "RoM" }
+        : { ...cell, owner: g.current, value: level, rotation: alignmentRotation({ owner: g.current, dir }) };
     }
   }
   for (const p of [1, 2]) {
@@ -424,6 +448,12 @@ function renderPanel() {
     const hasCamp = values.includes("camp");
     lines.push(`Click fields in your back row to place dice (each click raises the level). Total Power Level: ${sum} / ${SETUP_POWER}.`);
     if (needsCamp) lines.push(`Camp: click a field past level 6 to place your camp there (${hasCamp ? "placed" : "not placed yet"}).`);
+    if (setupNeedsAlignment() && localCanAct()) {
+      lines.push(rm.setupRotate
+        ? "Alignment: click a die to turn it by 90°. Every die keeps its alignment when it is upgraded."
+        : "Knights of Steel: switch to \"Turn dice\" to choose the alignment of each die.");
+      buttons.push([rm.setupRotate ? "Set levels" : "Turn dice", () => { rm.setupRotate = !rm.setupRotate; rm.message = ""; render(); }, true]);
+    }
     if (localCanAct()) buttons.push(["Confirm lineup", confirmSetup, sum === SETUP_POWER && (!needsCamp || hasCamp)]);
     else if (isAiTurn()) lines.push("The AI is setting up…");
   } else if (g.phase === "war") {

@@ -3,7 +3,8 @@
 // KoS uses the alignment of a die (die.dir: 0 up, 1 right, 2 down, 3 left on
 // the board). Loyal Shield, Silver Spear and Burning Stag choose their
 // alignment with every Movement and Attack (action.face, see core
-// performAction); the alignment of other creatures does not matter.
+// performAction). Every KoS die gets an alignment when it is placed (setup,
+// Supply, Reinforcements, Relentless), because it keeps it when upgraded.
 
 import { adjacent, diagonal, surrounding, step, rowOf, colOf, sq, onBoard, SIZE, SQUARES, opponent, supplyRow, defaultDir } from "../board.js";
 import {
@@ -15,6 +16,9 @@ import {
 const SWORD = 1, SHIELD = 2, SPEAR = 3, COMMANDER = 4, STAG = 5, KNIGHT = 6;
 const ORIENTING = [SHIELD, SPEAR, STAG];
 const FORMATION_POWER = 9;
+const FACES = [0, 1, 2, 3];
+/** One option per alignment for a die placed on `place`. */
+const withFaces = (opt) => FACES.map((face) => ({ ...opt, face }));
 
 const A = {
   agile: "KoS.sword.agile",
@@ -269,8 +273,7 @@ function reinforcementOptions(s, pending) {
   const level = REINF_ORDER[stage];
   const out = [];
   for (const place of free) {
-    if (ORIENTING.includes(level)) for (let face = 0; face < 4; face++) out.push({ type: "choice", kind: A.reinforcements, place, face });
-    else out.push({ type: "choice", kind: A.reinforcements, place });
+    out.push(...withFaces({ type: "choice", kind: A.reinforcements, place }));
   }
   return out;
 }
@@ -405,13 +408,13 @@ export const KoS = {
       case A.relentless: return relentlessOptions(s, pending);
       case A.rescue:
         if (s.players[player].exile < 1) return [];
-        return [...edgeFields(s, player).map((place) => ({ type: "choice", kind: A.rescue, place })), { type: "choice", kind: A.rescue, skip: true }];
+        return [...edgeFields(s, player).flatMap((place) => withFaces({ type: "choice", kind: A.rescue, place })), { type: "choice", kind: A.rescue, skip: true }];
       case A.toSpears:
         return diceOf(s, player, SHIELD).map((upgrade) => ({ type: "choice", kind: A.toSpears, upgrade }));
       case A.leadership: return leadershipOptions(s, pending);
       case A.supply:
         if (s.players[player].reserve < 1) return [];
-        return edgeFields(s, player).map((place) => ({ type: "choice", kind: A.supply, place }));
+        return edgeFields(s, player).flatMap((place) => withFaces({ type: "choice", kind: A.supply, place }));
       case A.reinforcements: return reinforcementOptions(s, pending);
       default: return [];
     }
@@ -426,7 +429,7 @@ export const KoS = {
         performAction(s, a.sub);
         break;
       case A.rescue:
-        if (!a.skip) placeDie(s, a.place, player, SWORD, { source: "exile", cause: "relentless" });
+        if (!a.skip) placeDie(s, a.place, player, SWORD, { source: "exile", cause: "relentless", dir: a.face ?? defaultDir(player) });
         break;
       case A.toSpears:
         setLevel(s, a.upgrade, s.board[a.upgrade].level + 1);
@@ -441,7 +444,7 @@ export const KoS = {
         break;
       }
       case A.supply: {
-        placeDie(s, a.place, player, SWORD);
+        placeDie(s, a.place, player, SWORD, { dir: a.face ?? defaultDir(player) });
         const left = pending.data.left - 1;
         if (left > 0) pushChoice(s, player, A.supply, { ...pending.data, left });
         else removeDie(s, pending.data.at, "reserve", "split");

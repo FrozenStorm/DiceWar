@@ -43,7 +43,8 @@ test("KoS.sword.relentless: an exiled First Sword may return on an edge field", 
   assert.equal(actor(s), 2, "the owner of the Sword decides");
   const opts = legalActions(s);
   assert.ok(opts.some((o) => o.place === at("a4")) && !opts.some((o) => o.place === at("a1")), "not the opposing Supply Zone");
-  s = applyAction(s, opts.find((o) => o.place === at("a4")));
+  s = applyAction(s, opts.find((o) => o.place === at("a4") && o.face === RIGHT));
+  assert.equal(s.board[at("a4")].dir, RIGHT);
   assert.equal(s.board[at("a4")].level, 1);
   assert.equal(s.players[2].exile, 0);
 });
@@ -120,12 +121,36 @@ test("KoS.knight: Breakthrough formations of 9+, Reinforcements", () => {
   let t = applyAction(s, { type: "spell", ability: "KoS.knight.reinforcements", at: at("d4") });
   t = applyAction(t, { type: "choice", kind: "KoS.knight.reinforcements", place: at("c4"), face: LEFT });
   t = applyAction(t, { type: "choice", kind: "KoS.knight.reinforcements", place: at("e4"), face: RIGHT });
-  t = applyAction(t, { type: "choice", kind: "KoS.knight.reinforcements", place: at("d5") });
+  assert.ok(legalActions(t).filter((o) => o.place === at("d5")).length === 4, "the First Sword chooses its alignment too");
+  t = applyAction(t, { type: "choice", kind: "KoS.knight.reinforcements", place: at("d5"), face: DOWN });
   assert.equal(t.board[at("d4")], null);
   assert.equal(t.board[at("c4")].level, 3);
   assert.equal(t.board[at("c4")].dir, LEFT);
   assert.equal(t.board[at("e4")].level, 2);
   assert.equal(t.board[at("d5")].level, 1);
+  assert.equal(t.board[at("d5")].dir, DOWN);
+});
+
+test("KoS alignment: chosen in the setup and with Supply and Relentless, kept when upgraded", async () => {
+  const { createGame, validateSetup } = await import("../engine/core.js");
+  let g = createGame({ set1: "KoS", set2: "KoS" });
+  const placements = [{ col: 2, level: 4, dir: RIGHT }, { col: 3, level: 6, dir: LEFT }];
+  assert.equal(validateSetup(g, 1, placements), null);
+  assert.equal(validateSetup(g, 1, [{ col: 2, level: 10, dir: 5 }]), "Invalid Power Level.");
+  assert.equal(validateSetup(g, 1, [{ col: 2, level: 4, dir: 7 }, { col: 3, level: 6 }]), "Invalid alignment.");
+  g = applyAction(g, { type: "setup", placements });
+  assert.equal(g.board[at("c1")].dir, RIGHT);
+  // Supply: every First Sword chooses its alignment.
+  let s = position(["......f", ".......", ".......", ".......", "...4...", ".......", "......."], KOS);
+  s = applyAction(s, { type: "spell", ability: "KoS.commander.supply", at: at("d3") });
+  const opts = legalActions(s).filter((o) => o.place === at("a1"));
+  assert.deepEqual(opts.map((o) => o.face).sort(), [0, 1, 2, 3]);
+  s = applyAction(s, opts.find((o) => o.face === LEFT));
+  assert.equal(s.board[at("a1")].dir, LEFT);
+  // The alignment stays when the die is upgraded.
+  const u = position(["......f", ".......", ".......", ".......", ".......", ".......", "1......"], KOS);
+  u.board[at("a1")].dir = RIGHT;
+  assert.equal(applyAction(u, { type: "upgrade", at: at("a1") }).board[at("a1")].dir, RIGHT);
 });
 
 test("KoS.shield.to_the_spears: more than 3 Shields at the start of the turn", () => {

@@ -430,10 +430,11 @@ export function validateSetup(s, player, placements, extra = {}) {
   if (!placements.length) return "Place at least one die.";
   const cols = new Set();
   let sum = 0;
-  for (const { col, level } of placements) {
+  for (const { col, level, dir } of placements) {
     if (!Number.isInteger(col) || col < 0 || col > 6) return "Invalid column.";
     if (cols.has(col)) return "Only one die per field.";
     if (!Number.isInteger(level) || level < 1 || level > MAX_LEVEL) return "Invalid Power Level.";
+    if (dir !== undefined && ![0, 1, 2, 3].includes(dir)) return "Invalid alignment.";
     cols.add(col);
     sum += level;
   }

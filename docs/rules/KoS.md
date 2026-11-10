@@ -3,7 +3,7 @@
 **Status: validated, implemented.** All open questions were answered by the rules owner.
 
 Engine notes (how the open details were implemented; tell us if one is wrong):
-- Alignment: dice start facing the opponent. Loyal Shield, Silver Spear and Burning Stag choose their alignment as the last click of every Movement and Attack. Heart Thrust always faces the direction of the thrust.
+- Alignment: every KoS die gets its alignment when it is placed: in the starting lineup ("Turn dice" in the setup panel, default facing the opponent) and when Supply, Reinforcements or Relentless place a die (last click). It keeps its alignment when it is upgraded or downgraded (Daniel, 2026-11-11). Loyal Shield, Silver Spear and Burning Stag also choose their alignment as the last click of every Movement and Attack. Heart Thrust always faces the direction of the thrust.
 - Shield Strike: the Shield may orient before the action, so it can strike any adjacent opposing creature; afterwards it faces any direction (Mindfulness).
 - Phalanx: checked after every action, for every creature that moved (also pushed or pulled). An opposing creature that ends right in front of a Silver Spear's tip loses 1 Power Level, also when the Spear itself moved there.
 - Relentless: "moves" means a Movement (not an attack). Each First Sword acts at most once per turn.
