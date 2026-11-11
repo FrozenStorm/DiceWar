@@ -244,6 +244,26 @@
 
     .cell-label { display: none; }
 
+    .bonus-tag {
+      position: absolute; top: 50%; z-index: 1; pointer-events: none;
+      transform: translateY(-50%);
+      height: 34%; min-height: 17px; aspect-ratio: 1.1;
+      background: #2b2420;
+    }
+    .bonus-tag::after {
+      content: attr(data-v);
+      position: absolute; inset: 1.5px;
+      display: flex; align-items: center; justify-content: center;
+      background: #e8dcc0; color: #3b3127;
+      font-family: var(--display); font-weight: 700; font-size: clamp(10px, 3.4cqmin, 22px);
+      clip-path: inherit;
+    }
+    .bonus-tag.right { right: 0; clip-path: polygon(36% 0, 100% 0, 100% 100%, 36% 100%, 0 50%); }
+    .bonus-tag.right::after { padding-left: 22%; }
+    .bonus-tag.left { left: 0; clip-path: polygon(0 0, 64% 0, 100% 50%, 64% 100%, 0 100%); }
+    .bonus-tag.left::after { padding-right: 22%; }
+    #app.online-player2 .bonus-tag { rotate: 180deg; }
+
     .die {
       position: relative;
       z-index: 2;
@@ -351,6 +371,15 @@
     }
     @media (min-aspect-ratio: 5/4) and (min-width: 1100px) {
       #app { grid-template-columns: minmax(0, 1fr) 400px; max-width: 1400px; }
+    }
+    /* Large screens: the side column grows with the screen (same layout, scaled). */
+    @media (min-aspect-ratio: 5/4) and (min-width: 1250px) and (min-height: 720px) {
+      #app { grid-template-columns: minmax(0, 1fr) 540px; max-width: 1700px; }
+      .dock { zoom: 1.35; }
+    }
+    @media (min-aspect-ratio: 5/4) and (min-width: 1600px) and (min-height: 900px) {
+      #app { grid-template-columns: minmax(0, 1fr) 600px; max-width: 2000px; }
+      .dock { zoom: 1.5; }
     }
     @media (min-width: 700px) and (max-aspect-ratio: 5/4) {
       .hint-text { font-size: 18px; }
@@ -751,6 +780,16 @@
           cell.dataset.col = c;
           cell.style.gridRow = String(r + 1);
           cell.style.gridColumn = String(c + 1);
+
+          // Field bonus tags like on the printed board (+3/+2/+1 at the edges)
+          const bonus = r <= 2 && c === SIZE - 1 ? 3 - r : r >= 4 && c === 0 ? r - 3 : 0;
+          if (bonus) {
+            const tag = document.createElement("span");
+            tag.className = "bonus-tag " + (c === 0 ? "left" : "right");
+            tag.dataset.v = "+" + bonus;
+            tag.setAttribute("aria-hidden", "true");
+            cell.appendChild(tag);
+          }
 
           const label = document.createElement("div");
           label.className = "cell-label";
