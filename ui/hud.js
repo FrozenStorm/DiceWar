@@ -231,10 +231,10 @@
           { label: "Level +", kind: "upgrade", onClick: () => rotateSelectedDie(1) },
         ],
         right: [{ label: "To Exile", kind: "spell", onClick: () => moveSelectedBoardDieToExile(owner) }],
-        bottom: [{ label: "Move", kind: "move", onClick: () => { state.ringDismissed = true; renderManual(); } }],
+        bottom: [{ label: "Turn 90°", kind: "upgrade", onClick: () => rotateSelectedDieVisual(90) }],
         left: [{ label: "To Reserve", kind: "spell", onClick: () => moveSelectedBoardDieToReserve(owner) }],
       },
-      center: { label: "Turn by 90°", onClick: () => rotateSelectedDieVisual(90) },
+      center: { label: "Move", onClick: () => { state.ringDismissed = true; renderManual(); } },
       onCancel: () => clearSelection(),
     });
   }

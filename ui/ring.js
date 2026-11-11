@@ -3,9 +3,9 @@
 //   Ring.show({
 //     square: { row, col },            // board field the ring belongs to
 //     items: { top: [], right: [], bottom: [], left: [] },
-//     dieImg: "img/RoX/3.png",          // shown in the middle (optional)
+//     dieImg: "img/RoX/3.png",          // shown in the middle when there is no center action
 //     dieRotation: 0,                   // degrees, for the image in the middle
-//     center: { label, onClick } | null, // tap on the middle (e.g. KoS "Turn")
+//     center: { label, onClick } | null, // action in the middle (Move / Attack)
 //     flip: false,                      // turn the ring by 180 degrees (player 2 in a duel)
 //     spellColor: "#00878c",
 //     onCancel: () => {},               // tap outside the ring
@@ -127,8 +127,9 @@
     layer.classList.add("open");
     Object.assign(backdrop.style, { left: `${br.left - ar.left}px`, top: `${br.top - ar.top}px`, width: `${br.width}px`, height: `${br.height}px` });
 
-    const R = Math.min(cell * 2.05, ar.width / 2 - 4, ar.height / 2 - 4);
-    const r = Math.max(R * 0.34, 24);
+    // Big enough for a thumb on a phone, but not huge on a large screen.
+    const R = Math.min(cell * 2.05, 170, ar.width / 2 - 4, ar.height / 2 - 4);
+    const r = Math.max(R * 0.37, 30);
     const pad = 4;
     let cx = cr.left - ar.left + cell / 2;
     let cy = cr.top - ar.top + cell / 2;
@@ -172,37 +173,29 @@
       });
     }
 
-    // Middle: the die itself (a tap there may turn it, KoS).
+    // Middle: the main action (Move / Attack), otherwise the die itself.
     const mid = el("g", { class: "seg" }, root);
+    if (o.center) {
+      el("circle", { cx: c, cy: c, r: r - 3, fill: COLORS.move, stroke: "#1e1a16", "stroke-width": 2 }, mid);
+      drawLabel(mid, c, c, { label: o.center.label, kind: "move" }, (r - 3) * 1.6, fontSize);
+      mid.setAttribute("tabindex", "0");
+      mid.setAttribute("role", "button");
+      mid.setAttribute("aria-label", o.center.label);
+      const fire = (e) => { e.stopPropagation(); o.center.onClick(); };
+      mid.addEventListener("click", fire);
+      mid.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") fire(e); });
+      return;
+    }
+    mid.style.pointerEvents = "none";
     el("circle", { cx: c, cy: c, r: r - 3, fill: "#e8dfca", stroke: "#1e1a16", "stroke-width": 2 }, mid);
     if (o.dieImg) {
       const s = (r - 3) * 1.25;
       const img = el("image", { href: o.dieImg, x: c - s / 2, y: c - s / 2, width: s, height: s, preserveAspectRatio: "xMidYMid meet" }, mid);
       const rot = (o.dieRotation || 0) + (o.flip ? 180 : 0);
       if (rot) img.setAttribute("transform", `rotate(${rot} ${c} ${c})`);
-      img.style.pointerEvents = "none";
     } else if (o.dieText) {
       const t = el("text", { x: c, y: c + r * 0.3, "text-anchor": "middle", "font-family": "Cinzel, Georgia, serif", "font-weight": 700, "font-size": r * 0.9, fill: "#2c241c" }, mid);
       t.textContent = o.dieText;
-    }
-    if (o.center) {
-      // circular arrow badge: "tap the die to turn it"
-      const br2 = r * 0.42;
-      const bx = c + (r - 3) * 0.62, by = c - (r - 3) * 0.62;
-      el("circle", { cx: bx, cy: by, r: br2, fill: "#56656f", stroke: "#1e1a16", "stroke-width": 1.5 }, mid);
-      el("path", {
-        d: `M${bx - br2 * 0.5} ${by + br2 * 0.15} A${br2 * 0.55} ${br2 * 0.55} 0 1 1 ${bx + br2 * 0.1} ${by + br2 * 0.55}`,
-        fill: "none", stroke: "#f4eedf", "stroke-width": 2, "stroke-linecap": "round",
-      }, mid);
-      el("path", { d: `M${bx - br2 * 0.75} ${by - br2 * 0.1} L${bx - br2 * 0.5} ${by + br2 * 0.35} L${bx - br2 * 0.1} ${by + br2 * 0.05}`, fill: "none", stroke: "#f4eedf", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" }, mid);
-      mid.setAttribute("tabindex", "0");
-      mid.setAttribute("role", "button");
-      mid.setAttribute("aria-label", o.center.label || "Turn");
-      const fire = (e) => { e.stopPropagation(); o.center.onClick(); };
-      mid.addEventListener("click", fire);
-      mid.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") fire(e); });
-    } else {
-      mid.style.pointerEvents = "none";
     }
   }
 

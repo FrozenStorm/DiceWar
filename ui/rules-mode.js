@@ -540,6 +540,8 @@ function ringModel() {
       text: "Choose the new alignment, then the action." };
   }
 
+  // Top: upgrades. Middle: Move / Attack (used most). Left and right: spells,
+  // a third spell goes to the bottom. Bottom: KoS "Turn" (then 4 arrows).
   const items = { top: [], right: [], bottom: [], left: [] };
   const spells = [];
   for (const t of others) {
@@ -547,18 +549,19 @@ function ringModel() {
     const upgrade = a && (a.type === "upgrade" || UPGRADE_ABILITIES.has(a.ability));
     (upgrade ? items.top : spells).push({ label: t, kind: upgrade ? "upgrade" : "spell", onClick: () => choose(t) });
   }
-  const half = Math.ceil(spells.length / 2);
-  items.left = spells.slice(0, half);
-  items.right = spells.slice(half);
+  if (spells[0]) items.left = [spells[0]];
+  if (spells[1]) items.right = [spells[1]];
+  items.bottom = spells.slice(2);
+  if (turns.length) items.bottom.unshift({ label: "Turn", kind: "upgrade", onClick: () => { rm.turnMode = true; render(); } });
+  let center = null;
   if (nums.length) {
     const attacks = nums.filter((t) => rm.game.board[t] && rm.game.board[t].owner !== player).length;
     const label = attacks === nums.length ? "Attack" : attacks ? "Move / Attack" : "Move";
-    items.bottom = [{ label, kind: "move", onClick: () => { rm.ringDismissed = true; render(); } }];
+    center = { label, onClick: () => { rm.ringDismissed = true; render(); } };
   }
   return {
-    ...base, items, onCancel: cancel,
-    center: turns.length ? { label: "Turn", onClick: () => { rm.turnMode = true; render(); } } : null,
-    text: turns.length ? "Choose an action, or tap the die to turn it. Tap outside to cancel." : "Choose an action in the circle. Tap outside to cancel.",
+    ...base, items, center, onCancel: cancel,
+    text: "Choose an action in the circle. Tap outside to cancel.",
   };
 }
 
