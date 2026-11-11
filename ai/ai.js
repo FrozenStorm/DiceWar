@@ -3,7 +3,9 @@
 //
 // Search: minimax with alpha-beta pruning over whole turns (decisions inside a
 // turn such as Balance or Force of Attraction do not cost depth), iterative
-// deepening with a time limit, and a heuristic evaluation in "VP x 100" units.
+// deepening with a time limit (or a fixed node budget for reproducible games),
+// and a heuristic evaluation in "VP x 100" units. Among equally rated moves the
+// AI picks one at random (opts.random, seedable).
 
 import {
   legalActions, applyAction, actor, totalVP, diceOf, standardAttacks,
@@ -20,6 +22,13 @@ export const LEVELS = {
 };
 
 const WIN = 1_000_000;
+
+/** Two root moves count as equally good when their values differ by less than this. */
+const TIE_EPS = 1e-6;
+
+/** Node budgets per level for reproducible games (AI Lab). Calibrated so that
+ *  they roughly match the time limits above on an average computer. */
+export const NODE_BUDGETS = { easy: 50_000, medium: 150_000, hard: 300_000 };
 
 /** Evaluation weights in "VP x 100" units. */
 export const DEFAULT_WEIGHTS = {
@@ -166,7 +175,7 @@ function resolveGreedy(s, W) {
 }
 
 function minimax(s, depth, alpha, beta, me, ctx) {
-  if (++ctx.nodes % 256 === 0 && Date.now() > ctx.deadline) throw new Timeout();
+  if (++ctx.nodes >= ctx.maxNodes || (ctx.nodes % 256 === 0 && Date.now() > ctx.deadline)) throw new Timeout();
   if (greedyPending(s)) {
     const t = resolveGreedy(s, ctx.W);
     const nextDepth = t.phase === "over" || t.current !== s.current ? depth - 1 : depth;
@@ -196,16 +205,25 @@ function minimax(s, depth, alpha, beta, me, ctx) {
 /**
  * Choose an action for the player who has to act in `s`.
  * @param {object} s engine state (war phase)
- * @param {object} [opts] { level: "easy"|"medium"|"hard", random: () => number }
- * @returns {{action: object, score: number, depth: number, nodes: number}}
+ * @param {object} [opts] { level: "easy"|"medium"|"hard", random: () => number,
+ *   maxNodes: node budget instead of the level's time limit (reproducible),
+ *   overrides: level settings to replace }
+ * @returns {{action: object, score: number, depth: number, nodes: number, ties: number}}
  */
 export function chooseAction(s, opts = {}) {
   const cfg = { ...LEVELS[opts.level || "medium"], ...(opts.overrides || {}) };
   const random = opts.random || Math.random;
   const me = actor(s);
   const W = { ...DEFAULT_WEIGHTS, ...(cfg.weights || {}) };
-  const ctx = { nodes: 0, deadline: Date.now() + cfg.timeMs, width: cfg.width, W };
-  if (greedyPending(s)) return { action: greedyChoice(s, W), score: 0, depth: 0, nodes: 0 };
+  const maxNodes = opts.maxNodes || cfg.maxNodes || 0;
+  const ctx = {
+    nodes: 0,
+    deadline: maxNodes ? Infinity : Date.now() + cfg.timeMs,
+    maxNodes: maxNodes || Infinity,
+    width: cfg.width,
+    W,
+  };
+  if (greedyPending(s)) return { action: greedyChoice(s, W), score: 0, depth: 0, nodes: 0, ties: 1 };
   let root = orderedActions(s, 0);
   if (cfg.book) {
     const preferred = bookAbility(s, me);
@@ -213,7 +231,7 @@ export function chooseAction(s, opts = {}) {
     // Follow the book, but never miss a capture.
     if (inBook && inBook.length) root = [...inBook, ...root.filter((a) => quickScore(s, a) >= 900)];
   }
-  if (root.length === 1) return { action: root[0], score: 0, depth: 0, nodes: 0 };
+  if (root.length === 1) return { action: root[0], score: 0, depth: 0, nodes: 0, ties: 1 };
 
   // Evaluate every root action once (depth 1 = finish my turn) for ordering and as fallback.
   let scored = root.map((a) => {
@@ -221,7 +239,6 @@ export function chooseAction(s, opts = {}) {
     return { a, child, v: evaluate(child, me, W) + (cfg.noise ? (random() - 0.5) * 2 * cfg.noise : 0) };
   });
   scored.sort((x, y) => y.v - x.v);
-  let best = scored[0];
   let reached = 0;
 
   for (let depth = 1; depth <= cfg.maxDepth; depth++) {
@@ -230,22 +247,27 @@ export function chooseAction(s, opts = {}) {
       const results = [];
       for (const item of scored) {
         const childDepth = item.child.phase === "over" || item.child.current !== s.current ? depth - 1 : depth;
-        let v = minimax(item.child, childDepth, alpha, Infinity, me, ctx);
+        // The window starts just below the best value so far: a move as good as
+        // the best one gets its exact value (not only an upper bound) and can
+        // take part in the random choice among equal moves.
+        let v = minimax(item.child, childDepth, alpha - TIE_EPS, Infinity, me, ctx);
         if (cfg.noise) v += (random() - 0.5) * 2 * cfg.noise;
         results.push({ ...item, v });
         if (v > alpha) alpha = v;
       }
       results.sort((x, y) => y.v - x.v);
       scored = results;
-      best = results[0];
       reached = depth;
-      if (Math.abs(best.v) >= WIN / 2) break; // forced result found
+      if (Math.abs(results[0].v) >= WIN / 2) break; // forced result found
     } catch (e) {
       if (!(e instanceof Timeout)) throw e;
       break;
     }
   }
-  return { action: best.a, score: best.v, depth: reached, nodes: ctx.nodes };
+  // Random choice among the moves rated as good as the best one.
+  const ties = scored.filter((x) => x.v >= scored[0].v - TIE_EPS);
+  const best = ties.length > 1 ? ties[Math.floor(random() * ties.length)] : ties[0];
+  return { action: best.a, score: best.v, depth: reached, nodes: ctx.nodes, ties: ties.length };
 }
 
 // ---------------------------------------------------------------------------
