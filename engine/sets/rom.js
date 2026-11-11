@@ -5,6 +5,7 @@ import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, doMove, doAttack, relocate, canDefeatWith, standardActionsOf, performAction,
   finishMoveOrAttack, lineSplits,
+  canPlace,
 } from "../core.js";
 
 const FRUIT = 1, SPROUT = 2, TORCH = 3, PROTECTRESS = 4, RUNNER = 5, MALI = 6;
@@ -181,7 +182,7 @@ function followOptions(s, pending) {
 
 const freeOwnZone = (s, player) => {
   const out = [];
-  for (let at = 0; at < SQUARES; at++) if (empty(s, at) && inOwnZone(player, at)) out.push(at);
+  for (let at = 0; at < SQUARES; at++) if (canPlace(s, at) && inOwnZone(player, at)) out.push(at);
   return out;
 };
 
@@ -277,7 +278,7 @@ export const RoM = {
   afterMoveOrAttack(s, at, die) {
     const last = s.turn.lastStep;
     if (die.level !== SPROUT || !last || last.attack || last.to !== at) return;
-    if (!adjacent(at).includes(last.from) || !empty(s, last.from) || s.players[die.owner].reserve < 1) return;
+    if (!adjacent(at).includes(last.from) || !canPlace(s, last.from) || s.players[die.owner].reserve < 1) return;
     pushChoice(s, die.owner, A.seed, { at: last.from });
   },
 
@@ -305,7 +306,7 @@ export const RoM = {
   choiceOptions(s, pending) {
     switch (pending.kind) {
       case A.seed:
-        if (!empty(s, pending.data.at) || s.players[pending.player].reserve < 1) return [];
+        if (!canPlace(s, pending.data.at) || s.players[pending.player].reserve < 1) return [];
         return [{ type: "choice", kind: A.seed, place: pending.data.at }, { type: "choice", kind: A.seed, skip: true }];
       case A.pathwayFollow:
         return followOptions(s, pending);

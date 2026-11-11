@@ -133,4 +133,4 @@ Before the setup phase, 4 knoll tiles are placed (row/column from 1, seen from p
 Rules:
 - A creature on a knoll can attack opposing creatures of the **same** Power Level from the occupied field, as if they were below it in the power hierarchy.
 - Victory Points and Field Bonus are handled as usual.
-- Engine: this only widens the power hierarchy. Immunities (e.g. LoD Protective Barrier, RoX Resistance) still apply, and creatures that cannot attack at all (e.g. RoX Portal) still cannot.
+- Confirmed: this only widens the power hierarchy. Immunities (e.g. LoD Protective Barrier, RoX Resistance) still apply, and creatures that cannot attack at all (e.g. RoX Portal) still cannot.

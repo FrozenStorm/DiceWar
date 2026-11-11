@@ -4,6 +4,7 @@ import { adjacent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, doMove, canRaise, standardActionsOf, actionOrigin, performAction, relocate, lineSplits,
+  canPlace,
 } from "../core.js";
 
 const GNOME = 1, POSSESSED = 2, HUNTER = 3, HAG = 4, GATHERER = 5, DEMON = 6;
@@ -125,7 +126,7 @@ function servitudeActions(s, at) {
 
 function mercyActions(s, at) {
   if (s.players[s.board[at].owner].reserve < 1) return [];
-  return adjacent(at).filter((t) => empty(s, t)).map((target) => ({ type: "spell", ability: A.mercy, at, target }));
+  return adjacent(at).filter((t) => canPlace(s, t)).map((target) => ({ type: "spell", ability: A.mercy, at, target }));
 }
 
 /** BoD.gatherer.sacrifice: move onto an adjacent own Gnome, the Gnome returns
@@ -149,7 +150,7 @@ function applySacrifice(s, a) {
 /** BoD.demon.allegiance: downgrade to a Possessed and place a Swamp Hag next to it. */
 function allegianceActions(s, at) {
   if (s.players[s.board[at].owner].reserve < 1) return [];
-  return adjacent(at).filter((t) => empty(s, t)).map((hag) => ({ type: "spell", ability: A.allegiance, at, hag }));
+  return adjacent(at).filter((t) => canPlace(s, t)).map((hag) => ({ type: "spell", ability: A.allegiance, at, hag }));
 }
 
 // --- Additional action ----------------------------------------------------------------

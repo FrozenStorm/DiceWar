@@ -11,6 +11,7 @@ import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, doMove, doAttack, relocate, defeat, canDefeatWith, canMove, canRaise,
   isProtected, standardActionsOf, standardMoves, performAction, mainActions, actionOrigin,
+  canPlace,
 } from "../core.js";
 
 const SWORD = 1, SHIELD = 2, SPEAR = 3, COMMANDER = 4, STAG = 5, KNIGHT = 6;
@@ -55,7 +56,7 @@ function edgeFields(s, player) {
   const out = [];
   for (let at = 0; at < SQUARES; at++) {
     const r = rowOf(at), c = colOf(at);
-    if (!empty(s, at) || r === opp) continue;
+    if (!canPlace(s, at) || r === opp) continue;
     if (r === 0 || r === SIZE - 1 || c === 0 || c === SIZE - 1) out.push(at);
   }
   return out;
@@ -271,7 +272,7 @@ const REINF_ORDER = [SPEAR, SHIELD, SWORD];
 function reinforcementOptions(s, pending) {
   const { at, stage } = pending.data;
   if (s.players[pending.player].reserve < 1) return [];
-  const free = surrounding(at).filter((t) => empty(s, t));
+  const free = surrounding(at).filter((t) => canPlace(s, t));
   const level = REINF_ORDER[stage];
   const out = [];
   for (const place of free) {
@@ -343,7 +344,7 @@ export const KoS = {
         case COMMANDER: out.push(...commanderActions(s, at)); break;
         case STAG: out.push(...backMoves(s, at)); break;
         case KNIGHT:
-          if (s.players[player].reserve >= 3 && surrounding(at).filter((t) => empty(s, t)).length >= 3) {
+          if (s.players[player].reserve >= 3 && surrounding(at).filter((t) => canPlace(s, t)).length >= 3) {
             out.push({ type: "spell", ability: A.reinforcements, at });
           }
           break;

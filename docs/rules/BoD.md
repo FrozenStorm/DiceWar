@@ -30,7 +30,7 @@ If possible, adjacent opposing creatures with Power Level 3 or higher have to at
 Card notes:
 - If there are several opposing creatures on adjacent fields, the opponent can decide which one attacks.
 - If the Possessed is protected by an adjacent Gnome, the opponent can't attack it and has to choose a different action.
-- Engine: if at the start of the opponent's turn there is a valid attack by a level 3+ creature on an adjacent Possessed, only such attacks are allowed.
+- Confirmed: if at the start of the opponent's turn there is a valid attack by a level 3+ creature on an adjacent Possessed, only such attacks are allowed.
 - Confirmed (BoD1): the obligation only applies if the Possessed can actually be attacked. If it is immune (e.g. protected by a Gnome), there is no obligation to attack it.
 
 ## 3 · Hunter of Death

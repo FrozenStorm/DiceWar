@@ -93,4 +93,4 @@ Rules:
 - Confirmed (RoM4): the opponent takes these dice from their Reserve.
 - Note: The Camp is the RoM location card only (the KoS card is The Knoll).
 - Confirmed (RoM5): when this location is used, both players always have a camp, whatever dice sets they play.
-- Engine: only *moving* into a camp (Movement, Attack or any ability that moves the creature) triggers it; placing a die there does not. If the opponent has fewer Reserve Dice, they exile as many as they have.
+- Confirmed: a camp can only be entered by moving (Movement, Attack or any ability that moves the creature). Dice can never be placed on a camp (splits, spells, Balance, Supply etc.). If the opponent has fewer Reserve Dice, they exile as many as they have.

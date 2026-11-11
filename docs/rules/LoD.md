@@ -29,7 +29,7 @@ If there are 3 to 6 Souls adjacent to each other (a connected group), a Protecti
 Card note: if there are more than 6 Souls adjacent to each other, return any remaining Souls to the Reserve at the end of your turn.
 - Two Souls do not form a barrier (picture).
 - Confirmed (LoD2): with more than 6 Souls the owner chooses which ones go back to the Reserve, and the remaining 6 must stay connected.
-- Engine: the immunity also covers the opponent's Lifepulling, RoX Impact and Force of Attraction. A Ghost may still move through a barrier Soul, but the Soul loses no level and no TP is gained.
+- Confirmed: the immunity also covers the opponent's Lifepulling, RoX Impact and Force of Attraction. A Ghost may still move through a barrier Soul, but the Soul loses no level and no TP is gained.
 
 ## 2 · Ghost
 
@@ -62,7 +62,7 @@ Card note: for every used upgrade, the indicator die on the TP bar has to be mov
 Important: the spell can't be used on the Blood Mage casting it.
 - Confirmed (LoD5): at least 1 and at most X Reserve Dice (X = number of own Blood Mages) are exiled. You gain the number of exiled dice + 1 TP.
 - Confirmed (LoD6): all TP lapse at the end of the spell, including TP collected earlier.
-- Engine: the upgrades are chosen one level at a time; "Finish" ends the spell.
+- Confirmed: the upgrades are chosen one level at a time; "Finish" ends the spell.
 
 ## 5 · Fire Basilisk
 

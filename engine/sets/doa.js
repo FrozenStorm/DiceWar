@@ -7,6 +7,7 @@ import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve, pushChoice,
   relocate, defeat, defaultBeats, canMove, canRaise, isProtected, standardMoves, emit,
   finishMoveOrAttack, MAX_LEVEL,
+  canPlace,
 } from "../core.js";
 
 const FISHER = 1, DREAM = 2, WATCH = 3, WEAVER = 4, OHTILIA = 5, AWAKENING = 6;
@@ -124,9 +125,9 @@ function ghostCallActions(s, at) {
   const out = [];
   const seen = new Set();
   for (const first of adjacent(at)) {
-    if (!empty(s, first)) continue;
+    if (!canPlace(s, first)) continue;
     for (const second of adjacent(first)) {
-      if (second === at || !empty(s, second)) continue;
+      if (second === at || !canPlace(s, second)) continue;
       for (const [watch, fisher] of [[first, second], [second, first]]) {
         const key = `${watch},${fisher}`;
         if (seen.has(key)) continue;
@@ -212,7 +213,7 @@ function twilight(s, at, player) {
 
 function freeFields(s) {
   const out = [];
-  for (let at = 0; at < SQUARES; at++) if (!s.board[at]) out.push(at);
+  for (let at = 0; at < SQUARES; at++) if (canPlace(s, at)) out.push(at);
   return out;
 }
 

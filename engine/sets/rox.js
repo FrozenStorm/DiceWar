@@ -4,6 +4,7 @@ import { adjacent, diagonal, surrounding, inOwnZone, SQUARES } from "../board.js
 import {
   diceOf, countLevel, placeDie, removeDie, defeat, setLevel, gainTP, exileFromReserve,
   pushChoice, doMove, canDefeatWith, finishMoveOrAttack, canMove, gainVP, canRaise, emit, relocate, resolveAttack, isProtected,
+  canPlace,
 } from "../core.js";
 
 const PORTAL = 1, BEARER = 2, GUARDIAN = 3, EMISSARY = 4, ENCHANTRESS = 5, XELADRON = 6;
@@ -89,7 +90,7 @@ function newPathsActions(s, at) {
   const out = [];
   for (const a of adj) {
     for (const b of adj) {
-      if (a === b || !empty(s, a) || !empty(s, b)) continue;
+      if (a === b || !canPlace(s, a) || !canPlace(s, b)) continue;
       // two fields adjacent to the Guardian are diagonal to each other unless opposite
       if (Math.abs(a - b) === 2 || Math.abs(a - b) === 14) continue;
       out.push({ type: "spell", ability: A.newPaths, at, bearer: a, portal: b });
@@ -105,7 +106,7 @@ function summoningActions(s, at) {
   const p = s.players[player];
   if (p.reserve < 2 || p.tp < 1) return [];
   const targets = new Set();
-  for (const b of diceOf(s, player, BEARER)) for (const t of adjacent(b)) if (empty(s, t)) targets.add(t);
+  for (const b of diceOf(s, player, BEARER)) for (const t of adjacent(b)) if (canPlace(s, t)) targets.add(t);
   const out = [];
   for (let level = 1; level <= Math.min(6, p.tp); level++) {
     for (const target of [...targets].sort((x, y) => x - y)) {
@@ -122,9 +123,9 @@ function decayActions(s, at) {
   if (s.players[player].reserve < 2) return [];
   const out = [];
   for (const emissary of diagonal(at)) {
-    if (!empty(s, emissary)) continue;
+    if (!canPlace(s, emissary)) continue;
     for (let bearer = 0; bearer < SQUARES; bearer++) {
-      if (bearer === emissary || !empty(s, bearer) || !inOwnZone(player, bearer)) continue;
+      if (bearer === emissary || !canPlace(s, bearer) || !inOwnZone(player, bearer)) continue;
       out.push({ type: "spell", ability: A.decay, at, emissary, bearer });
     }
   }
@@ -155,7 +156,7 @@ function applyImpact(s, a) {
 function balanceOptions(s, player) {
   const out = [];
   if (s.players[player].reserve > 0) {
-    for (let at = 0; at < SQUARES; at++) if (empty(s, at)) out.push({ type: "choice", kind: A.balance, place: at });
+    for (let at = 0; at < SQUARES; at++) if (canPlace(s, at)) out.push({ type: "choice", kind: A.balance, place: at });
   }
   for (const at of diceOf(s, player, PORTAL)) {
     if (canRaise(s, at)) out.push({ type: "choice", kind: A.balance, upgrade: at });

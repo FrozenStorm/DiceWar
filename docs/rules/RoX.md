@@ -99,7 +99,7 @@ Card note: you don't gain Field Bonus Points.
 Gain 1 virtual VP for each pair of Xeladron and Portal in your possession that are adjacent to each other.
 Card note: each creature only counts once per pair. Example: 2 Xeladrons and 2 Portals give 2 virtual VP.
 - Confirmed: virtual VP are recalculated continuously (not permanently credited) and count towards the 10 VP win condition.
-- Engine: maximum matching between your Xeladrons and adjacent Portals.
+- Confirmed: maximum matching between your Xeladrons and adjacent Portals.
 
 ## Location: The Craters (`RoX.marker.craters`)
 

@@ -145,3 +145,13 @@ test("Camp: placed in the setup; own creature back to the Reserve, opposing camp
   assert.equal(w.players[1].exile, 1);
   assert.equal(w.players[2].reserve, r2 - 2);
 });
+
+test("Camp: dice can't be placed on a camp, only moved into it", () => {
+  const s = position(["......f", ".......", ".......", ".......", ".......", "...1...", "..4...."], ROM);
+  s.tiles[at("d1")] = "camp";
+  s.camps = { 1: at("d1") };
+  const splits = byAbility(s, "RoM.fruit.breeding");
+  assert.ok(splits.length > 0);
+  assert.ok(splits.every((a) => a.a !== at("d1") && a.b !== at("d1")));
+  assert.ok(legalActions(s).some((a) => a.type === "move" && a.from === at("c1") && a.to === at("d1")));
+});

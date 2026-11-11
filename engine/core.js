@@ -127,9 +127,16 @@ export function gainVP(s, player, n) {
   p.vp = Math.max(0, Math.min(MAX_BAR, p.vp + n));
 }
 
+/** Can a die be placed (not moved) onto `at`? The square must be free and no
+ *  camp: a camp can only be entered by moving (confirmed by the rules owner). */
+export function canPlace(s, at) {
+  return at >= 0 && !s.board[at] && s.tiles[at] !== "camp";
+}
+
 /** Place a die from the owner's Reserve onto an empty square. */
 export function placeDie(s, at, owner, level, { dir = defaultDir(owner), cause = "ability", source = "reserve" } = {}) {
   if (s.board[at]) throw new Error("placeDie: square occupied");
+  if (s.tiles[at] === "camp" && cause !== "setup") throw new Error("placeDie: dice can't be placed on a camp");
   if (s.players[owner][source] <= 0) throw new Error(`placeDie: ${source} empty`);
   s.players[owner][source]--;
   const die = { id: s.nextDieId++, owner, level, dir };
@@ -272,7 +279,7 @@ export function lineSplits(s, at) {
   const out = [];
   for (const [d1, d2, line] of [[0, 2, "vertical"], [1, 3, "horizontal"]]) {
     const a = step(at, d1), b = step(at, d2);
-    if (a >= 0 && b >= 0 && !s.board[a] && !s.board[b]) out.push({ a, b, line });
+    if (canPlace(s, a) && canPlace(s, b)) out.push({ a, b, line });
   }
   return out;
 }
