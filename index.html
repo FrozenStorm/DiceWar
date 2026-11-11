@@ -471,7 +471,8 @@
             The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
           </p>
 
-          <button class="big-btn" id="start-game-btn">Start Game</button>
+          <button class="big-btn" id="start-game-btn">Start New Game</button>
+          <button class="big-btn secondary" id="btn-close-lobby" style="display: none;">Back to Game</button>
         </div>
       </div>
     </div>
@@ -1323,12 +1324,25 @@
       startNewGame();
     });
 
+    // A game is running: the menu can be closed again with "Back to Game".
+    let gameInProgress = false;
+    function markGameStarted() {
+      gameInProgress = true;
+      document.getElementById("btn-close-lobby").style.display = "";
+    }
+
     document.getElementById("btn-lobby").addEventListener("click", () => {
-      document.getElementById("app").classList.remove("online-player2");
+      document.getElementById("btn-close-lobby").style.display = gameInProgress ? "" : "none";
       lobbyOverlay.style.display = "flex";
     });
 
+    document.getElementById("btn-close-lobby").addEventListener("click", () => {
+      lobbyOverlay.style.display = "none";
+    });
+
     function startNewGameBase(p1Set, p2Set, gameMode) {
+      document.getElementById("app").classList.remove("online-player2");
+      markGameStarted();
       state.currentPlayer = 1;
       state.gameOver = false;
       state.gameMode = gameMode;
@@ -1698,6 +1712,7 @@
             resetHistory();
             setStatusFromState();
             updateSaveLoadButtons();
+            markGameStarted();
             alert("Save loaded.");
           } catch (err) {
             console.error(err);
@@ -1896,6 +1911,7 @@
           state.gameOver = false;
           state.gameMode = "online";
           state.roundNumber = 1;
+          markGameStarted();
           state.players[1] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p1Set };
           state.players[2] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p2Set };
 
@@ -1944,6 +1960,7 @@
             state.gameOver = false;
             state.gameMode = "online";
             state.roundNumber = 1;
+            markGameStarted();
             state.players[1] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p1Set };
             state.players[2] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p2Set };
 
