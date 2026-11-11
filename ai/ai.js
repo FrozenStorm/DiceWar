@@ -9,7 +9,7 @@ import {
   legalActions, applyAction, actor, totalVP, diceOf, standardAttacks,
   setupLevelCombinations,
 } from "../engine/core.js";
-import { opponent, fieldBonus, rowOf, colOf } from "../engine/board.js";
+import { opponent, fieldBonus, rowOf, colOf, defaultDir } from "../engine/board.js";
 import { getLocation } from "../engine/locations/index.js";
 import { getSet } from "../engine/sets/index.js";
 
@@ -265,6 +265,7 @@ function bookAbility(s, me) {
 /** Choose a starting lineup (Power Level 10 in the Supply Zone). */
 export function chooseSetup(s, opts = {}) {
   const action = chooseLineup(s, opts);
+  if (s.players[s.current].set === "KoS") chooseAlignments(s, action);
   if (s.locations.includes("camp")) {
     // The Camp: on a free field of the Supply Zone, preferably at the side.
     const random = opts.random || Math.random;
@@ -273,6 +274,25 @@ export function chooseSetup(s, opts = {}) {
     action.camp = free[Math.min(free.length - 1, Math.floor(random() * 2))];
   }
   return action;
+}
+
+/** KoS: every die of the lineup gets an alignment (kept when upgraded). The
+ *  AI tries the 4 alignments die by die and keeps the best evaluated one
+ *  (facing the opponent on ties). */
+function chooseAlignments(s, action) {
+  const me = s.current;
+  const forward = defaultDir(me);
+  const order = [forward, 1, 3, (forward + 2) % 4];
+  action.placements = action.placements.map((p) => ({ ...p, dir: forward }));
+  for (const p of action.placements) {
+    let best = forward, bestV = -Infinity;
+    for (const dir of order) {
+      p.dir = dir;
+      const v = evaluate(applyAction(s, action), me);
+      if (v > bestV + 1e-9) { bestV = v; best = dir; }
+    }
+    p.dir = best;
+  }
 }
 
 function chooseLineup(s, opts) {
