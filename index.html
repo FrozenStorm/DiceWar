@@ -1857,7 +1857,7 @@
       updateSaveLoadButtons();
       markGameStarted();
       // Last, so that the rules panel (e.g. "Game over") is not overwritten.
-      if (window.RulesMode && rg) RulesMode.load(rg, { resetHistory: true });
+      if (window.RulesMode && rg) RulesMode.loadSave(json);
       if (!quiet) alert(json.lab ? "AI Lab replay loaded (final position)." : "Save loaded.");
     }
     window.loadSaveData = loadSaveData;
@@ -1865,7 +1865,12 @@
     // --- Speichern / Laden ---
     function exportGameStateToFile() {
       const snapshot = createStateSnapshot();
-      if (window.RulesMode && RulesMode.active) snapshot.rulesGame = RulesMode.game;
+      if (window.RulesMode && RulesMode.active) {
+        snapshot.rulesGame = RulesMode.game;
+        // Moves so far, so that Undo / Redo still work after loading.
+        const hist = RulesMode.history();
+        if (hist) snapshot.rulesHistory = hist;
+      }
       const data = {
         version: 1,
         snapshot
