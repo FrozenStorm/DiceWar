@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <title>DiceWar</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#2b2a29" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="apple-touch-icon" sizes="180x180" href="icon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="icon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="icon/favicon-16x16.png">
@@ -13,809 +17,536 @@
   <link rel="icon" href="icon/android-chrome-512x512.png" sizes="512x512" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
+    /* Board-game look: parchment panels, slate title bars and the board's own map.
+       Portrait: opponent dock, board, own dock. Landscape: board left, docks right. */
+    @font-face { font-family: "Cinzel"; src: url("fonts/cinzel.woff2") format("woff2"); font-weight: 400 900; font-display: swap; }
+    @font-face { font-family: "Crimson Text"; src: url("fonts/crimson-text-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+    @font-face { font-family: "Crimson Text"; src: url("fonts/crimson-text-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+    @font-face { font-family: "Crimson Text"; src: url("fonts/crimson-text-400-italic.woff2") format("woff2"); font-style: italic; font-weight: 400; font-display: swap; }
+
     :root {
+      --frame: #2b2a29;
+      --frame-2: #3a3836;
+      --ink: #2c241c;
+      --ink-soft: #5c5245;
+      --edge: #1e1a16;
+      --paper: #e8dfca;
+      --paper-2: #d9cfb8;
+      --slate: #56656f;
+      --slate-2: #4c5a64;
+      --tile: #7a6d60;
+      --p1: #b8402f;
+      --p2: #2f6fa8;
+      --set-color: #56656f;
+      --accent: #e8b54a;
+      --hint: #17918f;
+      --attack: #b8402f;
+      --display: "Cinzel", "Trajan Pro", Georgia, serif;
+      --body: "Crimson Text", Georgia, "Times New Roman", serif;
+      --dock-h: auto;
+      /* still used by the dice rendering code */
       --p1-color: #1c1c1c;
       --p2-color: #1c1c1c;
-      --bg: #111;
-      --panel-bg: #1c1c1c;
-      --accent: #f0ad4e;
-      --text: #f7f7f7;
-      --muted: #aaa;
-      --cell-border: #333;
+      --text: #f4eedf;
+      --muted: #b9ad99;
+      --panel-bg: #33302d;
     }
 
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body { margin: 0; height: 100%; overflow: hidden; }
 
     body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: radial-gradient(circle at top, #222, #050505);
-      color: var(--text);
+      background: radial-gradient(circle at 50% 40%, var(--frame-2), #1d1c1b);
+      color: var(--ink);
+      font-family: var(--body);
+      -webkit-user-select: none;
+      user-select: none;
     }
 
-    html, body {
-      margin: 0;
-      height: 100%;
+    button { font: inherit; color: inherit; cursor: pointer; }
+    button:disabled { cursor: default; opacity: 0.45; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .paper {
+      background:
+        radial-gradient(circle at 15% 30%, rgba(120, 90, 50, 0.16), transparent 45%),
+        radial-gradient(circle at 85% 70%, rgba(110, 80, 40, 0.14), transparent 40%),
+        var(--paper);
+      border: 2px solid var(--edge);
+      border-radius: 10px;
+      color: var(--ink);
     }
 
+    /* ---------- App frame ---------- */
     #app {
-      min-height: 100vh;
-      min-height: 100svh;
-      min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding-top: env(safe-area-inset-top, 0);
-      padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
-    }
-
-    .player-zone {
-      display: flex;
-      align-items: stretch;
-      padding: 6px 8px;
-      gap: 6px;
-      background: rgba(0, 0, 0, 0.7);
-      border-top: 1px solid #222;
-      border-bottom: 1px solid #222;
-    }
-
-    .player-zone.top {
-      border-bottom: 1px solid #333;
-    }
-
-    .player-zone.bottom {
-      border-top: 1px solid #333;
-    }
-
-    .player-zone .label {
-      font-size: 0.8rem;
-      margin-bottom: 2px;
-      color: var(--muted);
-    }
-
-    .player-zone .block {
-      flex: 1;
-      background: var(--panel-bg);
-      border-radius: 6px;
-      padding: 4px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .player-zone .block.clickable {
-      cursor: pointer;
-      border: 1px solid transparent;
-    }
-
-    .player-zone .block.clickable.selected {
-      border-color: var(--accent);
-      box-shadow: 0 0 6px rgba(240, 173, 78, 0.6);
-    }
-
-    .count-display {
-      font-size: 1.1rem;
-      text-align: center;
-      font-weight: 600;
-    }
-
-    .dice-icon-row {
-      display: flex;
-      justify-content: center;
-      gap: 2px;
-      flex-wrap: wrap;
-      margin-top: 2px;
-      min-height: 16px;
-    }
-
-    .dice-mini {
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      border: 1px solid #666;
-      background: #111;
-    }
-
-    .center-stats {
-      flex: 1.4;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-evenly;
-      gap: 4px;
-    }
-
-    .counter-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-
-    .counter-label {
-      font-size: 0.75rem;
-      color: var(--muted);
-      width: 90px;
-      flex-shrink: 0;
-      text-align: right;
-      white-space: nowrap;
-    }
-
-    .counter-value {
-      min-width: 20px;
-      text-align: center;
-      font-weight: 600;
-    }
-
-    .btn {
-      border: none;
-      border-radius: 4px;
-      padding: 4px 6px;
-      font-size: 0.8rem;
-      background: #333;
-      color: var(--text);
-      cursor: pointer;
-    }
-
-    .btn.small {
-      width: 22px;
-      padding: 2px 0;
-    }
-
-    .btn.primary {
-      background: var(--accent);
-      color: #000;
-      font-weight: 600;
-    }
-
-    .btn:active {
-      transform: translateY(1px);
-      filter: brightness(0.9);
-    }
-
-    #middle {
-      flex: 1;
-      display: flex;
-      padding: 4px;
-      gap: 4px;
-      min-height: 0;
-    }
-
-    .side-panel {
-      width: 22%;
-      max-width: 110px;
+      height: 100%;
       display: flex;
       flex-direction: column;
       gap: 6px;
+      padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+      max-width: 900px;
+      margin: 0 auto;
     }
 
-    .side-card {
-      flex: 1;
-      background: var(--panel-bg);
-      border-radius: 6px;
-      padding: 4px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: stretch;
-      text-align: center;
-      font-size: 0.8rem;
-    }
+    .dock { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; min-height: 0; }
+    .dock > * { flex-shrink: 0; }
+    #dock-top { justify-content: flex-start; flex: 1 0 auto; }
+    #dock-bottom { justify-content: flex-end; }
+    .dock > .hint { order: 1; }
+    .dock > .player-bar { order: 2; }
+    .dock > .toolbar { order: 3; }
+    #dock-top > .player-bar { order: 0; }
 
-    .side-card h2 {
-      font-size: 0.8rem;
-      margin: 0 0 4px 0;
-      color: var(--muted);
-    }
+    /* Duel on one device: the board stays put, the dock at the top faces player 2,
+       and the controls move to the side of the player who acts. */
+    #app.duel #dock-top { transform: rotate(180deg); justify-content: flex-end; }
+    #app.duel #dock-top > .player-bar { order: 2; }
+    #app.duel .dock { height: var(--dock-h); flex: 0 0 auto; }
+    #app.duel #board-area { max-height: none; }
 
-    .status-text {
-      font-size: 0.8rem;
-      line-height: 1.3;
-    }
-
-    #board-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      min-width: 0;
+    #board-area {
+      flex: 1000 1 auto;
       min-height: 0;
+      max-height: calc(min(100vw, 900px) - 12px);
+      container-type: size;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       position: relative;
-      background: #050505;
-      border-radius: 8px;
-      padding: 0;
     }
 
-    /* Board: 7x7 Zellen, plus je 1 Spalte links/rechts für Bonus-Labels */
+    /* ---------- Player bar: the score tracks of the board ---------- */
+    .player-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      transition: box-shadow 0.2s;
+    }
+    .player-bar.active { box-shadow: 0 0 0 2px var(--player), 0 0 12px var(--player); }
+    .player-bar[data-player="1"] { --player: var(--p1); }
+    .player-bar[data-player="2"] { --player: var(--p2); }
+
+    .card-btn {
+      width: 38px; height: 50px; flex: 0 0 auto;
+      padding: 0; border: 1px solid var(--edge); border-radius: 4px;
+      background: var(--frame) center / cover no-repeat;
+      overflow: hidden;
+    }
+    .card-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .pile {
+      position: relative;
+      flex: 0 0 auto;
+      width: 36px;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0; border: 0; border-radius: 6px; background: transparent;
+    }
+    .pile img { height: 28px; width: auto; pointer-events: none; }
+    .pile .count { font-family: var(--display); font-weight: 700; font-size: 13px; line-height: 1; }
+    .pile.selected { box-shadow: 0 0 0 2px var(--accent); background: rgba(232, 181, 74, 0.25); }
+    #app.rules-mode .pile { cursor: default; }
+
+    .tracks { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .bar-name {
+      font-family: var(--display); font-weight: 700; font-size: 11px; letter-spacing: 0.04em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-soft);
+    }
+    .bar-name b { color: var(--player); }
+    .track { display: flex; align-items: center; gap: 2px; }
+    .track > img { width: 20px; height: 15px; object-fit: contain; flex: 0 0 auto; margin-right: 2px; }
+    .track button {
+      flex: 1 1 0; min-width: 0; max-width: 40px; height: 18px; padding: 0;
+      border: 0; border-radius: 2px;
+      background: var(--tile); color: #efe8da;
+      box-shadow: inset 0 0 0 1px #3b3128;
+      font-family: var(--display); font-weight: 600; font-size: 11px; line-height: 18px;
+    }
+    .track button.on { background: var(--player); color: #fff; box-shadow: 0 0 0 1px var(--edge), 0 0 6px var(--player); }
+    .track button.plus { box-shadow: inset 0 0 0 2px var(--player); }
+    #app.rules-mode .track button { cursor: default; }
+
+    /* ---------- Hint strip: looks like a section of a rule card ---------- */
+    .hint { overflow: hidden; padding: 0; }
+    .hint-title {
+      padding: 3px 10px;
+      background: linear-gradient(rgba(255,255,255,0.12), rgba(0,0,0,0.12)), var(--set-color);
+      border-bottom: 1px solid var(--edge);
+      font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: 0.04em;
+      color: #f4eedf; text-transform: uppercase;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hint-body { display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 10px; min-height: 44px; }
+    .hint-text { flex: 1; min-width: 0; font-size: 16px; line-height: 1.25; }
+    .hint-text .msg { display: block; font-style: italic; color: #7a2a1e; font-size: 14px; }
+    .hint-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 62%; }
+    .hint-buttons .btn {
+      min-height: 36px; padding: 4px 10px;
+      border: 1px solid var(--edge); border-radius: 8px;
+      background: var(--set-color); color: #f4eedf;
+      font-family: var(--display); font-weight: 600; font-size: 12px; line-height: 1.1;
+    }
+    .hint-buttons .btn.secondary { background: var(--paper-2); color: var(--ink); }
+
+    /* ---------- Toolbar ---------- */
+    .toolbar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+    .toolbar button {
+      height: 40px; border: 1px solid #4a4440; border-radius: 8px;
+      background: #33302d; color: var(--paper);
+      font-family: var(--display); font-weight: 600; font-size: 11px; letter-spacing: 0.03em;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .toolbar svg { width: 16px; height: 16px; flex: 0 0 auto; }
+
+    /* ---------- Board ---------- */
     #board {
-      width: 100%;
-      max-width: 800px;
-      aspect-ratio: 1 / 1;
+      width: min(100cqw, 100cqh);
+      height: min(100cqw, 100cqh);
       display: grid;
-      grid-template-columns: auto repeat(7, 1fr) auto;
-      grid-template-rows: repeat(7, 1fr);
-      gap: 2px;
-      background: #050505;
-      padding: 4px;
-      border-radius: 8px;
-      box-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      grid-template-rows: repeat(7, minmax(0, 1fr));
+      border: 3px solid var(--edge);
+      border-radius: 4px;
+      background: #6f6a4e url("img/ui/board.jpg") center / 100% 100% no-repeat;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
     }
 
     .cell {
       position: relative;
-      border-radius: 4px;
-      border: 1px solid var(--cell-border);
-      background: #111;
-      overflow: hidden;
+      min-width: 0; min-height: 0;
+      display: flex; align-items: center; justify-content: center;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.85rem;
     }
 
-    .cell.selected {
-      box-shadow: 0 0 6px rgba(240, 173, 78, 0.9);
-      border-color: var(--accent);
-    }
-
-    /* Feldtypen-Grafiken über ::before */
     .cell::before {
       content: "";
       position: absolute;
-      inset: 0;
-      opacity: 0.9;
+      inset: 8%;
       pointer-events: none;
       background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
     }
-
-    .cell.type-neutral::before {
-      opacity: 0.2;
-      background: radial-gradient(circle, #777, #222);
-    }
-
-    .cell.type-LoD::before {
-      background-image: url("img/LoD/marker.png");
-    }
-
-    .cell.type-RoM::before {
-      background-image: url("img/RoM/marker.png");
-    }
-
-    .cell.type-BoD::before {
-      background-image: url("img/BoD/marker.png");
-    }
-
-    .cell.type-RoX::before {
-      background-image: url("img/RoX/marker.png");
-    }
-
-    .cell.type-KoS::before {
-      background-image: url("img/KoS/marker.png");
-    }
-
-    .cell.type-DoA::before {
-      background-image: url("img/DoA/marker.png");
-    }
+    .cell.type-LoD::before { background-image: url("img/LoD/marker.png"); }
+    .cell.type-RoM::before { background-image: url("img/RoM/marker.png"); }
+    .cell.type-BoD::before { background-image: url("img/BoD/marker.png"); }
+    .cell.type-RoX::before { background-image: url("img/RoX/marker.png"); }
+    .cell.type-KoS::before { background-image: url("img/KoS/marker.png"); }
+    .cell.type-DoA::before { background-image: url("img/DoA/marker.png"); }
 
     /* DoA River: fields in the three middle rows where the flow pushes creatures */
-    .cell.flow {
-      background-image: linear-gradient(90deg, rgba(70, 150, 200, 0.10), rgba(70, 150, 200, 0.28));
-    }
+    .cell.flow { background: linear-gradient(90deg, rgba(40, 110, 170, 0.12), rgba(40, 110, 170, 0.32)); }
 
-    /* Rules mode: legal targets and the current selection */
-    .cell.hint {
-      box-shadow: inset 0 0 0 3px rgba(92, 184, 92, 0.9);
-    }
+    .cell.selected { background: rgba(240, 200, 120, 0.35); box-shadow: inset 0 0 0 2px var(--edge), inset 0 0 0 4px var(--accent); }
+    .cell.hint { background: rgba(23, 145, 143, 0.38); box-shadow: inset 0 0 0 2px #0f6463, inset 0 0 0 4px rgba(244, 238, 223, 0.7); }
+    .cell.hint-attack { background: rgba(184, 64, 47, 0.38); box-shadow: inset 0 0 0 2px #6e1c12, inset 0 0 0 4px rgba(244, 238, 223, 0.7); }
+    .cell.in-path { box-shadow: inset 0 0 0 3px var(--accent); }
 
-    .cell.hint-attack {
-      box-shadow: inset 0 0 0 3px rgba(217, 83, 79, 0.95);
-    }
-
-    .cell.in-path {
-      box-shadow: inset 0 0 0 3px var(--accent);
-    }
-
-    #rules-panel {
-      display: none;
-      flex: 0 0 auto;
-      font-size: 0.7rem;
-      line-height: 1.25;
-      overflow-y: auto;
-      max-height: 40vh;
-    }
-
-    #rules-panel .rules-panel-text {
-      margin-bottom: 4px;
-      color: var(--text);
-    }
-
-    #rules-panel .btn {
-      width: 100%;
-      margin-top: 4px;
-      font-size: 0.7rem;
-    }
-
-    #app.rules-mode button[data-counter],
-    #app.rules-mode .btn-up-card,
-    #app.rules-mode .btn-down-card,
-    #app.rules-mode #btn-end-turn {
-      display: none;
-    }
-
-    #rules-options {
-      display: none;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.85rem;
-    }
-
-    #rules-options label {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
-
-    .cell-label {
-      position: absolute;
-      bottom: 1px;
-      right: 2px;
-      font-size: 0.55rem;
-      color: rgba(255, 255, 255, 0.7);
-      text-shadow: 0 0 2px #000;
-      pointer-events: none;
-    }
+    .cell-label { display: none; }
 
     .die {
       position: relative;
       z-index: 2;
-      width: 85%;
+      width: 80%;
       aspect-ratio: 1 / 1;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      color: #fff;
-      box-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      font-size: 1rem;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: contain;
-      background-clip: border-box;
+      border-radius: 14%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--display); font-weight: 700; color: #fff;
+      font-size: clamp(12px, 4cqmin, 22px);
+      box-shadow: 0 0 0 2px var(--p1), 0 3px 6px rgba(0, 0, 0, 0.55);
+      background-position: center; background-repeat: no-repeat; background-size: contain;
     }
+    .die.p1 { background: radial-gradient(circle at 30% 20%, #111, var(--p1-color)); box-shadow: 0 0 0 2px var(--p1), 0 3px 6px rgba(0, 0, 0, 0.55); }
+    .die.p2 { background: radial-gradient(circle at 30% 20%, #111, var(--p2-color)); box-shadow: 0 0 0 2px var(--p2), 0 3px 6px rgba(0, 0, 0, 0.55); }
 
-    .die.p1 {
-      background: radial-gradient(circle at 30% 20%, #111, var(--p1-color));
-    }
+    /* Online, player 2: the board is seen from the other side. */
+    #app.online-player2 #board { transform: rotate(180deg); }
+    #app.online-player2 .cell::before { transform: rotate(180deg); }
 
-    .die.p2 {
-      background: radial-gradient(circle at 30% 20%, #111, var(--p2-color));
-    }
+    /* ---------- Radial action menu ---------- */
+    #ring-layer { position: absolute; inset: 0; z-index: 20; display: none; }
+    #ring-layer.open { display: block; }
+    #ring-backdrop { position: absolute; background: rgba(30, 24, 18, 0.45); }
+    #ring-svg { position: absolute; overflow: visible; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6)); }
+    #ring-svg .seg { cursor: pointer; }
+    #ring-svg .seg path { stroke: var(--edge); stroke-width: 2; }
+    #ring-svg .seg:hover path, #ring-svg .seg:focus path { filter: brightness(1.15); }
+    #ring-svg .seg:focus { outline: none; }
+    #ring-svg .seg.disabled { cursor: default; }
+    #ring-svg text { pointer-events: none; }
 
-    .current-die-view {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-evenly;
-      gap: 4px;
-    }
-
-    .current-die-box {
-      width: 70px;
-      height: 70px;
-      border-radius: 8px;
-      border: 2px dashed #555;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.3rem;
-      font-weight: 700;
-      color: #fff;
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: contain;
-      background-clip: border-box;
-    }
-
-    .current-die-box.empty {
-      font-size: 0.65rem;
-      color: var(--muted);
-    }
-
-    /* Bonus-Zeilenlegenden als Grid-Items, die mit den Zeilen mitrutschen */
-    .bonus-label {
-      font-size: 0.7rem;
-      color: var(--accent);
-      text-shadow: 0 0 3px #000;
-      pointer-events: none;
-      padding: 1px 4px;
-      border-radius: 999px;
-      background: rgba(0, 0, 0, 0.7);
-    }
-
-    .bonus-label-top {
-      justify-self: flex-end;
-      align-self: center;
-    }
-
-    .bonus-label-bottom {
-      justify-self: flex-start;
-      align-self: center;
-    }
-
-    /* Lobby / Neustart */
-
-    #lobby-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.95);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      z-index: 999;
-      text-align: center;
+    /* ---------- Overlays (lobby, rule cards, online) ---------- */
+    .overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
       padding: 20px;
+      background: rgba(20, 18, 16, 0.92);
+    }
+    .overlay h1, .overlay h2 { font-family: var(--display); margin: 0; letter-spacing: 0.04em; }
+
+    #lobby-overlay { display: flex; overflow-y: auto; justify-content: safe center; }
+    .lobby-card { width: 100%; max-width: 360px; padding: 0; overflow: hidden; flex: 0 0 auto; }
+    .lobby-card h1 {
+      padding: 8px 14px; font-size: 24px; text-align: center; color: #f4eedf;
+      background: linear-gradient(#66757f, #4c5a64); border-bottom: 1px solid var(--edge);
+    }
+    .lobby-card .lobby-inner { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+    .lobby-card p { margin: 0; font-size: 15px; line-height: 1.3; color: var(--ink-soft); }
+    #lobby-config, #rules-options { display: flex; flex-direction: column; gap: 8px; }
+    #rules-options { display: none; }
+    .lobby-player-config label, #rules-options label {
+      display: flex; flex-direction: column; gap: 3px;
+      font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: 0.03em;
+    }
+    #rules-options #enforce-rules-label { flex-direction: row; align-items: center; gap: 8px; }
+    .lobby-card select {
+      width: 100%; min-height: 40px; padding: 4px 8px;
+      border: 1px solid var(--edge); border-radius: 6px;
+      background: #f3ecdc; color: var(--ink);
+      font-family: var(--body); font-size: 16px;
+    }
+    .big-btn {
+      min-height: 46px; padding: 8px 18px;
+      border: 1px solid var(--edge); border-radius: 8px;
+      background: linear-gradient(#66757f, #4c5a64); color: #f4eedf;
+      font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: 0.05em;
+    }
+    .big-btn.secondary { background: var(--paper-2); color: var(--ink); }
+
+    #rules-overlay { gap: 8px; }
+    #rules-overlay.player2 { transform: rotate(180deg); }
+    .rules-stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .rules-stage img { max-width: calc(100% - 80px); max-height: 100%; object-fit: contain; }
+    .rules-arrow {
+      width: 36px; height: 60px; flex: 0 0 auto; border: 0; background: transparent;
+      font-size: 2rem; color: var(--paper);
     }
 
-    #lobby-overlay h1 {
-      margin: 0 0 8px 0;
-      font-size: 1.3rem;
+    .online-box { padding: 16px 20px; text-align: center; color: var(--ink); }
+    #host-peer-id { font-family: monospace; font-weight: 700; font-size: 1.4rem; }
+    #join-peer-id-input {
+      border-radius: 6px; border: 1px solid var(--edge); background: #f3ecdc; color: var(--ink);
+      padding: 8px 12px; font-size: 1rem; width: 220px; text-align: center;
     }
+    .overlay .muted { color: var(--muted); font-size: 15px; margin: 0; text-align: center; max-width: 320px; }
 
-    #lobby-overlay p {
-      margin: 0 0 8px 0;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
+    .hidden-legacy { display: none !important; }
 
-    #lobby-config {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 8px;
-      width: 100%;
-      max-width: 260px;
-    }
-
-    .lobby-player-config label {
-      font-size: 0.85rem;
-      color: var(--muted);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      align-items: stretch;
-    }
-
-    #lobby-config select {
-      border-radius: 4px;
-      border: 1px solid #333;
-      background: #000;
-      color: var(--text);
-      padding: 4px 6px;
-      font-size: 0.85rem;
-    }
-
-    /* rules overlay faces player 2 across the table */
-    #rules-overlay.player2 {
-      transform: rotate(180deg);
-    }
-
-    /* Online Mode - Player 2 Perspective */
-    #app.online-player2 {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 .player-zone {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 #middle {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 .side-panel {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 .side-card {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 #board {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 .center-stats {
-      flex-direction: column-reverse;
-    }
-
-    #app.online-player2 #rules-overlay {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 .bonus-label {
-      transform: rotate(180deg);
-    }
-
-    #app.online-player2 .cell::before {
-      transform: rotate(180deg);
-    }
-
-    /* Responsive Layout für schmale Displays */
-    @media (max-width: 700px) {
-      #middle {
-        flex-direction: column;
-      }
-
-      .side-panel {
-        width: 100%;
+    /* ---------- Landscape: board left, docks in a column on the right ---------- */
+    @media (min-aspect-ratio: 5/4) {
+      #app {
         max-width: none;
-        flex-direction: row;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas: "board top" "board bottom";
+        column-gap: 12px;
+        row-gap: 6px;
       }
-
-      .side-card {
-        flex: 1;
-      }
-
-      .card-player1 { order: 0; }
-      .btn-down-card { order: 1; }
-      .current-die-card { order: 2; }
-      .btn-up-card { order: 3; }
-      .card-player2 { order: 4; }
+      #board-area { grid-area: board; max-height: none; }
+      #dock-top { grid-area: top; }
+      #dock-bottom { grid-area: bottom; }
+      #app.duel #dock-top { transform: none; justify-content: flex-start; }
+      #app.duel #dock-top > .player-bar { order: 0; }
+      #app.duel .dock { height: auto; }
     }
-
-    @media (min-width: 500px) {
-      #board {
-        max-width: 700px;
-      }
+    @media (min-aspect-ratio: 5/4) and (min-width: 1100px) {
+      #app { grid-template-columns: minmax(0, 1fr) 400px; max-width: 1400px; }
     }
+    @media (min-width: 700px) and (max-aspect-ratio: 5/4) {
+      .hint-text { font-size: 18px; }
+      .track button { height: 22px; line-height: 22px; font-size: 13px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .player-bar { transition: none; } }
   </style>
 </head>
 <body>
   <div id="app">
     <!-- Online Host Overlay -->
-    <div id="online-host-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
-      <h2 style="margin: 0; font-size: 1.2rem;">Online – Host</h2>
-      <p style="margin: 0; color: var(--muted); font-size: 0.9rem;">Your connection ID:</p>
-      <div style="background: #1c1c1c; border-radius: 8px; padding: 20px; border: 2px solid var(--accent); text-align: center; position: relative;">
-        <div style="font-size: 1.5rem; font-family: monospace; font-weight: bold; color: var(--accent);" id="host-peer-id">Establishing connection...</div>
-        <button class="btn small" id="btn-copy-peer-id" style="position:absolute; top:4px; right:4px;">📋</button>
+    <div id="online-host-overlay" class="overlay">
+      <h2 style="color: var(--paper);">Online – Host</h2>
+      <p class="muted">Your connection ID:</p>
+      <div class="paper online-box" style="position: relative;">
+        <div id="host-peer-id">Establishing connection...</div>
+        <button class="big-btn secondary" id="btn-copy-peer-id" style="margin-top: 8px; min-height: 36px; font-size: 12px;">Copy ID</button>
       </div>
-      <p style="margin: 0; color: var(--muted); font-size: 0.8rem; max-width: 300px; text-align: center;">Share this ID with your opponent so they can connect.</p>
-      <button class="btn primary" id="btn-start-as-host" style="padding: 10px 20px; font-size: 1rem;">OK – Start Game</button>
-      <button class="btn" id="btn-cancel-host" style="padding: 10px 20px; font-size: 1rem;">Cancel</button>
+      <p class="muted">Share this ID with your opponent so they can connect.</p>
+      <button class="big-btn" id="btn-start-as-host">OK – Start Game</button>
+      <button class="big-btn secondary" id="btn-cancel-host">Cancel</button>
     </div>
 
     <!-- Online Join Overlay -->
-    <div id="online-join-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
-      <h2 style="margin: 0; font-size: 1.2rem;">Online – Join</h2>
-      <p style="margin: 0; color: var(--muted); font-size: 0.9rem;">Enter the host ID:</p>
-      <input type="text" id="join-peer-id-input" placeholder="e.g. abc123xyz" style="border-radius: 4px; border: 1px solid #333; background: #000; color: var(--text); padding: 8px 12px; font-size: 1rem; width: 200px; text-align: center;">
-      <button class="btn primary" id="btn-join-peer" style="padding: 10px 20px; font-size: 1rem;">OK – Connect</button>
-      <button class="btn" id="btn-cancel-join" style="padding: 10px 20px; font-size: 1rem;">Cancel</button>
+    <div id="online-join-overlay" class="overlay">
+      <h2 style="color: var(--paper);">Online – Join</h2>
+      <p class="muted">Enter the host ID:</p>
+      <input type="text" id="join-peer-id-input" placeholder="e.g. abc123xyz">
+      <button class="big-btn" id="btn-join-peer">OK – Connect</button>
+      <button class="big-btn secondary" id="btn-cancel-join">Cancel</button>
     </div>
 
-    <!-- Rules/Karten Overlay -->
-    <div id="rules-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center;">
-      <div style="flex: 1; display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 20px;">
-        <div id="rules-prev" style="width: 30px; height: 60px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--accent); user-select: none;">◀</div>
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center; max-width: 90%;">
-          <img id="rules-image" src="" style="max-width: 100%; max-height: 80vh; object-fit: contain;" alt="Rules">
-        </div>
-        <div id="rules-next" style="width: 30px; height: 60px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--accent); user-select: none;">▶</div>
+    <!-- Rule cards overlay -->
+    <div id="rules-overlay" class="overlay">
+      <div class="rules-stage">
+        <button id="rules-prev" class="rules-arrow" aria-label="Previous card">◀</button>
+        <img id="rules-image" src="" alt="Rule card">
+        <button id="rules-next" class="rules-arrow" aria-label="Next card">▶</button>
       </div>
-      <button class="btn primary" id="btn-close-rules" style="margin-bottom: 40px; padding: 10px 20px; font-size: 1rem;">Back to Game</button>
+      <button class="big-btn" id="btn-close-rules">Back to Game</button>
     </div>
 
     <!-- Lobby -->
-    <div id="lobby-overlay">
-      <h1>DiceWar</h1>
-      <p>Choose a game mode, a dice set for each player and a landscape, then start the match.</p>
-
-      <div id="lobby-config">
-        <div class="lobby-player-config">
-          <label>
-            Game Mode
-            <select id="game-mode-select">
-              <option value="ai">Single player vs AI</option>
-              <option value="solo">Solo</option>
-              <option value="duel">Duel</option>
-              <option value="online-host">Online – Host</option>
-              <option value="online-join">Online – Join</option>
-            </select>
-          </label>
-        </div>
-        <div class="lobby-player-config">
-          <label>
-            Player 1 – Dice Set
-            <select id="p1-dice-set"></select>
-          </label>
-        </div>
-        <div class="lobby-player-config">
-          <label>
-            Player 2 – Dice Set
-            <select id="p2-dice-set"></select>
-          </label>
-        </div>
-        <div class="lobby-player-config">
-          <label>
-            Landscape
-            <select id="use-location">
-              <option value="">None</option>
-              <option value="craters">The Craters (RoX)</option>
-              <option value="oracle">The Oracle (BoD)</option>
-              <option value="ruins">The Ruins (LoD)</option>
-              <option value="camp">The Camp (RoM)</option>
-              <option value="knoll">The Knoll (KoS)</option>
-              <option value="river">The River (DoA)</option>
-            </select>
-          </label>
-          <label id="river-col-label" style="display: none;">
-            River column
-            <select id="river-col">
-              <option value="0">a</option>
-              <option value="1" selected>b</option>
-              <option value="2">c</option>
-              <option value="3">d</option>
-              <option value="4">e</option>
-              <option value="5">f</option>
-              <option value="6">g</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div class="lobby-player-config" id="rules-options">
-        <label id="enforce-rules-label"><input type="checkbox" id="enforce-rules" checked> Enforce rules (beta)</label>
-        <label id="ai-level-label">AI strength
-          <select id="ai-level">
-            <option value="easy">Easy</option>
-            <option value="medium" selected>Medium</option>
-            <option value="hard">Hard</option>
-          </select>
-        </label>
-        <label>Animations
-          <select id="anim-speed">
-            <option value="normal">Normal</option>
-            <option value="fast">Fast</option>
-            <option value="off">Off</option>
-          </select>
-        </label>
-      </div>
-
-      <p id="ai-note" style="display: none; font-size: 0.8rem; color: var(--muted); max-width: 320px;">
-        The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
-      </p>
-
-      <button class="btn primary" id="start-game-btn">Start Game</button>
-    </div>
-
-    <!-- Spielerzone 2 (oben) -->
-    <div class="player-zone top" data-player="2">
-      <div class="block clickable" id="p2-reserve">
-        <div class="label">Player 2 – Reserve</div>
-        <div class="count-display" id="p2-reserve-count">15</div>
-        <div class="dice-icon-row" id="p2-reserve-icons"></div>
-      </div>
-      <div class="center-stats">
-        <div class="counter-row">
-          <span class="counter-label">Trigger Points</span>
-          <button class="btn small" data-counter="p2-trigger" data-delta="-1">−</button>
-          <span class="counter-value" id="p2-trigger">0</span>
-          <button class="btn small" data-counter="p2-trigger" data-delta="1">+</button>
-        </div>
-        <div class="counter-row">
-          <span class="counter-label">Victory Points</span>
-          <button class="btn small" data-counter="p2-victory" data-delta="-1">−</button>
-          <span class="counter-value" id="p2-victory">0</span>
-          <button class="btn small" data-counter="p2-victory" data-delta="1">+</button>
-        </div>
-      </div>
-      <div class="block clickable" id="p2-exile">
-        <div class="label">Player 2 – Exile</div>
-        <div class="count-display" id="p2-exile-count">0</div>
-        <div class="dice-icon-row" id="p2-exile-icons"></div>
-      </div>
-    </div>
-
-    <!-- Mitte: Seitenleisten + Spielfeld -->
-    <div id="middle">
-      <!-- Obere Side-Panel -->
-      <div class="side-panel">
-        <div class="side-card">
-        <button class="btn primary" id="btn-lobby">Lobby</button>
-        <!-- Speichern / Laden nebeneinander -->
-        <div style="display: flex; gap: 4px; margin-top: 4px;">
-          <button class="btn" id="btn-save" style="flex: 1;">💾</button>
-          <button class="btn" id="btn-load" style="flex: 1;">📂</button>
-        </div>
-        <input type="file" id="load-file-input" accept=".json,application/json" style="display: none;">
-      </div>
-        <div class="side-card">
-          <div class="status-text" id="status-text">Player 1's turn.</div>
-          <div class="status-text" id="round-text" style="margin-top: 8px; font-size: 0.75rem; color: var(--muted);">Round: 1</div>
-        </div>
-        <div class="side-card" id="rules-panel"></div>
-        <div class="side-card">
-          <button class="btn primary" id="btn-end-turn">End Turn</button>
-          <!-- NEU: Undo / Redo -->
-          <div style="margin-top:6px; display:flex; gap:0;">
-            <button class="btn" id="btn-undo" style="flex:1; margin:0;">&#x21B6</button>
-            <button class="btn" id="btn-redo" style="flex:1; margin:0;">&#x21B7</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Spielfeld -->
-      <div id="board-container">
-        <div id="board"></div>
-      </div>
-
-      <!-- Untere Side-Panel -->
-      <div class="side-panel">
-        <div class="side-card card-player2">
-          <button class="btn" id="btn-player2-cards">Player 2<br />Cards</button>
-        </div>
-        <div class="side-card btn-up-card">
-          <button class="btn primary" id="btn-die-plus">+</button>
-        </div>
-        <div class="side-card current-die-card">
-          <div class="current-die-view">
-            <div class="current-die-box empty" id="current-die-box">
-              No<br />Die
+    <div id="lobby-overlay" class="overlay">
+      <div class="paper lobby-card">
+        <h1>DiceWar</h1>
+        <div class="lobby-inner">
+          <p>Choose a game mode, a dice set for each player and a landscape, then start the match.</p>
+          <div id="lobby-config">
+            <div class="lobby-player-config">
+              <label>Game Mode
+                <select id="game-mode-select">
+                  <option value="ai">Single player vs AI</option>
+                  <option value="solo">Solo</option>
+                  <option value="duel">Duel</option>
+                  <option value="online-host">Online – Host</option>
+                  <option value="online-join">Online – Join</option>
+                </select>
+              </label>
+            </div>
+            <div class="lobby-player-config">
+              <label>Player 1 – Dice Set
+                <select id="p1-dice-set"></select>
+              </label>
+            </div>
+            <div class="lobby-player-config">
+              <label>Player 2 – Dice Set
+                <select id="p2-dice-set"></select>
+              </label>
+            </div>
+            <div class="lobby-player-config">
+              <label>Landscape
+                <select id="use-location">
+                  <option value="">None</option>
+                  <option value="craters">The Craters (RoX)</option>
+                  <option value="oracle">The Oracle (BoD)</option>
+                  <option value="ruins">The Ruins (LoD)</option>
+                  <option value="camp">The Camp (RoM)</option>
+                  <option value="knoll">The Knoll (KoS)</option>
+                  <option value="river">The River (DoA)</option>
+                </select>
+              </label>
+              <label id="river-col-label" style="display: none; margin-top: 8px;">River column
+                <select id="river-col">
+                  <option value="0">a</option>
+                  <option value="1" selected>b</option>
+                  <option value="2">c</option>
+                  <option value="3">d</option>
+                  <option value="4">e</option>
+                  <option value="5">f</option>
+                  <option value="6">g</option>
+                </select>
+              </label>
             </div>
           </div>
-        </div>
-        <div class="side-card btn-down-card">
-          <button class="btn primary" id="btn-die-minus">↻</button>
-        </div>
-        <div class="side-card card-player1">
-          <button class="btn" id="btn-player1-cards">Player 1<br />Cards</button>
+
+          <div class="lobby-player-config" id="rules-options">
+            <label id="enforce-rules-label"><input type="checkbox" id="enforce-rules" checked> Enforce rules (beta)</label>
+            <label id="ai-level-label">AI strength
+              <select id="ai-level">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+            <label>Animations
+              <select id="anim-speed">
+                <option value="normal">Normal</option>
+                <option value="fast">Fast</option>
+                <option value="off">Off</option>
+              </select>
+            </label>
+          </div>
+
+          <p id="ai-note" style="display: none; font-size: 14px;">
+            The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
+          </p>
+
+          <button class="big-btn" id="start-game-btn">Start Game</button>
         </div>
       </div>
     </div>
 
-    <!-- Spielerzone 1 (unten) -->
-    <div class="player-zone bottom" data-player="1">
-      <div class="block clickable" id="p1-reserve">
-        <div class="label">Player 1 – Reserve</div>
-        <div class="count-display" id="p1-reserve-count">15</div>
-        <div class="dice-icon-row" id="p1-reserve-icons"></div>
-      </div>
-      <div class="center-stats">
-        <div class="counter-row">
-          <span class="counter-label">Victory Points</span>
-          <button class="btn small" data-counter="p1-victory" data-delta="-1">−</button>
-          <span class="counter-value" id="p1-victory">0</span>
-          <button class="btn small" data-counter="p1-victory" data-delta="1">+</button>
+    <!-- Dock of player 2 (top; faces player 2 in a duel) -->
+    <div class="dock" id="dock-top">
+      <div class="player-bar paper" id="bar-2" data-player="2">
+        <button class="card-btn" id="btn-player2-cards" aria-label="Player 2 rule cards"></button>
+        <button class="pile" id="p2-exile" aria-label="Player 2 exile">
+          <img src="img/ui/exile.png" alt=""><span class="count" id="p2-exile-count">0</span>
+        </button>
+        <div class="tracks">
+          <div class="bar-name" id="p2-name"><b>Player 2</b></div>
+          <div class="track" id="p2-victory-track"><img src="img/ui/crown.png" alt="Victory points"></div>
+          <div class="track" id="p2-trigger-track"><img src="img/ui/claw.png" alt="Trigger points"></div>
         </div>
-        <div class="counter-row">
-          <span class="counter-label">Trigger Points</span>
-          <button class="btn small" data-counter="p1-trigger" data-delta="-1">−</button>
-          <span class="counter-value" id="p1-trigger">0</span>
-          <button class="btn small" data-counter="p1-trigger" data-delta="1">+</button>
+        <button class="pile" id="p2-reserve" aria-label="Player 2 reserve">
+          <img src="img/ui/reserve.png" alt=""><span class="count" id="p2-reserve-count">15</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Board -->
+    <div id="board-area">
+      <div id="board"></div>
+      <div id="ring-layer">
+        <div id="ring-backdrop"></div>
+        <svg id="ring-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+
+    <!-- Dock of player 1 (bottom) with the controls -->
+    <div class="dock" id="dock-bottom">
+      <div class="hint paper" id="hint">
+        <div class="hint-title" id="hint-title">Your turn</div>
+        <div class="hint-body">
+          <div class="hint-text"><span id="status-text">Player 1's turn.</span><span class="msg" id="hint-msg"></span></div>
+          <div class="hint-buttons" id="rules-panel"></div>
         </div>
       </div>
-      <div class="block clickable" id="p1-exile">
-        <div class="label">Player 1 – Exile</div>
-        <div class="count-display" id="p1-exile-count">0</div>
-        <div class="dice-icon-row" id="p1-exile-icons"></div>
+      <div class="player-bar paper" id="bar-1" data-player="1">
+        <button class="card-btn" id="btn-player1-cards" aria-label="Player 1 rule cards"></button>
+        <button class="pile" id="p1-exile" aria-label="Player 1 exile">
+          <img src="img/ui/exile.png" alt=""><span class="count" id="p1-exile-count">0</span>
+        </button>
+        <div class="tracks">
+          <div class="bar-name" id="p1-name"><b>Player 1</b></div>
+          <div class="track" id="p1-victory-track"><img src="img/ui/crown.png" alt="Victory points"></div>
+          <div class="track" id="p1-trigger-track"><img src="img/ui/claw.png" alt="Trigger points"></div>
+        </div>
+        <button class="pile" id="p1-reserve" aria-label="Player 1 reserve">
+          <img src="img/ui/reserve.png" alt=""><span class="count" id="p1-reserve-count">15</span>
+        </button>
       </div>
+      <nav class="toolbar" id="toolbar">
+        <button id="btn-lobby"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Menu</button>
+        <button id="btn-undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>Undo</button>
+        <button id="btn-redo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>Redo</button>
+        <button id="btn-save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Save</button>
+        <button id="btn-load"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M5 3h14"/></svg>Load</button>
+      </nav>
+      <input type="file" id="load-file-input" accept=".json,application/json" style="display: none;">
+    </div>
+
+    <!-- Kept for older code paths; not shown -->
+    <div class="hidden-legacy">
+      <span id="round-text"></span>
+      <div id="current-die-box"></div>
+      <button id="btn-end-turn"></button>
+      <button id="btn-die-plus"></button>
+      <button id="btn-die-minus"></button>
     </div>
   </div>
-
+  <script src="ui/ring.js"></script>
+  <script src="ui/hud.js"></script>
   <script>
     // --- Würfel-Sets ---
     const DICE_SETS = [
@@ -1020,7 +751,7 @@
           cell.dataset.row = r;
           cell.dataset.col = c;
           cell.style.gridRow = String(r + 1);
-          cell.style.gridColumn = String(c + 2);
+          cell.style.gridColumn = String(c + 1);
 
           const label = document.createElement("div");
           label.className = "cell-label";
@@ -1031,7 +762,6 @@
           boardEl.appendChild(cell);
         }
       }
-      createRowBonusLabels();
     }
 
     function createRowBonusLabels() {
@@ -1161,39 +891,19 @@
 
     function refreshPlayerPanels() {
       [1, 2].forEach((p) => {
-        document.getElementById(`p${p}-reserve-count`).textContent =
-          state.players[p].reserve;
-        document.getElementById(`p${p}-exile-count`).textContent =
-          state.players[p].exile;
-        document.getElementById(`p${p}-trigger`).textContent =
-          state.players[p].trigger;
-        document.getElementById(`p${p}-victory`).textContent =
-          state.players[p].victory;
-
-        renderMiniDice(`p${p}-reserve-icons`, state.players[p].reserve);
-        renderMiniDice(`p${p}-exile-icons`, state.players[p].exile);
-
-        updateHistoryButtons();
-        updateSaveLoadButtons();
+        document.getElementById(`p${p}-reserve-count`).textContent = state.players[p].reserve;
+        document.getElementById(`p${p}-exile-count`).textContent = state.players[p].exile;
       });
-
-      document
-        .querySelectorAll(".player-zone")
-        .forEach((zone) => (zone.style.outline = "none"));
-      const currentZone = document.querySelector(
-        `.player-zone[data-player="${state.currentPlayer}"]`
-      );
-      if (currentZone) {
-        currentZone.style.outline = "2px solid var(--accent)";
-        currentZone.style.outlineOffset = "-2px";
-      }
-
+      GameUI.refreshBars();
       updateOnlineUIState();
       updateHistoryButtons();
+      updateSaveLoadButtons();
+      GameUI.renderManual();
     }
 
     function renderMiniDice(containerId, count) {
       const container = document.getElementById(containerId);
+      if (!container) return;
       container.innerHTML = "";
       const maxIcons = Math.min(count, 5);
       for (let i = 0; i < maxIcons; i++) {
@@ -1212,10 +922,11 @@
 
     function clearSelection() {
       state.selected = null;
+      state.ringDismissed = false;
       updateBoardDOM();
       updateCurrentDieView();
       document
-        .querySelectorAll(".player-zone .block.clickable")
+        .querySelectorAll(".pile")
         .forEach((b) => b.classList.remove("selected"));
     }
 
@@ -1242,8 +953,9 @@
           return;
         }
         state.selected = { type: "board", row: r, col: c };
+        state.ringDismissed = false;
         document
-          .querySelectorAll(".player-zone .block.clickable")
+          .querySelectorAll(".pile")
           .forEach((b) => b.classList.remove("selected"));
         updateBoardDOM();
         updateCurrentDieView();
@@ -1281,7 +993,7 @@
             cell.rotation = 0;
             state.selected = { type: "board", row: r, col: c, manipulated: true };
             document
-              .querySelectorAll(".player-zone .block.clickable")
+              .querySelectorAll(".pile")
               .forEach((b) => b.classList.remove("selected"));
             refreshPlayerPanels();
             updateBoardDOM();
@@ -1303,7 +1015,7 @@
             cell.rotation = 0;
             state.selected = { type: "board", row: r, col: c, manipulated: true };
             document
-              .querySelectorAll(".player-zone .block.clickable")
+              .querySelectorAll(".pile")
               .forEach((b) => b.classList.remove("selected"));
             refreshPlayerPanels();
             updateBoardDOM();
@@ -1468,6 +1180,7 @@
     }
 
     function updateCurrentDieView() {
+      if (window.GameUI) GameUI.renderManual();
       if (!state.selected || state.selected.type !== "board") {
         currentDieBox.classList.add("empty");
         currentDieBox.innerHTML = "No<br />Die";
@@ -1579,8 +1292,11 @@
       const p2Set = state.players[2].diceSet || "numbers";
       const folder1 = p1Set === "numbers" ? "numbers" : p1Set;
       const folder2 = p2Set === "numbers" ? "numbers" : p2Set;
-      p1Btn.innerHTML = `<img src="img/${folder1}/rules/artwork.png" alt="Artwork" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px;">`;
-      p2Btn.innerHTML = `<img src="img/${folder2}/rules/artwork.png" alt="Artwork" style="width: 100%; height: 100%; object-fit: contain; border-radius: 4px;">`;
+      const cardFace = (set, folder) => set === "numbers"
+        ? `<span style="font-family: var(--display); font-size: 9px; color: var(--paper);">Rules</span>`
+        : `<img src="img/${folder}/rules/artwork.png" alt="Rule cards">`;
+      p1Btn.innerHTML = cardFace(p1Set, folder1);
+      p2Btn.innerHTML = cardFace(p2Set, folder2);
     }
 
     // --- Lobby / Würfel-Set-Auswahl ---
@@ -1698,12 +1414,12 @@
         cell.style.opacity = "1";
       });
 
-      document.querySelectorAll(".block.clickable").forEach(block => {
+      document.querySelectorAll(".pile").forEach(block => {
         block.style.pointerEvents = "auto";
         block.style.opacity = "1";
       });
 
-      document.querySelectorAll("button[data-counter]").forEach(btn => {
+      document.querySelectorAll(".track button").forEach(btn => {
         btn.disabled = false;
         btn.style.opacity = "1";
       });
@@ -1732,12 +1448,12 @@
         cell.style.opacity = "0.5";
       });
 
-      document.querySelectorAll(".block.clickable").forEach(block => {
+      document.querySelectorAll(".pile").forEach(block => {
         block.style.pointerEvents = "none";
         block.style.opacity = "0.5";
       });
 
-      document.querySelectorAll("button[data-counter]").forEach(btn => {
+      document.querySelectorAll(".track button").forEach(btn => {
         btn.disabled = true;
         btn.style.opacity = "0.5";
       });
@@ -2158,6 +1874,7 @@
       } else {
         app.classList.remove("online-player2");
       }
+      GameUI.layout();
     }
 
     async function startGameAsHost(p1Set, p2Set) {
@@ -2402,7 +2119,7 @@
 
     // In rules mode, Reserve and Exile are managed by the engine only.
     document.addEventListener("click", (e) => {
-      if (window.RulesMode && RulesMode.active && e.target.closest(".player-zone .block.clickable")) {
+      if (window.RulesMode && RulesMode.active && e.target.closest(".pile")) {
         e.stopPropagation();
       }
     }, true);

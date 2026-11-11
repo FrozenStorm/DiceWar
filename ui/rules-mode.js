@@ -12,7 +12,7 @@ import {
 } from "../engine/core.js";
 import { IMPLEMENTED_SETS } from "../engine/sets/index.js";
 import { IMPLEMENTED_LOCATIONS } from "../engine/locations/index.js";
-import { actionPath, pendingPrompt, abilityName, TURN_LABELS } from "../engine/paths.js";
+import { actionPath, pendingPrompt, abilityName, TURN_LABELS, FACE_LABELS } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
 import { SIZE, sq, rowOf, colOf, supplyRow, defaultDir } from "../engine/board.js";
 import { captureDice, play as playAnimation, animateTurnAt, getSpeed, setSpeed } from "./animate.js";
@@ -38,7 +38,12 @@ const rm = {
   aiToken: 0,        // invalidates running AI requests (undo, new game)
   thinking: false,
   animating: Promise.resolve(), // animation of the last action
+  ringDismissed: false, // radial menu closed with "Move / Attack": only the board fields count
+  turnMode: false,      // radial menu shows the four directions of "Turn" (KoS)
 };
+
+// Abilities that upgrade a creature: shown at the top of the radial menu.
+const UPGRADE_ABILITIES = new Set(["BoD.hunter.dark_fusion", "RoM.protectress.symbiosis"]);
 
 const engineSet = (uiSet) => ENGINE_SET[uiSet];
 
@@ -76,8 +81,8 @@ function stop() {
   rm.aiToken++;
   rm.thinking = false;
   document.getElementById("app").classList.remove("rules-mode");
-  const panel = document.getElementById("rules-panel");
-  if (panel) panel.style.display = "none";
+  if (window.Ring) Ring.hide();
+  for (const p of [1, 2]) if (state.players[p]) state.players[p].virtualVP = 0;
 }
 
 /** May the person at this device act right now? */
@@ -180,6 +185,8 @@ function perform(action) {
     rm.redo = [];
     rm.game = next;
     rm.prefix = [];
+    rm.ringDismissed = false;
+    rm.turnMode = false;
     rm.message = "";
   } catch (err) {
     console.error(err);
@@ -264,6 +271,8 @@ function choose(token) {
     return;
   }
   rm.prefix = prefix;
+  rm.ringDismissed = false;
+  rm.turnMode = false;
   render();
   // "Turn …" (KoS): the die turns on the board right away.
   const dir = TURN_LABELS.indexOf(token);
@@ -378,7 +387,7 @@ function project() {
   }
   for (const p of [1, 2]) {
     const ep = g.players[p];
-    Object.assign(state.players[p], { reserve: ep.reserve, exile: ep.exile, trigger: ep.tp, victory: ep.vp });
+    Object.assign(state.players[p], { reserve: ep.reserve, exile: ep.exile, trigger: ep.tp, victory: ep.vp, virtualVP: g.phase === "war" ? virtualVP(g, p) : 0 });
   }
   state.currentPlayer = g.phase === "setup" ? g.current : actor(g);
   state.roundNumber = Math.max(1, Math.ceil(g.turnNumber / 2));
@@ -394,11 +403,6 @@ function render() {
   updateRoundDisplay();
   updateCurrentDieView();
   decorateBoard();
-  for (const p of [1, 2]) {
-    const v = virtualVP(rm.game, p);
-    if (v) document.getElementById(`p${p}-victory`).textContent = `${rm.game.players[p].vp} +${v}`;
-  }
-  setStatus(statusText());
   renderPanel();
   maybeRunAI();
 }
@@ -452,73 +456,178 @@ function statusText() {
   return rm.ai ? (g.current === rm.ai.player ? "AI's turn." : "Your turn.") : `Player ${g.current}'s turn.`;
 }
 
-function renderPanel() {
-  let panel = document.getElementById("rules-panel");
-  if (!panel) return;
-  panel.style.display = "block";
+/** Screen direction (0 up, 1 right, 2 down, 3 left) of engine direction `dir`. */
+function screenDir(dir) {
+  const flipped = document.getElementById("app").classList.contains("online-player2");
+  return flipped ? (dir + 2) % 4 : dir;
+}
+
+const SIDE_NAMES = ["top", "right", "bottom", "left"];
+
+/** Is the radial menu turned towards player 2 (duel on one device, portrait)? */
+function ringFlipped(player) {
+  return state.gameMode === "duel" && player === 2 && !(window.GameUI && GameUI.isLandscape());
+}
+
+function arrowItems(labels, tokens, flip) {
+  const items = { top: [], right: [], bottom: [], left: [] };
+  labels.forEach((label, dir) => {
+    if (!tokens.includes(label)) return;
+    const side = (screenDir(dir) + (flip ? 2 : 0)) % 4;
+    const names = ["Up", "Right", "Down", "Left"];
+    items[SIDE_NAMES[side]].push({ label: "", kind: "arrow", ariaLabel: `${label.split(" ")[0]} ${names[screenDir(dir)]}`, onClick: () => choose(label) });
+  });
+  return items;
+}
+
+function dieImageOf(at) {
+  const d = rm.game.board[at];
+  const set = d && state.players[d.owner] && state.players[d.owner].diceSet;
+  if (!d || !set) return null;
+  const b = state.players[1].diceSet === state.players[2].diceSet && d.owner === 2 ? "b" : "";
+  return `img/${set}/${d.level}${b}.png`;
+}
+
+function dieImageRotation(at) {
+  const cell = state.board[rowOf(at)][colOf(at)];
+  let rot = cell.rotation || 0;
+  if ((state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2) rot += 180;
+  return rot;
+}
+
+/** The radial menu for the current click path, or null. */
+function ringModel() {
   const g = rm.game;
-  const lines = [];
+  if (g.phase !== "war" || !localCanAct()) return null;
+  const prefix = rm.prefix;
+  const next = nextTokens();
+  const strings = next.filter((t) => typeof t === "string");
+  const nums = next.filter((t) => typeof t === "number");
+  const player = actor(g);
+  const flip = ringFlipped(player);
+  const spellColor = window.GameUI ? GameUI.setColor(player) : undefined;
+  const cancel = () => { rm.prefix = []; rm.ringDismissed = false; rm.turnMode = false; render(); };
+
+  // Alignment after the action (KoS "Face …"): arrows around the new field.
+  if (strings.length && strings.every((t) => FACE_LABELS.includes(t)) && !nums.length) {
+    const at = [...prefix].reverse().find((t) => typeof t === "number");
+    if (at === undefined) return null;
+    return {
+      square: { row: rowOf(at), col: colOf(at) }, flip, spellColor,
+      dieImg: dieImageOf(prefix.find((t) => typeof t === "number")),
+      items: arrowItems(FACE_LABELS, strings, flip),
+      onCancel: cancel,
+      text: "Choose the new alignment of the creature.",
+    };
+  }
+
+  const atDie = typeof prefix[0] === "number"
+    && (prefix.length === 1 || (prefix.length === 2 && TURN_LABELS.includes(prefix[1])));
+  if (!atDie || !strings.length || rm.ringDismissed) return null;
+  const at = prefix[0];
+  const turns = strings.filter((t) => TURN_LABELS.includes(t));
+  const others = strings.filter((t) => !TURN_LABELS.includes(t));
+  const base = { square: { row: rowOf(at), col: colOf(at) }, flip, spellColor, dieImg: dieImageOf(at), dieRotation: dieImageRotation(at) };
+
+  if (rm.turnMode && turns.length) {
+    return { ...base, items: arrowItems(TURN_LABELS, turns, flip), onCancel: () => { rm.turnMode = false; render(); },
+      text: "Choose the new alignment, then the action." };
+  }
+
+  const items = { top: [], right: [], bottom: [], left: [] };
+  const spells = [];
+  for (const t of others) {
+    const a = candidates([...prefix, t])[0];
+    const upgrade = a && (a.type === "upgrade" || UPGRADE_ABILITIES.has(a.ability));
+    (upgrade ? items.top : spells).push({ label: t, kind: upgrade ? "upgrade" : "spell", onClick: () => choose(t) });
+  }
+  const half = Math.ceil(spells.length / 2);
+  items.left = spells.slice(0, half);
+  items.right = spells.slice(half);
+  if (nums.length) {
+    const attacks = nums.filter((t) => rm.game.board[t] && rm.game.board[t].owner !== player).length;
+    const label = attacks === nums.length ? "Attack" : attacks ? "Move / Attack" : "Move";
+    items.bottom = [{ label, kind: "move", onClick: () => { rm.ringDismissed = true; render(); } }];
+  }
+  return {
+    ...base, items, onCancel: cancel,
+    center: turns.length ? { label: "Turn", onClick: () => { rm.turnMode = true; render(); } } : null,
+    text: turns.length ? "Choose an action, or tap the die to turn it. Tap outside to cancel." : "Choose an action in the circle. Tap outside to cancel.",
+  };
+}
+
+function renderPanel() {
+  if (!document.getElementById("hint") || !window.GameUI) return;
+  const g = rm.game;
+  const acting = whoActs(g);
+  const color = GameUI.setColor(g.phase === "over" ? (g.result && g.result.winner) || acting : acting);
+  const turnTitle = `${playerName(acting)}${playerName(acting) === "You" ? "r" : "'s"} turn · Round ${state.roundNumber}`;
+  let title = turnTitle;
+  let text = "";
+  const msgs = [];
   const buttons = [];
+  let ring = null;
 
   if (g.phase === "setup") {
-    const values = Object.values(rm.setupDraft);
-    const sum = values.filter((v) => v !== "camp").reduce((a, b) => a + b, 0);
-    const needsCamp = g.locations.includes("camp");
-    const hasCamp = values.includes("camp");
-    lines.push(`Click fields in your back row to place dice (each click raises the level). Total Power Level: ${sum} / ${SETUP_POWER}.`);
-    if (needsCamp) lines.push(`Camp: click a field past level 6 to place your camp there (${hasCamp ? "placed" : "not placed yet"}).`);
-    if (setupNeedsAlignment() && localCanAct()) {
-      lines.push(rm.setupRotate
-        ? "Alignment: click a die to turn it by 90°. Every die keeps its alignment when it is upgraded."
-        : "Knights of Steel: switch to \"Turn dice\" to choose the alignment of each die.");
-      buttons.push([rm.setupRotate ? "Set levels" : "Turn dice", () => { rm.setupRotate = !rm.setupRotate; rm.message = ""; render(); }, true]);
-    }
-    if (localCanAct()) buttons.push(["Confirm lineup", confirmSetup, sum === SETUP_POWER && (!needsCamp || hasCamp)]);
-    else if (isAiTurn()) lines.push("The AI is setting up…");
-  } else if (g.phase === "war") {
-    if (g.endOfWar) {
-      lines.push(`End of War declared by Player ${g.endOfWar.declaredBy}: Player ${g.endOfWar.chased} has fled ${g.endOfWar.turnsFled} / ${END_OF_WAR_TURNS} turns.`);
-    }
+    title = `Setup · ${playerName(acting)}`;
     if (localCanAct()) {
-      const first = rm.prefix.find((t) => typeof t === "string" && t.length > 0);
+      const values = Object.values(rm.setupDraft);
+      const sum = values.filter((v) => v !== "camp").reduce((a, b) => a + b, 0);
+      const needsCamp = g.locations.includes("camp");
+      const hasCamp = values.includes("camp");
+      text = `Tap fields in your back row to place dice; each tap raises the level. Power ${sum} / ${SETUP_POWER}.`;
+      if (needsCamp) msgs.push(`Camp: tap a field past level 6 to place your camp (${hasCamp ? "placed" : "not placed yet"}).`);
+      if (setupNeedsAlignment()) {
+        msgs.push(rm.setupRotate ? "Tap a die to turn it by 90°." : "Use \"Turn dice\" to choose the alignment of each die.");
+        buttons.push({ label: rm.setupRotate ? "Set levels" : "Turn dice", secondary: true, onClick: () => { rm.setupRotate = !rm.setupRotate; rm.message = ""; render(); } });
+      }
+      buttons.push({ label: "Confirm lineup", onClick: confirmSetup, disabled: !(sum === SETUP_POWER && (!needsCamp || hasCamp)) });
+    } else {
+      text = isAiTurn() ? "The AI is setting up…" : "Waiting for the opponent…";
+    }
+  } else if (g.phase === "war") {
+    if (g.endOfWar) msgs.push(`End of War declared by ${playerName(g.endOfWar.declaredBy)}: ${playerName(g.endOfWar.chased)} has fled ${g.endOfWar.turnsFled} / ${END_OF_WAR_TURNS} turns.`);
+    if (localCanAct()) {
+      ring = ringModel();
       const cand = candidates(rm.prefix)[0];
       const ability = cand && cand.ability;
+      const chosen = rm.prefix.find((t) => typeof t === "string" && !TURN_LABELS.includes(t));
+      if (ability && chosen) title = abilityName(ability);
+      else if (g.pending.length) title = `${playerName(acting)} · decision`;
       const hint = ability && getSet(ability.split(".")[0]).stepHint?.(ability, rm.prefix.length);
-      if (hint) lines.push(hint);
-      else if (!rm.prefix.length && !g.pending.length) lines.push("Select one of your creatures.");
-      else if (rm.prefix.length === 1) lines.push("Choose a highlighted field or an action.");
-      if (ability && !first) lines.push(abilityName(ability));
-      for (const t of nextTokens()) if (typeof t === "string") buttons.push([t, () => choose(t), true]);
-      if (rm.prefix.length) buttons.push(["Cancel", () => { rm.prefix = []; render(); }, true]);
+      if (ring) text = ring.text;
+      else if (hint) text = hint;
+      else if (g.pending.length) text = pendingPrompt(g.pending[0]);
+      else if (!rm.prefix.length) text = "Tap one of your creatures.";
+      else text = "Tap a highlighted field.";
+      const ringTokens = ring ? nextTokens().filter((t) => typeof t === "string") : [];
+      for (const t of nextTokens()) {
+        if (typeof t !== "string" || ringTokens.includes(t)) continue;
+        if (rm.ringDismissed && rm.prefix.length === 1) continue; // "Move / Attack" chosen: fields only
+        buttons.push({ label: t, onClick: () => choose(t) });
+      }
+      if (rm.prefix.length) buttons.push({ label: "Cancel", secondary: true, onClick: () => { rm.prefix = []; rm.ringDismissed = false; rm.turnMode = false; render(); } });
     } else {
-      lines.push(isAiTurn() ? "The AI is thinking…" : "Waiting for the opponent…");
+      text = isAiTurn() ? "The AI is thinking…" : "Waiting for the opponent…";
     }
-    lines.push(`Total VP: P1 ${totalVP(g, 1)} · P2 ${totalVP(g, 2)}`);
+  } else {
+    title = "Game over";
+    text = statusText();
   }
-  if (rm.message) lines.push(rm.message);
+  if (rm.message) msgs.push(rm.message);
 
-  panel.innerHTML = "";
-  for (const l of lines) {
-    const div = document.createElement("div");
-    div.className = "rules-panel-text";
-    div.textContent = l;
-    panel.appendChild(div);
-  }
-  for (const [label, fn, enabled] of buttons) {
-    const b = document.createElement("button");
-    b.className = "btn" + (label === "Cancel" ? "" : " primary");
-    b.textContent = label;
-    b.disabled = !enabled;
-    b.addEventListener("click", fn);
-    panel.appendChild(b);
-  }
+  GameUI.renderHint({ title, text, msg: msgs.join(" "), color, buttons });
+  if (ring) Ring.show(ring);
+  else Ring.hide();
 }
 
 window.RulesMode = {
   get active() { return rm.active; },
   get game() { return rm.game; },
   get prefix() { return [...rm.prefix]; },
-  isAvailable, start, stop, load, render, onCellClick, undo, redo, localCanAct,
+  isAvailable, start, stop, load, render, onCellClick, undo, redo, localCanAct, playerName,
+  actingPlayer: () => (rm.game ? whoActs(rm.game) : state.currentPlayer),
+  get ai() { return rm.ai; },
   getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
   implementedLocations: IMPLEMENTED_LOCATIONS,
   canUndo: () => rm.undo.length > 0 && state.gameMode !== "online",
