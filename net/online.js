@@ -174,13 +174,13 @@ function renderLobby() {
   const named = !!ON.name && ON.inLobby;
   $("online-players-box").style.display = named ? "" : "none";
   $("online-name-row").querySelector("button").textContent = ON.inLobby ? "Rename" : "Enter";
-  if (!db || !named) { list.innerHTML = ""; incomingBox.innerHTML = ""; return; }
+  if (!db || !named) { setHtml(list, ""); setHtml(incomingBox, ""); return; }
 
   // Incoming challenges.
   const now = db.now();
   const incoming = Object.entries(ON.incoming).filter(([, c]) =>
     c && c.status === "pending" && (typeof c.at !== "number" || now - c.at < CHALLENGE_TIMEOUT_MS));
-  incomingBox.innerHTML = incoming.map(([from, c]) => `
+  setHtml(incomingBox, incoming.map(([from, c]) => `
     <div class="challenge-card" data-from="${esc(from)}">
       <div><b>${esc(displayName(from, c.fromName))}</b> challenges you!</div>
       <div class="challenge-details">${esc(challengeSummary(c))}</div>
@@ -189,24 +189,37 @@ function renderLobby() {
         <button class="big-btn" data-act="accept">Accept</button>
         <button class="big-btn secondary" data-act="decline">Decline</button>
       </div>
-    </div>`).join("");
+    </div>`).join(""));
 
   // Other players.
   const others = Object.entries(ON.lobby).filter(([uid, p]) => uid !== db.uid && p && p.name);
   others.sort((a, b) => (a[1].status === "free" ? 0 : 1) - (b[1].status === "free" ? 0 : 1) || a[1].name.localeCompare(b[1].name));
   if (!others.length) {
-    list.innerHTML = `<li class="empty">Nobody else is here yet. Keep this page open, or invite a friend to dicewar.</li>`;
+    setHtml(list, `<li class="empty">Nobody else is here yet. Keep this page open, or invite a friend to dicewar.</li>`);
   } else {
     const waiting = ON.outgoing && ON.outgoing.to;
-    list.innerHTML = others.map(([uid, p]) => {
+    setHtml(list, others.map(([uid, p]) => {
       const st = p.status === "free" ? "free" : p.status === "in_game" ? "in game" : "busy";
       let action = "";
       if (waiting === uid) action = `<button class="small-btn" data-act="cancel">Cancel</button>`;
       else if (p.status === "free" && !waiting) action = `<button class="small-btn" data-act="challenge">Challenge</button>`;
       return `<li data-uid="${esc(uid)}"><span class="dot ${p.status === "free" ? "free" : "busy"}"></span>
         <span class="pname">${esc(displayName(uid, p.name))}</span><span class="pstatus">${waiting === uid ? "waiting…" : st}</span>${action}</li>`;
-    }).join("");
+    }).join(""));
   }
+}
+
+/** Replace the content only when it changed, so an open dropdown is not closed
+ *  by the periodic refresh; chosen dice sets of challenge cards are kept. */
+function setHtml(el, html) {
+  if (el.dataset.html === html) return;
+  const chosen = {};
+  el.querySelectorAll(".challenge-card").forEach((c) => { chosen[c.dataset.from] = c.querySelector(".incoming-set").value; });
+  el.dataset.html = html;
+  el.innerHTML = html;
+  el.querySelectorAll(".challenge-card").forEach((c) => {
+    if (chosen[c.dataset.from]) c.querySelector(".incoming-set").value = chosen[c.dataset.from];
+  });
 }
 
 function setOptions(selected) {

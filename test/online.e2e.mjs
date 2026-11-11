@@ -256,6 +256,10 @@ try {
       await B.page.screenshot({ path: process.env.SHOTS + "/lobby-B.png" });
     }
     await B.page.selectOption(".challenge-card .incoming-set", "BoD");
+    // The lobby refreshes every second; the dropdown must survive it (open menus would close).
+    const sel = await B.page.$(".challenge-card .incoming-set");
+    await new Promise((r) => setTimeout(r, 2500));
+    assert.equal(await sel.evaluate((el) => el.isConnected && el.value), "BoD", "dropdown not re-rendered");
     await B.page.click(".challenge-card [data-act=accept]");
     await A.page.waitForSelector("#online-bar >> text=Bob");
     await B.page.waitForSelector("#online-bar >> text=Alice");
