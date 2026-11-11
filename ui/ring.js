@@ -125,6 +125,7 @@
     const cell = cr.width;
 
     layer.classList.add("open");
+    area.classList.add("ring-open");
     Object.assign(backdrop.style, { left: `${br.left - ar.left}px`, top: `${br.top - ar.top}px`, width: `${br.width}px`, height: `${br.height}px` });
 
     // Big enough for a thumb on a phone, but not huge on a large screen.
@@ -133,8 +134,12 @@
     const pad = 4;
     let cx = cr.left - ar.left + cell / 2;
     let cy = cr.top - ar.top + cell / 2;
-    cx = Math.min(Math.max(cx, R + pad), ar.width - R - pad);
-    cy = Math.min(Math.max(cy, R + pad), ar.height - R - pad);
+    // Stay centred on the die as far as the screen allows: the ring may reach
+    // over the docks above and below the board, but never off the screen.
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    cx = Math.min(Math.max(cx, R + pad - ar.left), vw - ar.left - R - pad);
+    cy = Math.min(Math.max(cy, R + pad - ar.top), vh - ar.top - R - pad);
 
     const size = 2 * (R + pad);
     svg.setAttribute("width", size);
@@ -208,6 +213,8 @@
     current = null;
     const layer = document.getElementById("ring-layer");
     if (layer) layer.classList.remove("open");
+    const area = document.getElementById("board-area");
+    if (area) area.classList.remove("ring-open");
     const svg = document.getElementById("ring-svg");
     if (svg) svg.innerHTML = "";
   }

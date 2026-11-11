@@ -285,6 +285,8 @@
     /* ---------- Radial action menu ---------- */
     #ring-layer { position: absolute; inset: 0; z-index: 20; display: none; }
     #ring-layer.open { display: block; }
+    /* The ring may reach over the docks: lift the whole board area above them. */
+    #board-area.ring-open { z-index: 30; }
     #ring-backdrop { position: absolute; background: rgba(30, 24, 18, 0.45); }
     #ring-svg { position: absolute; overflow: visible; filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.6)); }
     #ring-svg .seg { cursor: pointer; }
