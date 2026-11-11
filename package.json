@@ -1,0 +1,10 @@
+{
+  "name": "dicewar",
+  "private": true,
+  "type": "module",
+  "description": "DiceWar web game with rules engine and AI opponent",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:online": "node test/online.e2e.mjs"
+  }
+}

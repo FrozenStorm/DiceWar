@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "lobby": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 20 && newData.child('status').isString()"
+      }
+    },
+    "challenges": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$from": {
+          ".read": "auth != null && auth.uid === $from",
+          ".write": "auth != null && (auth.uid === $from || auth.uid === $to)",
+          ".validate": "newData.child('fromName').isString() && newData.child('status').isString()"
+        }
+      }
+    },
+    "games": {
+      "$gid": {
+        ".read": "auth != null && (data.child('meta/p1').val() === auth.uid || data.child('meta/p2').val() === auth.uid)",
+        ".write": "auth != null && (data.exists() ? (data.child('meta/p1').val() === auth.uid || data.child('meta/p2').val() === auth.uid) : newData.child('meta/p2').val() === auth.uid)",
+        "state": {
+          ".validate": "newData.hasChildren(['seq', 'by', 'json']) && newData.child('by').val() === auth.uid && newData.child('json').isString() && (!data.exists() || newData.child('seq').val() === data.child('seq').val() + 1)"
+        }
+      }
+    }
+  }
+}

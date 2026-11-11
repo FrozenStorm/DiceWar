@@ -1,9 +1,29 @@
-const CACHE_NAME = "dicewar-v1";
+const CACHE_NAME = "dicewar-v25";
 
 const PRECACHE_ASSETS = [
   "./",
   "index.html",
   "site.webmanifest",
+  "engine/board.js",
+  "engine/core.js",
+  "engine/paths.js",
+  "engine/sets/index.js",
+  "engine/sets/rox.js",
+  "engine/sets/bod.js",
+  "engine/sets/lod.js",
+  "engine/sets/rom.js",
+  "engine/sets/kos.js",
+  "engine/sets/doa.js",
+  "engine/locations/index.js",
+  "ui/rules-mode.js",
+  "ui/animate.js",
+  "ui/ring.js",
+  "ui/hud.js",
+  "net/online.js", "net/backend-firebase.js", "net/firebase-config.js",
+  "img/ui/board.jpg", "img/ui/crown.png", "img/ui/claw.png", "img/ui/exile.png", "img/ui/reserve.png",
+  "fonts/cinzel.woff2", "fonts/crimson-text-400.woff2", "fonts/crimson-text-600.woff2", "fonts/crimson-text-400-italic.woff2",
+  "ui/ai-worker.js",
+  "ai/ai.js",
   "icon/favicon.ico",
   "icon/favicon-16x16.png",
   "icon/favicon-32x32.png",
@@ -47,7 +67,7 @@ const PRECACHE_ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS.map((u) => new Request(u, { cache: "reload" }))))
   );
   self.skipWaiting();
 });
@@ -61,19 +81,24 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Network first, so every update shows on the first reload. The cache is only
+// the offline fallback. "no-cache" makes the browser revalidate with the server
+// instead of reusing its own HTTP cache.
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
-      cache.match(event.request).then((cached) => {
-        const networkFetch = fetch(event.request).then((response) => {
+      fetch(event.request, { cache: "no-cache" })
+        .then((response) => {
           if (response.ok) cache.put(event.request, response.clone());
           return response;
-        });
-        return cached || networkFetch;
-      })
+        })
+        .catch(() =>
+          cache.match(event.request, { ignoreSearch: true }).then((cached) => cached || Response.error())
+        )
     )
   );
 });

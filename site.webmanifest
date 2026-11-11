@@ -1,11 +1,11 @@
 {
   "name": "DiceWar",
   "short_name": "DiceWar",
-  "description": "Würfel-Strategiespiel",
+  "description": "Dice strategy game",
   "start_url": "/DiceWar/index.html",
-  "display": "standalone",
-  "background_color": "#111",
-  "theme_color": "#f0ad4e",
+  "display": "fullscreen",
+  "background_color": "#2b2a29",
+  "theme_color": "#2b2a29",
   "icons": [
     {
       "src": "icon/android-chrome-192x192.png",
@@ -22,5 +22,10 @@
       "sizes": "180x180",
       "type": "image/png"
     }
-  ]
+  ],
+  "display_override": [
+    "fullscreen",
+    "standalone"
+  ],
+  "orientation": "any"
 }
