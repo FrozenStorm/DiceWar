@@ -3,7 +3,7 @@
 // raising the Power Level of a creature (blocksRaise).
 
 import { sq } from "../board.js";
-import { removeDie, gainVP, gainTP, setLevel, exileFromReserve, defeat, emit } from "../core.js";
+import { removeDie, gainVP, gainTP, setLevel, exileFromReserve, emit } from "../core.js";
 import { supplyRow, opponent, colOf, SIZE } from "../board.js";
 
 /** RoX: The Craters. Rules: docs/rules/RoX.md, "Location: The Craters". */
@@ -142,12 +142,15 @@ const river = {
 /** Push the creature on `at` 1 field downstream. A creature in the way is
  *  pushed on first (e.g. one standing on a location tile). Over the edge it
  *  goes into Exile and the opponent of its owner receives its Power Level as
- *  VP, without Field Bonus (DoA5). Pushing is not a Movement: it also moves
+ *  VP, without Field Bonus (DoA5); this is not a defeat. Pushing is not a Movement: it also moves
  *  creatures that cannot move themselves. */
 function riverPush(s, at) {
   const die = s.board[at];
   if (colOf(at) === SIZE - 1) {
-    defeat(s, at, opponent(die.owner), { fieldBonus: false, cause: "river" });
+    // Not a defeat (Daniel, 2026-11-11): into the Exile without defeat effects
+    // (no Depth Rapture, no Fake Gold rule); the opponent still gets the VP.
+    removeDie(s, at, "exile", "river");
+    gainVP(s, opponent(die.owner), die.level);
     return;
   }
   const to = at + 1;

@@ -194,3 +194,12 @@ test("KoS.shield.to_the_spears: more than 3 Shields at the start of the turn", (
   assert.equal(s.board[at("a1")].level, 3);
   assert.ok(legalActions(s).every((o) => o.kind !== "KoS.shield.to_the_spears"));
 });
+
+test("KoS: the AI chooses the alignment of its starting lineup", async () => {
+  const { createGame } = await import("../engine/core.js");
+  const { chooseSetup } = await import("../ai/ai.js");
+  const g = createGame({ set1: "KoS", set2: "KoS" });
+  const a = chooseSetup(g, { level: "medium", random: () => 0.3 });
+  assert.ok(a.placements.every((p) => [0, 1, 2, 3].includes(p.dir)));
+  assert.ok(applyAction(g, a));
+});

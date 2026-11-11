@@ -230,15 +230,17 @@ function sintFlutActions(s, at) {
   return [0, 1, 2, 3].map((dir) => ({ type: "spell", ability: A.sintFlut, at, dir }));
 }
 
-/** DoA.awakening.sint_flut: all opposing creatures 1 field in direction `dir`,
- *  front first. Own creatures, unmovable and immune creatures block (and so
- *  do the opposing creatures stuck behind them). Over the edge: Exile, 1 VP. */
+/** DoA.awakening.sint_flut: all opposing creatures are pushed 1 field in
+ *  direction `dir`, front first. Pushing is not a Movement, so it also moves
+ *  creatures that cannot move and ignores immunities (Daniel, 2026-11-11).
+ *  Own creatures block (and so do the opposing creatures stuck behind them).
+ *  Over the edge: defeated, 1 VP each, no Field Bonus. */
 function applySintFlut(s, player, dir) {
   const foe = opponent(player);
   const key = (at) => [-rowOf(at), colOf(at), rowOf(at), -colOf(at)][dir];
   const dice = diceOf(s, foe).sort((x, y) => key(y) - key(x)); // front first
   for (const at of dice) {
-    if (!s.board[at] || !canMove(s, at) || isProtected(s, at, "spell")) continue;
+    if (!s.board[at]) continue;
     const to = step(at, dir);
     if (to < 0) {
       defeat(s, at, player, { vp: 1, fieldBonus: false, cause: "sint_flut" });
@@ -312,7 +314,12 @@ export const DoA = {
         exileFromReserve(s, player, 1);
         gainTP(s, player, -2);
         setLevel(s, a.foe, s.board[a.foe].level + a.delta, { byPlayer: player });
-        if (s.board[a.friend]) setLevel(s, a.friend, s.board[a.friend].level - a.delta, { byPlayer: player });
+        if (s.board[a.friend]) {
+          // Below level 1 also a friendly creature goes into the Exile (Daniel, 2026-11-11, for now).
+          const level = s.board[a.friend].level - a.delta;
+          if (level < 1) removeDie(s, a.friend, "exile", "downgrade");
+          else setLevel(s, a.friend, level);
+        }
         break;
       case A.fromTheFog:
         applyFog(s, a);

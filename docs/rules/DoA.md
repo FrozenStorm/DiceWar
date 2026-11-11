@@ -102,7 +102,9 @@ Rules:
 - Godcatcher is a decision at the end of your turn: choose the Fisher for the Reserve and the creature to upgrade (if any can be upgraded). It repeats while more than 3 Fishers are left.
 - World Sleep removes spell actions of opposing creatures that stand on one of the 8 fields around a Dream Bringer.
 - Wave Ride: the 1-field moves are the standard Movement; longer rides are listed as the ability.
-- Thread of Fate: a creature downgraded below 1 leaves the board (opposing: Exile, own: Reserve). A creature already at level 6 cannot be upgraded.
+- Thread of Fate: a creature downgraded below 1 goes into the Exile, also a friendly one (Daniel, 2026-11-11, provisional). A creature already at level 6 cannot be upgraded.
 - From the Fog: opposing creatures that cannot be moved or are immune against specialities (e.g. Portals, LoD Protective Barrier) cannot be swapped.
-- Sint Flut counts as moving the opposing creatures: creatures that cannot move or are immune against spells stay and block those behind them. Over the edge they are defeated (1 VP each, no Field Bonus).
-- The River is chosen in the lobby together with its column. Creatures pushed over the edge count as defeated (e.g. Depth Rapture triggers).
+- Sint Flut pushes the opposing creatures; pushing is not a Movement, so it also pushes creatures that cannot move and ignores immunities (Daniel, 2026-11-11). Only own creatures block (and the opposing creatures stuck behind them). Over the edge they are defeated (1 VP each, no Field Bonus).
+- The River is chosen in the lobby together with its column. Creatures pushed over the edge are not defeated (Daniel, 2026-11-11): they go into the Exile without defeat effects (no Depth Rapture, no Fake Gold rule), and the opponent of their owner receives VP equal to their Power Level.
+- Godcatcher may upgrade any friendly creature in your zone, also another Tidal Fisher (confirmed).
+- Water Pearls: a level change of the last Water Weaver counts like leaving the Warlands (-1 TP, confirmed).

@@ -199,3 +199,24 @@ test("DoA River: a creature flowing onto an occupied location tile pushes the oc
   assert.equal(s.board[at("d4")].owner, 1, "player 1's Fisher flowed onto the river tile");
   assert.equal(s.board[at("e4")].owner, 2, "the occupant was pushed off");
 });
+
+test("DoA decisions 2026-11-11: Thread of Fate exiles an own level 1, Sint Flut pushes everything, river is no defeat", async () => {
+  // Thread of Fate: opposing +1, own Fisher -1 -> Exile (not the Reserve).
+  let s = position(["......f", ".......", ".......", "...4c..", "..1....", ".......", "......."], { ...DOA, players: { 1: { tp: 2 } } });
+  const reserve = s.players[1].reserve;
+  s = applyAction(s, byAbility(s, "DoA.weaver.thread_of_fate").find((a) => a.foe === at("e4") && a.delta === 1 && a.friend === at("c3")));
+  assert.equal(s.board[at("c3")], null);
+  assert.equal(s.players[1].exile, 2, "1 for the spell, 1 for the Fisher");
+  assert.equal(s.players[1].reserve, reserve - 1);
+  // Sint Flut also pushes creatures that cannot move (RoX Portal on g4).
+  s = position(["......f", ".......", ".......", "......a", ".......", ".......", "6......"], { set1: "DoA", set2: "RoX", players: { 1: { tp: 10 } } });
+  s = applyAction(s, byAbility(s, "DoA.awakening.sint_flut").find((a) => a.dir === 1));
+  assert.equal(s.board[at("g4")], null);
+  assert.equal(s.players[1].vp, 2);
+  // River: a Dream Bringer flowing over the edge is no defeat (no Depth Rapture), the opponent gets its level.
+  s = position(["......f", ".......", "......b", ".......", ".......", ".......", "1......"], { ...DOA, locations: ["river"] });
+  s = applyAction(s, { type: "move", from: at("a1"), to: at("b1") });
+  assert.equal(s.board[at("g5")], null);
+  assert.equal(s.players[2].tp, 0, "no Depth Rapture");
+  assert.equal(s.players[1].vp, 2);
+});
