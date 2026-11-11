@@ -25,7 +25,7 @@
   function playerName(p) {
     if (rulesActive() && RulesMode.playerName) return RulesMode.playerName(p);
     if (state.gameMode === "online" && typeof onlineState !== "undefined" && onlineState.localPlayer) {
-      return p === onlineState.localPlayer ? "You" : "Opponent";
+      return p === onlineState.localPlayer ? "You" : (window.Online ? Online.opponentName() : "Opponent");
     }
     return `Player ${p}`;
   }

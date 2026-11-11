@@ -15,7 +15,6 @@
   <link rel="icon" href="icon/favicon.ico" sizes="any">
   <link rel="icon" href="icon/android-chrome-192x192.png" sizes="192x192" type="image/png">
   <link rel="icon" href="icon/android-chrome-512x512.png" sizes="512x512" type="image/png">
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <style>
     /* Board-game look: parchment panels, slate title bars and the board's own map.
        Portrait: opponent dock, board, own dock. Landscape: board left, docks right. */
@@ -322,15 +321,57 @@
       font-size: 2rem; color: var(--paper);
     }
 
-    .online-box { padding: 16px 20px; text-align: center; color: var(--ink); }
-    #host-peer-id { font-family: monospace; font-weight: 700; font-size: 1.4rem; }
-    #join-peer-id-input {
-      border-radius: 6px; border: 1px solid var(--edge); background: #f3ecdc; color: var(--ink);
-      padding: 8px 12px; font-size: 1rem; width: 220px; text-align: center;
-    }
     .overlay .muted { color: var(--muted); font-size: 15px; margin: 0; text-align: center; max-width: 320px; }
 
     .hidden-legacy { display: none !important; }
+
+    /* ---------- Online lobby ---------- */
+    #online-lobby-overlay { overflow-y: auto; justify-content: safe center; }
+    .online-card { max-width: 420px; }
+    #online-name-row { display: flex; gap: 8px; align-items: flex-end; }
+    #online-name-row label { flex: 1; }
+    .lobby-card input[type="text"] {
+      width: 100%; min-height: 40px; padding: 4px 8px;
+      border: 1px solid var(--edge); border-radius: 6px;
+      background: #f3ecdc; color: var(--ink); font-family: var(--body); font-size: 16px;
+    }
+    .small-btn {
+      min-height: 36px; padding: 4px 12px; border: 1px solid var(--edge); border-radius: 6px;
+      background: linear-gradient(#66757f, #4c5a64); color: #f4eedf;
+      font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: 0.04em;
+    }
+    .lobby-card h3 { margin: 0; font-family: var(--display); font-size: 13px; letter-spacing: 0.04em; }
+    #online-lobby-msg { display: none; padding: 6px 10px; border-radius: 6px; background: var(--paper-2); color: var(--ink); font-size: 15px; }
+    #online-players { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 40vh; overflow-y: auto; }
+    #online-players li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-bottom: 1px solid rgba(30, 26, 22, 0.15); min-height: 44px; }
+    #online-players li.empty { color: var(--ink-soft); font-style: italic; border: 0; }
+    #online-players .pname { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #online-players .pstatus { color: var(--ink-soft); font-size: 14px; }
+    .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+    .dot.free { background: #3f9b4f; }
+    .dot.busy { background: #b9ad99; }
+    .challenge-card {
+      display: flex; flex-direction: column; gap: 6px; padding: 10px;
+      border: 2px solid var(--accent); border-radius: 8px; background: #f3ecdc;
+    }
+    .challenge-card label, #challenge-dialog label {
+      display: flex; flex-direction: column; gap: 3px;
+      font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: 0.03em;
+    }
+    #challenge-dialog label.inline { flex-direction: row; align-items: center; gap: 8px; }
+    .challenge-details { font-size: 14px; color: var(--ink-soft); }
+    .challenge-buttons { display: flex; gap: 8px; }
+    .challenge-buttons .big-btn { flex: 1; }
+    #challenge-dialog { position: fixed; inset: 0; z-index: 1100; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(20, 18, 16, 0.7); overflow-y: auto; }
+    #challenge-dialog .lobby-card { max-width: 360px; }
+
+    .online-bar {
+      display: none; align-items: center; gap: 8px; padding: 3px 8px; order: -1;
+      font-size: 15px; min-height: 36px;
+    }
+    .online-bar .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .online-bar .small-btn { min-height: 30px; padding: 2px 10px; }
+    #online-result-overlay .lobby-card { text-align: center; }
 
     /* ---------- Landscape: board left, docks in a column on the right ---------- */
     @media (min-aspect-ratio: 5/4) {
@@ -361,26 +402,65 @@
 </head>
 <body>
   <div id="app">
-    <!-- Online Host Overlay -->
-    <div id="online-host-overlay" class="overlay">
-      <h2 style="color: var(--paper);">Online – Host</h2>
-      <p class="muted">Your connection ID:</p>
-      <div class="paper online-box" style="position: relative;">
-        <div id="host-peer-id">Establishing connection...</div>
-        <button class="big-btn secondary" id="btn-copy-peer-id" style="margin-top: 8px; min-height: 36px; font-size: 12px;">Copy ID</button>
+    <!-- Online lobby -->
+    <div id="online-lobby-overlay" class="overlay">
+      <div class="paper lobby-card online-card">
+        <h1>Online Lobby</h1>
+        <div class="lobby-inner">
+          <form id="online-name-row">
+            <label>Your name
+              <input type="text" id="online-name" maxlength="20" autocomplete="nickname" placeholder="e.g. Daniel">
+            </label>
+            <button class="small-btn" type="submit">Enter</button>
+          </form>
+          <div id="online-lobby-msg"></div>
+          <div id="online-incoming"></div>
+          <div id="online-players-box" style="display: none;">
+            <h3>Players in the lobby</h3>
+            <ul id="online-players"></ul>
+          </div>
+          <button class="big-btn secondary" id="btn-online-leave">Leave Lobby</button>
+        </div>
       </div>
-      <p class="muted">Share this ID with your opponent so they can connect.</p>
-      <button class="big-btn" id="btn-start-as-host">OK – Start Game</button>
-      <button class="big-btn secondary" id="btn-cancel-host">Cancel</button>
+      <div id="challenge-dialog">
+        <div class="paper lobby-card">
+          <h1 id="challenge-title">Challenge</h1>
+          <div class="lobby-inner">
+            <label>Your dice set <select id="challenge-set"></select></label>
+            <label>Landscape <select id="challenge-location"></select></label>
+            <label id="challenge-river-label" style="display: none;">River column
+              <select id="challenge-river-col">
+                <option value="0">a</option><option value="1" selected>b</option><option value="2">c</option>
+                <option value="3">d</option><option value="4">e</option><option value="5">f</option><option value="6">g</option>
+              </select>
+            </label>
+            <label>Who starts?
+              <select id="challenge-start">
+                <option value="random">Random</option>
+                <option value="me">I start</option>
+                <option value="opponent">Opponent starts</option>
+              </select>
+            </label>
+            <label class="inline"><input type="checkbox" id="challenge-rules" checked> Enforce rules</label>
+            <div class="challenge-buttons">
+              <button class="big-btn" id="btn-send-challenge">Challenge</button>
+              <button class="big-btn secondary" id="btn-cancel-challenge-dialog">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Online Join Overlay -->
-    <div id="online-join-overlay" class="overlay">
-      <h2 style="color: var(--paper);">Online – Join</h2>
-      <p class="muted">Enter the host ID:</p>
-      <input type="text" id="join-peer-id-input" placeholder="e.g. abc123xyz">
-      <button class="big-btn" id="btn-join-peer">OK – Connect</button>
-      <button class="big-btn secondary" id="btn-cancel-join">Cancel</button>
+    <!-- Online game result -->
+    <div id="online-result-overlay" class="overlay">
+      <div class="paper lobby-card">
+        <h1 id="online-result-title">Game over</h1>
+        <div class="lobby-inner">
+          <p id="online-result-text"></p>
+          <button class="big-btn" id="btn-result-lobby">Back to Lobby</button>
+          <button class="big-btn secondary" id="btn-result-close">Look at the Board</button>
+        </div>
+      </div>
     </div>
 
     <!-- Rule cards overlay -->
@@ -406,8 +486,7 @@
                   <option value="ai">Single player vs AI</option>
                   <option value="solo">Solo</option>
                   <option value="duel">Duel</option>
-                  <option value="online-host">Online – Host</option>
-                  <option value="online-join">Online – Join</option>
+                  <option value="online">Online lobby</option>
                 </select>
               </label>
             </div>
@@ -477,6 +556,12 @@
 
     <!-- Dock of player 2 (top; faces player 2 in a duel) -->
     <div class="dock" id="dock-top">
+      <div class="online-bar paper" id="online-bar">
+        <span class="text" id="online-bar-text"></span>
+        <button class="small-btn" id="btn-claim-win" style="display: none;">Claim Win</button>
+        <button class="small-btn" id="btn-resign">Resign</button>
+        <button class="small-btn" id="btn-online-back" style="display: none;">Lobby</button>
+      </div>
       <div class="player-bar paper" id="bar-2" data-player="2">
         <button class="card-btn" id="btn-player2-cards" aria-label="Player 2 rule cards"></button>
         <button class="pile" id="p2-exile" aria-label="Player 2 exile">
@@ -1743,127 +1828,26 @@
       URL.revokeObjectURL(url);
     }
 
-    // --- Online Mode / PeerJS ---
+    // --- Online mode (lobby and transport in net/online.js) ---
     const onlineState = {
-      peer: null,
-      connection: null,
-      isHost: false,
-      isJoining: false,
-      myPeerId: null,
-      remotePeerId: null,
       localPlayer: null,
     };
 
-    function initPeer() {
-      return new Promise((resolve) => {
-        console.log("initPeer: creating Peer with ICE servers");
-        onlineState.peer = new Peer({
-          config: {
-            iceServers: [
-              { urls: "stun:stun.relay.metered.ca:80" },
-              {
-                urls: "turn:global.relay.metered.ca:80",
-                username: "b509c1735ca2cb18ca624913",
-                credential: "wQVmLRg4orteQDXi"
-              },
-              {
-                urls: "turn:global.relay.metered.ca:80?transport=tcp",
-                username: "b509c1735ca2cb18ca624913",
-                credential: "wQVmLRg4orteQDXi"
-              },
-              {
-                urls: "turn:global.relay.metered.ca:443",
-                username: "b509c1735ca2cb18ca624913",
-                credential: "wQVmLRg4orteQDXi"
-              },
-              {
-                urls: "turns:global.relay.metered.ca:443?transport=tcp",
-                username: "b509c1735ca2cb18ca624913",
-                credential: "wQVmLRg4orteQDXi"
-              }
-            ]
-          }
-        });
-        onlineState.peer.on("open", (id) => {
-          console.log("initPeer: peer open with id", id);
-          onlineState.myPeerId = id;
-          resolve(id);
-        });
-        onlineState.peer.on("connection", (conn) => {
-          console.log("initPeer: incoming connection from", conn.peer);
-          handleIncomingConnection(conn);
-        });
-      });
-    }
-
-    function handleIncomingConnection(conn) {
-      conn.on("open", () => {
-        onlineState.connection = conn;
-        onlineState.remotePeerId = conn.peer;
-        if (state.gameMode === "online" && onlineState.isHost) {
-          setStatus("Player " + state.currentPlayer + "'s turn.");
-          sendGameState();
-        }
-      });
-      conn.on("data", (data) => {
-        console.log("handleIncomingConnection: received data", data);
-        handleRemoteGameState(data);
-      });
-      conn.on("close", () => {
-        alert("Connection to opponent lost!");
-        goBackToLobby();
-      });
-      conn.on("error", (err) => {
-        console.error("Connection error:", err);
-      });
-    }
-
-    function connectToHost(hostPeerId) {
-      return new Promise((resolve, reject) => {
-        console.log("connectToHost: trying to connect to", hostPeerId);
-        const conn = onlineState.peer.connect(hostPeerId);
-        const timeout = setTimeout(() => {
-          const msg = "Timeout connecting to host";
-          console.warn(msg);
-          conn.close();
-          reject(new Error(msg));
-        }, 10000);
-
-        conn.on("open", () => {
-          clearTimeout(timeout);
-          console.log("connectToHost: connection open");
-          onlineState.connection = conn;
-          onlineState.remotePeerId = hostPeerId;
-          resolve();
-        });
-        conn.on("data", (data) => {
-          handleRemoteGameState(data);
-        });
-        conn.on("close", () => {
-          alert("Connection to host lost!");
-          goBackToLobby();
-        });
-        conn.on("error", (err) => {
-          clearTimeout(timeout);
-          console.error("connectToHost error", err);
-          reject(err);
-        });
-      });
+    /** Everything the opponent needs to show the current position. */
+    function buildGameSnapshot() {
+      return {
+        state: state,
+        currentPlayer: state.currentPlayer,
+        selected: state.selected,
+        rulesGame: window.RulesMode && RulesMode.active ? RulesMode.game : null,
+      };
     }
 
     function sendGameState() {
-      if (onlineState.connection && onlineState.connection.open) {
-        const gameData = {
-          state: state,
-          currentPlayer: state.currentPlayer,
-          selected: state.selected,
-          rulesGame: window.RulesMode && RulesMode.active ? RulesMode.game : null,
-        };
-        onlineState.connection.send(gameData);
-      }
+      if (state.gameMode === "online" && window.Online) Online.pushState(buildGameSnapshot());
     }
 
-    function handleRemoteGameState(data) {
+    function handleRemoteGameState(data, { resetHistory = false } = {}) {
       state.board = data.state.board;
       state.players = data.state.players;
       state.currentPlayer = data.currentPlayer;
@@ -1873,11 +1857,12 @@
       updateBoardDOM();
       refreshPlayerPanels();
       updateRoundDisplay();
-      setStatus("Player " + state.currentPlayer + "'s turn.");
+      setStatus(GameUI.playerName ? GameUI.playerName(state.currentPlayer) + (GameUI.playerName(state.currentPlayer) === "You" ? "r turn." : "'s turn.") : "Player " + state.currentPlayer + "'s turn.");
       if (window.RulesMode) {
-        if (data.rulesGame) RulesMode.load(data.rulesGame);
+        if (data.rulesGame) RulesMode.load(data.rulesGame, { resetHistory });
         else if (RulesMode.active) RulesMode.stop();
       }
+      updateOnlineUIState();
     }
 
     function updatePerspective() {
@@ -1890,131 +1875,30 @@
       GameUI.layout();
     }
 
-    async function startGameAsHost(p1Set, p2Set) {
-      await initPeer();
-      document.getElementById("host-peer-id").textContent = onlineState.myPeerId;
-      const hostOverlay = document.getElementById("online-host-overlay");
-      hostOverlay.style.display = "flex";
-
-      return new Promise((resolve) => {
-        document.getElementById("btn-start-as-host").onclick = async () => {
-          onlineState.isHost = true;
-          onlineState.localPlayer = 1;
-          hostOverlay.style.display = "none";
-
-          const lobbyOverlay = document.getElementById("lobby-overlay");
-          lobbyOverlay.style.display = "none";
-
-          state.currentPlayer = 1;
-          state.gameOver = false;
-          state.gameMode = "online";
-          state.roundNumber = 1;
-          markGameStarted();
-          state.players[1] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p1Set };
-          state.players[2] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p2Set };
-
-          initBoardState();
-          buildBoardDOM();
-          updateBoardDOM();
-          refreshPlayerPanels();
-          updateRoundDisplay();
-          updateCardButtons();
-          updatePerspective();
-          clearSelection();
-          resetHistory();
-          updateSaveLoadButtons();
-          setStatus("Player 1's turn. Waiting for opponent...");
-
-          resolve();
-        };
-      });
+    /** Local board for an online game (both players). */
+    function setupOnlineGame(meta, localPlayer) {
+      if (window.RulesMode) RulesMode.stop();
+      onlineState.localPlayer = localPlayer;
+      startNewGameBase(meta.set1, meta.set2, "online");
+      state.currentPlayer = meta.startingPlayer || 1;
+      updatePerspective();
+      updateOnlineUIState();
+      document.getElementById("lobby-overlay").style.display = "none";
     }
 
-    async function startGameAsJoin(p1Set, p2Set) {
-      await initPeer();
-      const joinOverlay = document.getElementById("online-join-overlay");
-      joinOverlay.style.display = "flex";
-
-      return new Promise((resolve, reject) => {
-        document.getElementById("btn-join-peer").onclick = async () => {
-          const hostId = document.getElementById("join-peer-id-input").value.trim();
-          console.log("Join button clicked, hostId=", hostId);
-          if (!hostId) {
-            alert("Please enter a host ID.");
-            return;
-          }
-
-          try {
-            await connectToHost(hostId);
-            console.log("join overlay: connected");
-            onlineState.isJoining = true;
-            onlineState.localPlayer = 2;
-            joinOverlay.style.display = "none";
-
-            const lobbyOverlay = document.getElementById("lobby-overlay");
-            lobbyOverlay.style.display = "none";
-
-            state.currentPlayer = 1;
-            state.gameOver = false;
-            state.gameMode = "online";
-            state.roundNumber = 1;
-            markGameStarted();
-            state.players[1] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p1Set };
-            state.players[2] = { reserve: 15, exile: 0, trigger: 0, victory: 0, diceSet: p2Set };
-
-            initBoardState();
-            buildBoardDOM();
-            updateBoardDOM();
-            refreshPlayerPanels();
-            updateRoundDisplay();
-            updateCardButtons();
-            updatePerspective();
-            clearSelection();
-            resetHistory();
-            updateSaveLoadButtons();
-            setStatus("Connected to host. Waiting for game start...");
-
-            resolve();
-          } catch (err) {
-            console.error("join failed", err);
-            alert("Error connecting: " + err);
-            reject(err);
-          }
-        };
-      });
-    }
-
-    function goBackToLobby() {
-      if (onlineState.connection) {
-        onlineState.connection.close();
+    /** Starting position of an online game; built by the player who accepts. */
+    function initOnlineGameState(meta) {
+      if (meta.rules && window.RulesMode && RulesMode.isAvailable(meta.set1, meta.set2)) {
+        RulesMode.start(meta.set1, meta.set2, {
+          locations: meta.location ? [meta.location] : [],
+          riverCol: meta.riverCol,
+          startingPlayer: meta.startingPlayer,
+        });
+      } else {
+        placeLandscapeTiles(meta.location, meta.riverCol);
+        setStatus(GameUI.playerName(state.currentPlayer) === "You" ? "Your turn." : GameUI.playerName(state.currentPlayer) + "'s turn.");
       }
-      if (onlineState.peer) {
-        onlineState.peer.destroy();
-        onlineState.peer = null;
-      }
-      onlineState.connection = null;
-      onlineState.myPeerId = null;
-      onlineState.remotePeerId = null;
-      onlineState.isHost = false;
-      onlineState.isJoining = false;
-
-      document.getElementById("app").classList.remove("online-player2");
-      document.getElementById("online-host-overlay").style.display = "none";
-      document.getElementById("online-join-overlay").style.display = "none";
-      document.getElementById("lobby-overlay").style.display = "flex";
-      resetHistory();
-      updateSaveLoadButtons();
     }
-
-    document.getElementById("btn-cancel-host").addEventListener("click", goBackToLobby);
-    document.getElementById("btn-cancel-join").addEventListener("click", goBackToLobby);
-
-    document.getElementById("btn-copy-peer-id").addEventListener("click", () => {
-      const id = document.getElementById("host-peer-id").textContent;
-      navigator.clipboard.writeText(id).then(() => {
-        alert("ID copied: " + id);
-      }).catch(err => console.error("Copy failed", err));
-    });
 
     // --- Updated startNewGame to handle online modes ---
     const originalStartNewGame = startNewGameBase;
@@ -2026,6 +1910,13 @@
       const p1Set = p1Select ? p1Select.value : "numbers";
       const p2Set = p2Select ? p2Select.value : "numbers";
 
+      if (gameMode === "online") {
+        if (window.Online) Online.openLobby();
+        else alert("The online lobby is still loading. Please try again in a moment.");
+        return;
+      }
+      if (window.Online && Online.inGame() && !Online.leaveForOtherMode()) return;
+      if (window.Online && !Online.inGame()) Online.leaveForOtherMode();
       if (window.RulesMode) RulesMode.stop();
       if (gameMode === "ai") {
         if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
@@ -2039,14 +1930,7 @@
         RulesMode.start(p1Set, p2Set, { locations, ai: { player: 2, level }, riverCol: chosenRiverCol() });
         return;
       }
-      if (gameMode === "online-host") {
-        await startGameAsHost(p1Set, p2Set);
-        if (!rulesModeChosen(p1Set, p2Set)) placeLandscapeTiles();
-        startRulesModeIfChosen(p1Set, p2Set);
-      } else if (gameMode === "online-join") {
-        // The host decides about rules mode and sends the game state.
-        await startGameAsJoin(p1Set, p2Set);
-      } else {
+      {
         originalStartNewGame(p1Set, p2Set, gameMode);
         const lobbyOverlay = document.getElementById("lobby-overlay");
         lobbyOverlay.style.display = "none";
@@ -2066,10 +1950,9 @@
     };
 
     /** Without rules mode: show the chosen landscape's tiles on the board. */
-    function placeLandscapeTiles() {
-      const v = document.getElementById("use-location").value;
+    function placeLandscapeTiles(v = document.getElementById("use-location").value, riverCol = chosenRiverCol()) {
       const l = v === "river"
-        ? { type: "DoA", fields: [2, 3, 4].map((r) => [r, chosenRiverCol()]) }
+        ? { type: "DoA", fields: [2, 3, 4].map((r) => [r, riverCol]) }
         : LANDSCAPE_TILES[v];
       if (!l) return;
       for (const [r, c] of l.fields) state.board[r][c].type = l.type;
@@ -2103,7 +1986,12 @@
       const p1Set = document.getElementById("p1-dice-set").value;
       const p2Set = document.getElementById("p2-dice-set").value;
       const mode = document.getElementById("game-mode-select").value;
-      const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && mode !== "online-join";
+      const online = mode === "online";
+      document.getElementById("lobby-config").querySelectorAll(".lobby-player-config").forEach((el, i) => {
+        if (i > 0) el.style.display = online ? "none" : "";
+      });
+      document.getElementById("start-game-btn").textContent = online ? "Enter Lobby" : "Start New Game";
+      const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && !online;
       document.getElementById("rules-options").style.display = available ? "flex" : "none";
       document.getElementById("enforce-rules-label").style.display = mode === "ai" ? "none" : "flex";
       document.getElementById("ai-level-label").style.display = mode === "ai" ? "flex" : "none";
@@ -2155,6 +2043,7 @@
     }
   </script>
   <script type="module" src="ui/rules-mode.js"></script>
+  <script type="module" src="net/online.js"></script>
   <!-- Cloudflare Web Analytics -->
   <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "5a155bde3a4c487ba8bcee92b8c73808"}'></script>
   <!-- End Cloudflare Web Analytics -->

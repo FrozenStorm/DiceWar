@@ -431,8 +431,12 @@ function nextTokens() {
   return [...set];
 }
 
-/** "Player 1" in two-player games, "You" / "AI" against the AI. */
+/** "Player 1" in two-player games, "You" / "AI" against the AI,
+ *  "You" / the opponent's name online. */
 function playerName(p) {
+  if (state.gameMode === "online" && window.Online && onlineState.localPlayer) {
+    return p === onlineState.localPlayer ? "You" : Online.opponentName();
+  }
   if (!rm.ai) return `Player ${p}`;
   return p === rm.ai.player ? "AI" : "You";
 }
@@ -449,11 +453,13 @@ function statusText() {
     }[reason] || reason;
     if (!winner) return `Draw (${why}).`;
     if (rm.ai) return winner === rm.ai.player ? `The AI wins (${why}).` : `You win (${why})!`;
-    return `Player ${winner} wins (${why}).`;
+    if (playerName(winner) === "You") return `You win (${why})!`;
+    return `${playerName(winner)} wins (${why}).`;
   }
   if (g.phase === "setup") return `${playerName(g.current)}: set up the starting lineup.`;
   if (g.pending.length) return `${playerName(actor(g))}: ${pendingPrompt(g.pending[0])}`;
-  return rm.ai ? (g.current === rm.ai.player ? "AI's turn." : "Your turn.") : `Player ${g.current}'s turn.`;
+  if (rm.ai || state.gameMode === "online") return playerName(g.current) === "You" ? "Your turn." : `${playerName(g.current)}'s turn.`;
+  return `Player ${g.current}'s turn.`;
 }
 
 /** Screen direction (0 up, 1 right, 2 down, 3 left) of engine direction `dir`. */
@@ -624,6 +630,8 @@ window.RulesMode = {
   get game() { return rm.game; },
   get prefix() { return [...rm.prefix]; },
   isAvailable, start, stop, load, render, onCellClick, undo, redo, localCanAct, playerName,
+  statusText: () => (rm.game ? statusText() : ""),
+  perform, // used by the online end-to-end test
   actingPlayer: () => (rm.game ? whoActs(rm.game) : state.currentPlayer),
   get ai() { return rm.ai; },
   getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
