@@ -43,7 +43,6 @@
       --attack: #b8402f;
       --display: "Cinzel", "Trajan Pro", Georgia, serif;
       --body: "Crimson Text", Georgia, "Times New Roman", serif;
-      --dock-h: auto;
       /* still used by the dice rendering code */
       --p1-color: #1c1c1c;
       --p2-color: #1c1c1c;
@@ -102,7 +101,7 @@
        and the controls move to the side of the player who acts. */
     #app.duel #dock-top { transform: rotate(180deg); justify-content: flex-end; }
     #app.duel #dock-top > .player-bar { order: 2; }
-    #app.duel .dock { height: var(--dock-h); flex: 0 0 auto; }
+    #app.duel .dock { flex: 0 0 auto; }
     #app.duel #board-area { max-height: none; }
 
     #board-area {
@@ -349,7 +348,6 @@
       #dock-bottom { grid-area: bottom; }
       #app.duel #dock-top { transform: none; justify-content: flex-start; }
       #app.duel #dock-top > .player-bar { order: 0; }
-      #app.duel .dock { height: auto; }
     }
     @media (min-aspect-ratio: 5/4) and (min-width: 1100px) {
       #app { grid-template-columns: minmax(0, 1fr) 400px; max-width: 1400px; }

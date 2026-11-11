@@ -122,37 +122,36 @@
 
     const controlsDock = duel && actingPlayer() === 2 && !isLandscape() ? top : bottom;
     if (hint.parentElement !== controlsDock) {
+      // Duel: the controls change sides and the board slides along.
+      const board = $("board");
+      const before = board.getBoundingClientRect().top;
       controlsDock.appendChild(hint);
       controlsDock.appendChild(toolbar);
+      slideBoard(board, before);
     }
-    if (duel) sizeDuelDocks();
-    else app.style.removeProperty("--dock-h");
     if (window.Ring && Ring.open) requestAnimationFrame(() => Ring.refresh());
+  }
+
+  function slideBoard(board, before) {
+    const delta = before - board.getBoundingClientRect().top;
+    if (!delta || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    board.style.transition = "none";
+    board.style.translate = `0 ${delta}px`;
+    board.getBoundingClientRect(); // apply the start position
+    board.style.transition = "translate 0.35s ease";
+    board.style.translate = "0 0";
+    board.addEventListener("transitionend", () => {
+      board.style.transition = "";
+      board.style.translate = "";
+      if (window.Ring && Ring.open) Ring.refresh();
+    }, { once: true });
   }
 
   function isLandscape() {
     return window.matchMedia("(min-aspect-ratio: 5/4)").matches;
   }
 
-  /** Both docks get the height of the taller one, so the board never moves. */
-  function sizeDuelDocks() {
-    const app = $("app");
-    if (isLandscape()) { app.style.removeProperty("--dock-h"); return; }
-    const parts = ["bar-1", "hint", "toolbar"].map((id) => $(id).getBoundingClientRect().height);
-    const gap = 6;
-    const h = parts.reduce((a, b) => a + b, 0) + gap * 2;
-    app.style.setProperty("--dock-h", `${Math.ceil(h)}px`);
-  }
-
   window.addEventListener("resize", () => { if (typeof state !== "undefined") layout(); });
-  // The hint text changes its height: keep both duel docks equally high.
-  if (window.ResizeObserver) {
-    const ro = new ResizeObserver(() => {
-      if (typeof state !== "undefined" && state.gameMode === "duel") sizeDuelDocks();
-    });
-    const watch = () => ["hint", "toolbar", "bar-1", "bar-2"].forEach((id) => { const n = $(id); if (n) ro.observe(n); });
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch); else watch();
-  }
 
   // ---------------------------------------------------------------------------
   // Hint strip
