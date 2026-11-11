@@ -69,7 +69,7 @@ function start(p1Set, p2Set, { locations = [], startingPlayer, ai = null, riverC
   rm.setupDraft = {};
   rm.setupDir = {};
   rm.setupRotate = false;
-  rm.message = `${playerName(rm.game.startingPlayer)} ${rm.ai ? (rm.game.startingPlayer === rm.ai.player ? "starts" : "start") : "starts"} (rolled the higher number).`;
+  rm.message = "";
   document.getElementById("app").classList.add("rules-mode");
   render();
 }
@@ -569,19 +569,17 @@ function renderPanel() {
   let ring = null;
 
   if (g.phase === "setup") {
-    title = `Setup · ${playerName(acting)}`;
+    title = `Setup · ${playerName(acting)} · ${playerName(g.startingPlayer)} ${playerName(g.startingPlayer) === "You" ? "start" : "starts"}`;
     if (localCanAct()) {
       const values = Object.values(rm.setupDraft);
       const sum = values.filter((v) => v !== "camp").reduce((a, b) => a + b, 0);
       const needsCamp = g.locations.includes("camp");
       const hasCamp = values.includes("camp");
-      text = `Tap fields in your back row to place dice; each tap raises the level. Power ${sum} / ${SETUP_POWER}.`;
-      if (needsCamp) msgs.push(`Camp: tap a field past level 6 to place your camp (${hasCamp ? "placed" : "not placed yet"}).`);
+      text = rm.setupRotate ? "Tap a die to turn it." : `Tap your back row: +1 level per tap. Power ${sum}/${SETUP_POWER}${needsCamp ? (hasCamp ? ", camp ✓" : ", camp after level 6") : ""}.`;
       if (setupNeedsAlignment()) {
-        msgs.push(rm.setupRotate ? "Tap a die to turn it by 90°." : "Use \"Turn dice\" to choose the alignment of each die.");
         buttons.push({ label: rm.setupRotate ? "Set levels" : "Turn dice", secondary: true, onClick: () => { rm.setupRotate = !rm.setupRotate; rm.message = ""; render(); } });
       }
-      buttons.push({ label: "Confirm lineup", onClick: confirmSetup, disabled: !(sum === SETUP_POWER && (!needsCamp || hasCamp)) });
+      buttons.push({ label: "Confirm", onClick: confirmSetup, disabled: !(sum === SETUP_POWER && (!needsCamp || hasCamp)) });
     } else {
       text = isAiTurn() ? "The AI is setting up…" : "Waiting for the opponent…";
     }
