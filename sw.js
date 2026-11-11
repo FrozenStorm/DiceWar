@@ -1,4 +1,4 @@
-const CACHE_NAME = "dicewar-v21";
+const CACHE_NAME = "dicewar-v22";
 
 const PRECACHE_ASSETS = [
   "./",
@@ -66,7 +66,7 @@ const PRECACHE_ASSETS = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_ASSETS.map((u) => new Request(u, { cache: "reload" }))))
   );
   self.skipWaiting();
 });
@@ -80,19 +80,24 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Network first, so every update shows on the first reload. The cache is only
+// the offline fallback. "no-cache" makes the browser revalidate with the server
+// instead of reusing its own HTTP cache.
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
-      cache.match(event.request).then((cached) => {
-        const networkFetch = fetch(event.request).then((response) => {
+      fetch(event.request, { cache: "no-cache" })
+        .then((response) => {
           if (response.ok) cache.put(event.request, response.clone());
           return response;
-        });
-        return cached || networkFetch;
-      })
+        })
+        .catch(() =>
+          cache.match(event.request, { ignoreSearch: true }).then((cached) => cached || Response.error())
+        )
     )
   );
 });
