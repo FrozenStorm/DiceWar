@@ -518,6 +518,7 @@
                   <option value="solo">Solo</option>
                   <option value="duel">Duel</option>
                   <option value="online">Online lobby</option>
+                  <option value="lab">AI Lab (AI vs AI test runs)</option>
                 </select>
               </label>
             </div>
@@ -574,6 +575,10 @@
               </select>
             </label>
           </div>
+
+          <p id="lab-note" style="display: none; font-size: 14px;">
+            In the AI Lab the AI plays many games against itself: choose pairings of dice sets, AI levels and landscapes, then download the statistics and the final position of every game as a ZIP. The games run on your device.
+          </p>
 
           <p id="ai-note" style="display: none; font-size: 14px;">
             The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
@@ -1821,23 +1826,7 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
           try {
-            const json = JSON.parse(ev.target.result);
-            const snapshot = json.snapshot || json;
-            applyStateSnapshot(snapshot);
-            if (window.RulesMode) {
-              if (snapshot.rulesGame) RulesMode.load(snapshot.rulesGame, { resetHistory: true });
-              else RulesMode.stop();
-            }
-            updateBoardDOM();
-            refreshPlayerPanels();
-            updateRoundDisplay();
-            updateCurrentDieView();
-            updateCardButtons();
-            resetHistory();
-            setStatusFromState();
-            updateSaveLoadButtons();
-            markGameStarted();
-            alert("Save loaded.");
+            loadSaveData(JSON.parse(ev.target.result));
           } catch (err) {
             console.error(err);
             alert("Error loading file.");
@@ -1847,6 +1836,31 @@
         e.target.value = "";
       });
     }
+
+    /** Load a save file (or an AI Lab replay, which has only the rules engine state). */
+    function loadSaveData(json, { quiet = false } = {}) {
+      const snapshot = json.snapshot || json;
+      const rg = snapshot.rulesGame;
+      if (window.RulesMode) RulesMode.stop();
+      if (!snapshot.board && rg && rg.players) {
+        startNewGameBase(rg.players[1].set, rg.players[2].set, "duel");
+      } else {
+        applyStateSnapshot(snapshot);
+      }
+      updateBoardDOM();
+      refreshPlayerPanels();
+      updateRoundDisplay();
+      updateCurrentDieView();
+      updateCardButtons();
+      resetHistory();
+      setStatusFromState();
+      updateSaveLoadButtons();
+      markGameStarted();
+      // Last, so that the rules panel (e.g. "Game over") is not overwritten.
+      if (window.RulesMode && rg) RulesMode.load(rg, { resetHistory: true });
+      if (!quiet) alert(json.lab ? "AI Lab replay loaded (final position)." : "Save loaded.");
+    }
+    window.loadSaveData = loadSaveData;
 
     // --- Speichern / Laden ---
     function exportGameStateToFile() {
@@ -1951,6 +1965,11 @@
       const p1Set = p1Select ? p1Select.value : "numbers";
       const p2Set = p2Select ? p2Select.value : "numbers";
 
+      if (gameMode === "lab") {
+        if (window.Lab) Lab.open();
+        else alert("The AI Lab is still loading. Please try again in a moment.");
+        return;
+      }
       if (gameMode === "online") {
         if (window.Online) Online.openLobby();
         else alert("The online lobby is still loading. Please try again in a moment.");
@@ -2028,11 +2047,13 @@
       const p2Set = document.getElementById("p2-dice-set").value;
       const mode = document.getElementById("game-mode-select").value;
       const online = mode === "online";
+      const labMode = mode === "lab";
       document.getElementById("lobby-config").querySelectorAll(".lobby-player-config").forEach((el, i) => {
-        if (i > 0) el.style.display = online ? "none" : "";
+        if (i > 0) el.style.display = online || labMode ? "none" : "";
       });
-      document.getElementById("start-game-btn").textContent = online ? "Enter Lobby" : "Start New Game";
-      const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && !online;
+      document.getElementById("start-game-btn").textContent = online ? "Enter Lobby" : labMode ? "Open AI Lab" : "Start New Game";
+      document.getElementById("lab-note").style.display = labMode ? "block" : "none";
+      const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && !online && !labMode;
       document.getElementById("rules-options").style.display = available ? "flex" : "none";
       document.getElementById("enforce-rules-label").style.display = mode === "ai" ? "none" : "flex";
       document.getElementById("ai-level-label").style.display = mode === "ai" ? "flex" : "none";
@@ -2085,6 +2106,7 @@
   </script>
   <script type="module" src="ui/rules-mode.js"></script>
   <script type="module" src="net/online.js"></script>
+  <script type="module" src="ui/lab.js"></script>
   <!-- Cloudflare Web Analytics -->
   <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "5a155bde3a4c487ba8bcee92b8c73808"}'></script>
   <!-- End Cloudflare Web Analytics -->
