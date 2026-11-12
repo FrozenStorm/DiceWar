@@ -171,6 +171,8 @@ function quiescence(s, p, depth, alpha, beta, ply, ctx) {
   tick(ctx);
   const open = s.pending.length > 0; // a decision has to be taken: no standing pat
   let best = -Infinity;
+  // Safety net: a chain of decisions inside one turn must not run on forever.
+  if (open && ply >= MAX_PLY) return ctx.evalFn(s, p, ctx.W);
   if (!open) {
     best = ctx.evalFn(s, p, ctx.W);
     if (depth <= 0 || best >= beta || ply >= MAX_PLY) return best;
