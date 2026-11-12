@@ -53,12 +53,16 @@ const ruins = {
   id: "ruins",
   name: "The Ruins",
   squares: [sq(1, 5), sq(3, 3), sq(5, 1)],
-  // Creatures with Power Level 1 on a ruin go to the Reserve immediately.
+  // Creatures with Power Level 1 on a ruin go to the Reserve immediately,
+  // also when the River washes them onto a ruin (Daniel, 2026-11-12).
   afterAction(s) {
     for (const at of this.squares) {
       const d = s.board[at];
       if (d && d.level === 1) removeDie(s, at, "reserve", "ruins");
     }
+  },
+  onTurnEnd(s) {
+    this.afterAction(s);
   },
   // Alternative victory: all ruins occupied by your creatures at the end of your turn.
   winsAtTurnEnd(s, player) {
@@ -82,7 +86,7 @@ const camp = {
     const at = sq(supplyRow(player), action.camp);
     s.camps = { ...(s.camps || {}), [player]: at };
     s.tiles = [...s.tiles]; // tiles are shared between states
-    s.tiles[at] = "camp";
+    s.tiles[at] = [...(s.tiles[at] || []), "camp"];
   },
   // A creature moved into a camp: own camp -> back to the Reserve; opposing
   // camp -> into the own Exile, and the camp owner exiles as many Reserve Dice
@@ -161,9 +165,21 @@ function riverPush(s, at) {
   emit(s, { t: "move", path: [at, to] });
 }
 
-const LOCATIONS = { craters, oracle, ruins, camp, knoll, river };
+// The order of this list is the order in which the location effects are
+// applied. The River comes first, so its flow is resolved before the
+// end-of-turn effects of the other tiles (Daniel, 2026-11-12).
+const LOCATIONS = { river, craters, oracle, ruins, camp, knoll };
 
 export const IMPLEMENTED_LOCATIONS = Object.keys(LOCATIONS);
+
+/** The given location ids in the order their effects are applied. */
+export function sortLocations(ids) {
+  const order = (id) => {
+    const i = IMPLEMENTED_LOCATIONS.indexOf(id);
+    return i < 0 ? IMPLEMENTED_LOCATIONS.length : i;
+  };
+  return [...ids].sort((a, b) => order(a) - order(b));
+}
 
 export function getLocation(id) {
   const loc = LOCATIONS[id];

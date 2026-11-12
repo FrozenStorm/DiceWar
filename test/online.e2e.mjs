@@ -246,7 +246,7 @@ try {
   await step("challenge accepted: rules game starts for both", async () => {
     await A.page.click("#online-players li >> text=Challenge");
     await A.page.selectOption("#challenge-set", "RoX");
-    await A.page.selectOption("#challenge-location", "craters");
+    for (const id of ["craters", "oracle", "ruins"]) await A.page.click(`#challenge-location .pick:has(input[value=${id}])`);
     await A.page.selectOption("#challenge-start", "me");
     if (process.env.SHOTS) await A.page.screenshot({ path: process.env.SHOTS + "/dialog-A.png" });
     await A.page.click("#btn-send-challenge");
@@ -269,6 +269,10 @@ try {
     assert.equal(await A.page.evaluate(() => RulesMode.localCanAct()), true, "Alice starts");
     assert.equal(await B.page.evaluate(() => RulesMode.localCanAct()), false);
     assert.equal(await B.page.evaluate(() => state.players[2].diceSet), "BoD");
+    // Several landscapes: the centre field carries the Oracle and a Ruin (split tile).
+    assert.deepEqual(await B.page.evaluate(() => RulesMode.game.locations), ["craters", "oracle", "ruins"]);
+    assert.equal(await B.page.evaluate(() => state.board[3][3].type), "BoD+LoD");
+    assert.equal(await A.page.evaluate(() => document.querySelectorAll("#board .cell")[24].querySelectorAll(".tile-part").length), 2);
     const lobby = getAt(db.root, ["lobby"]);
     assert.ok(Object.values(lobby).every((p) => p.status === "in_game"));
   });
