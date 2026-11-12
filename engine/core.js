@@ -108,7 +108,17 @@ export function diceOf(s, player, level) {
   return out;
 }
 
-export const countLevel = (s, player, level) => diceOf(s, player, level).length;
+/** Number of dice of `player` with the given level (no list is built: this
+ *  runs for every position the AI evaluates). */
+export function countLevel(s, player, level) {
+  const board = s.board;
+  let n = 0;
+  for (let i = 0; i < SQUARES; i++) {
+    const d = board[i];
+    if (d && d.owner === player && d.level === level) n++;
+  }
+  return n;
+}
 
 export function virtualVP(s, player) {
   const set = setOf(s, player);
