@@ -132,6 +132,8 @@ function getWorker() {
 
 // Expert uses several processor cores when the device has them: a pool of
 // search threads (ai/expert-parallel.js), coordinated from here.
+/** Thinking time of Expert per move with several cores (one core: the level's own limit). */
+const EXPERT_MULTI_CORE_MS = 5000;
 let expertPool = null;
 let expertPoolFailed = false;
 
@@ -166,7 +168,9 @@ async function askExpertParallel(game) {
   if (!pool) return null;
   try {
     const [{ chooseExpertActionParallel }, { LEVELS }] = await Promise.all([import("../ai/expert-parallel.js"), import("../ai/ai.js")]);
-    return (await chooseExpertActionParallel(game, LEVELS.expert, Math.random, pool)).action;
+    // Several cores reach the same depth in about half the time.
+    const cfg = { ...LEVELS.expert, timeMs: EXPERT_MULTI_CORE_MS };
+    return (await chooseExpertActionParallel(game, cfg, Math.random, pool)).action;
   } catch (err) {
     console.warn("Multi-core search failed, using a single core", err);
     return null;
