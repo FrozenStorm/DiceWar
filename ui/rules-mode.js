@@ -27,8 +27,10 @@ const RIVER_ROWS = [2, 3, 4]; // rows the DoA River flows through
 const rm = {
   active: false,
   game: null,
-  undo: [],
-  redo: [],
+  undo: [],          // earlier states (oldest first)
+  redo: [],          // undone states (most recent undo last)
+  undoActions: [],   // undoActions[i] turned undo[i] into the next state
+  redoActions: [],   // parallel to redo
   prefix: [],        // tokens chosen so far
   setupDraft: {},    // col -> level during the setup phase
   setupDir: {},      // col -> alignment during the setup phase (KoS)
@@ -63,8 +65,7 @@ function start(p1Set, p2Set, { locations = [], startingPlayer, ai = null, riverC
     locations,
     riverCol,
   });
-  rm.undo = [];
-  rm.redo = [];
+  clearHistory();
   rm.prefix = [];
   rm.setupDraft = {};
   rm.setupDir = {};
@@ -181,8 +182,10 @@ function perform(action) {
   try {
     next = applyAction(rm.game, action);
     rm.undo.push(rm.game);
-    if (rm.undo.length > 200) rm.undo.shift();
+    rm.undoActions.push(action);
+    if (rm.undo.length > MAX_HISTORY) { rm.undo.shift(); rm.undoActions.shift(); }
     rm.redo = [];
+    rm.redoActions = [];
     rm.game = next;
     rm.prefix = [];
     rm.ringDismissed = false;
@@ -199,13 +202,24 @@ function perform(action) {
   if (state.gameMode === "online") sendGameState();
 }
 
+// Undo/redo also work after the end of the game, e.g. to look back at a finished game.
 // Against the AI, undo/redo jump over the AI's actions to the human's next decision.
+const MAX_HISTORY = 5000;
+
+function clearHistory() {
+  rm.undo = [];
+  rm.redo = [];
+  rm.undoActions = [];
+  rm.redoActions = [];
+}
+
 function undo() {
   if (!rm.undo.length || state.gameMode === "online") return;
   rm.aiToken++;
   rm.thinking = false;
   do {
     rm.redo.push(rm.game);
+    rm.redoActions.push(rm.undoActions.pop());
     rm.game = rm.undo.pop();
   } while (rm.ai && rm.undo.length && isAiTurn());
   rm.prefix = [];
@@ -218,10 +232,66 @@ function redo() {
   rm.thinking = false;
   do {
     rm.undo.push(rm.game);
+    rm.undoActions.push(rm.redoActions.pop());
     rm.game = rm.redo.pop();
   } while (rm.ai && rm.redo.length && isAiTurn());
   rm.prefix = [];
   render();
+}
+
+/** History of the game so far for a save file: the oldest kept state and the
+ *  actions from there to the current state. */
+function history() {
+  if (!rm.game || !rm.undo.length) return null;
+  return { start: rm.undo[0], actions: [...rm.undoActions] };
+}
+
+/** Rebuild the states of a saved history. Returns null if it does not lead to `game`. */
+function statesFrom(hist, game) {
+  if (!hist || !hist.start || !Array.isArray(hist.actions)) return null;
+  try {
+    const states = [hist.start];
+    for (const a of hist.actions) states.push(applyAction(states[states.length - 1], a));
+    const last = states[states.length - 1];
+    const same = (x, y) => JSON.stringify(x) === JSON.stringify(y);
+    if (!same(last.board, game.board) || last.phase !== game.phase || last.turnNumber !== game.turnNumber) return null;
+    return states;
+  } catch (err) {
+    console.warn("Saved history could not be replayed", err);
+    return null;
+  }
+}
+
+/** Saved history of a save file, or of an AI Lab replay (start options + actions). */
+function historyOfSave(json) {
+  const snap = json.snapshot || json;
+  if (snap.rulesHistory) return snap.rulesHistory;
+  const lab = json.lab;
+  if (lab && lab.game && Array.isArray(lab.actions)) {
+    const g = lab.game;
+    const start = createGame({
+      set1: g.set1, set2: g.set2, startingPlayer: g.startingPlayer,
+      locations: g.location ? [g.location] : [], maxTurns: g.maxTurns, riverCol: g.riverCol ?? 1,
+    });
+    return { start, actions: lab.actions };
+  }
+  return null;
+}
+
+/** Load a game from a save file, with its history so that Undo / Redo work. */
+function loadSave(json) {
+  const game = (json.snapshot || json).rulesGame;
+  rm.ai = null;
+  load(game, { resetHistory: true });
+  const hist = historyOfSave(json);
+  const states = statesFrom(hist, game);
+  if (states) {
+    rm.undo = states.slice(0, -1);
+    rm.undoActions = [...hist.actions];
+    rm.game = states[states.length - 1];
+    render();
+  }
+  return !!states;
 }
 
 /** State received from the online opponent or loaded from a file. */
@@ -233,7 +303,7 @@ function load(game, { resetHistory = false } = {}) {
   document.getElementById("app").classList.add("rules-mode");
   rm.game = game;
   rm.prefix = [];
-  if (resetHistory) { rm.undo = []; rm.redo = []; }
+  if (resetHistory) clearHistory();
   render();
   // Online: show the opponent's action as an animation.
   if (isUpdate) rm.animating = playAnimation(game.events, before, { slow: true, alignDeg }).catch((e) => console.error(e));
@@ -633,7 +703,7 @@ window.RulesMode = {
   get active() { return rm.active; },
   get game() { return rm.game; },
   get prefix() { return [...rm.prefix]; },
-  isAvailable, start, stop, load, render, onCellClick, undo, redo, localCanAct, playerName,
+  isAvailable, start, stop, load, loadSave, history, render, onCellClick, undo, redo, localCanAct, playerName,
   statusText: () => (rm.game ? statusText() : ""),
   perform, // used by the online end-to-end test
   actingPlayer: () => (rm.game ? whoActs(rm.game) : state.currentPlayer),

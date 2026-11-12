@@ -1930,23 +1930,7 @@
         const reader = new FileReader();
         reader.onload = (ev) => {
           try {
-            const json = JSON.parse(ev.target.result);
-            const snapshot = json.snapshot || json;
-            applyStateSnapshot(snapshot);
-            if (window.RulesMode) {
-              if (snapshot.rulesGame) RulesMode.load(snapshot.rulesGame, { resetHistory: true });
-              else RulesMode.stop();
-            }
-            updateBoardDOM();
-            refreshPlayerPanels();
-            updateRoundDisplay();
-            updateCurrentDieView();
-            updateCardButtons();
-            resetHistory();
-            setStatusFromState();
-            updateSaveLoadButtons();
-            markGameStarted();
-            alert("Save loaded.");
+            loadSaveData(JSON.parse(ev.target.result));
           } catch (err) {
             console.error(err);
             alert("Error loading file.");
@@ -1957,10 +1941,41 @@
       });
     }
 
+    /** Load a save file. With the saved move history (rulesHistory), Undo / Redo
+     *  work after loading, also in a finished game. */
+    function loadSaveData(json, { quiet = false } = {}) {
+      const snapshot = json.snapshot || json;
+      const rg = snapshot.rulesGame;
+      if (window.RulesMode) RulesMode.stop();
+      if (!snapshot.board && rg && rg.players) {
+        startNewGameBase(rg.players[1].set, rg.players[2].set, "duel");
+      } else {
+        applyStateSnapshot(snapshot);
+      }
+      updateBoardDOM();
+      refreshPlayerPanels();
+      updateRoundDisplay();
+      updateCurrentDieView();
+      updateCardButtons();
+      resetHistory();
+      setStatusFromState();
+      updateSaveLoadButtons();
+      markGameStarted();
+      // Last, so that the rules panel (e.g. "Game over") is not overwritten.
+      if (window.RulesMode && rg) RulesMode.loadSave(json);
+      if (!quiet) alert("Save loaded.");
+    }
+    window.loadSaveData = loadSaveData;
+
     // --- Speichern / Laden ---
     function exportGameStateToFile() {
       const snapshot = createStateSnapshot();
-      if (window.RulesMode && RulesMode.active) snapshot.rulesGame = RulesMode.game;
+      if (window.RulesMode && RulesMode.active) {
+        snapshot.rulesGame = RulesMode.game;
+        // Moves so far, so that Undo / Redo still work after loading.
+        const hist = RulesMode.history();
+        if (hist) snapshot.rulesHistory = hist;
+      }
       const data = {
         version: 1,
         snapshot
