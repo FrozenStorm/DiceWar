@@ -320,14 +320,12 @@ export const RoX = {
 
   virtualVP: forcefulAlliance,
 
-  // Opening knowledge for the AI (from experienced players): lineup 1-6-3,
-  // then split Xeladron (Decay) and afterwards the Portal Guardian (New Paths).
+  // Starting lineups for the AI (from experienced players): 1-6-3.
   aiBook: {
     setups: [
       [{ col: 2, level: 1 }, { col: 3, level: 6 }, { col: 4, level: 3 }],
       [{ col: 2, level: 3 }, { col: 3, level: 6 }, { col: 4, level: 1 }],
     ],
-    opening: [A.decay, A.newPaths],
   },
 
   // Click paths for the user interface (see engine/paths.js).
