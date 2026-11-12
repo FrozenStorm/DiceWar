@@ -20,6 +20,10 @@ const FORMATION_POWER = 9;
 const FACES = [0, 1, 2, 3];
 /** One option per alignment for a die placed on `place`. */
 const withFaces = (opt) => FACES.map((face) => ({ ...opt, face }));
+/** The same for a First Sword of `player`: its alignment only matters once it
+ *  has been upgraded, so the AI only looks at the one facing the opponent. */
+const withSwordFaces = (opt, player) =>
+  FACES.map((face) => (face === defaultDir(player) ? { ...opt, face } : { ...opt, face, redundant: true }));
 
 const A = {
   agile: "KoS.sword.agile",
@@ -247,25 +251,37 @@ function backMoves(s, from) {
 
 /** KoS.knight.breakthrough: 1 virtual VP per Formation with Power Level 9+. */
 function breakthrough(s, player) {
-  if (!countLevel(s, player, KNIGHT)) return 0;
-  const seen = new Set();
+  const board = s.board;
+  let knight = false;
+  for (let i = 0; i < SQUARES; i++) {
+    const d = board[i];
+    if (d && d.owner === player && d.level === KNIGHT) { knight = true; break; }
+  }
+  if (!knight) return 0;
+  // Flood fill over the own creatures; `seenMark` is reused between calls.
+  const mark = ++seenMark;
   let vp = 0;
-  for (const start of diceOf(s, player)) {
-    if (seen.has(start)) continue;
-    let sum = 0;
-    const stack = [start];
-    seen.add(start);
-    while (stack.length) {
-      const x = stack.pop();
-      sum += s.board[x].level;
-      for (const n of adjacent(x)) {
-        if (!seen.has(n) && isOwn(s, n, player)) { seen.add(n); stack.push(n); }
+  for (let start = 0; start < SQUARES; start++) {
+    const first = board[start];
+    if (!first || first.owner !== player || seen[start] === mark) continue;
+    let sum = 0, top = 0;
+    stack[top++] = start;
+    seen[start] = mark;
+    while (top) {
+      const x = stack[--top];
+      sum += board[x].level;
+      const adj = adjacent(x);
+      for (let k = 0; k < adj.length; k++) {
+        const n = adj[k], d = board[n];
+        if (d && d.owner === player && seen[n] !== mark) { seen[n] = mark; stack[top++] = n; }
       }
     }
     if (sum >= FORMATION_POWER) vp++;
   }
   return vp;
 }
+const seen = new Int32Array(SQUARES), stack = new Int32Array(SQUARES);
+let seenMark = 0;
 
 const REINF_ORDER = [SPEAR, SHIELD, SWORD];
 
@@ -276,7 +292,8 @@ function reinforcementOptions(s, pending) {
   const level = REINF_ORDER[stage];
   const out = [];
   for (const place of free) {
-    out.push(...withFaces({ type: "choice", kind: A.reinforcements, place }));
+    const opt = { type: "choice", kind: A.reinforcements, place };
+    out.push(...(level === SWORD ? withSwordFaces(opt, pending.player) : withFaces(opt)));
   }
   return out;
 }
@@ -424,13 +441,13 @@ export const KoS = {
       case A.relentless: return relentlessOptions(s, pending);
       case A.rescue:
         if (s.players[player].exile < 1) return [];
-        return [...edgeFields(s, player).flatMap((place) => withFaces({ type: "choice", kind: A.rescue, place })), { type: "choice", kind: A.rescue, skip: true }];
+        return [...edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.rescue, place }, player)), { type: "choice", kind: A.rescue, skip: true }];
       case A.toSpears:
         return diceOf(s, player, SHIELD).map((upgrade) => ({ type: "choice", kind: A.toSpears, upgrade }));
       case A.leadership: return leadershipOptions(s, pending);
       case A.supply:
         if (s.players[player].reserve < 1) return [];
-        return edgeFields(s, player).flatMap((place) => withFaces({ type: "choice", kind: A.supply, place }));
+        return edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.supply, place }, player));
       case A.reinforcements: return reinforcementOptions(s, pending);
       default: return [];
     }
@@ -481,6 +498,19 @@ export const KoS = {
   virtualVP: breakthrough,
 
   aiGreedyChoices: [A.relentless, A.rescue, A.toSpears, A.leadership, A.supply, A.reinforcements],
+  // Inside its look-ahead the expert AI skips the additional actions of the
+  // other First Swords (it still decides them properly when they come up).
+  aiSkipInSearch: (pending) => (pending.kind === A.relentless ? { type: "choice", kind: A.relentless, skip: true } : null),
+
+  // Starting lineups of the AI.
+  aiBook: {
+    // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).
+    expertSetups: [
+      [{ col: 2, level: 2 }, { col: 3, level: 6 }, { col: 4, level: 2 }],
+      [{ col: 0, level: 1 }, { col: 1, level: 1 }, { col: 2, level: 3 }, { col: 3, level: 3 }, { col: 4, level: 1 }, { col: 5, level: 1 }],
+      [{ col: 1, level: 1 }, { col: 2, level: 4 }, { col: 3, level: 4 }, { col: 4, level: 1 }],
+    ],
+  },
 
   actionPath(a) {
     switch (a.ability || a.kind) {

@@ -277,6 +277,16 @@ export const BoD = {
   // BoD.demon.bound: 1 virtual VP per pair of Demon and Possessed.
   virtualVP: (s, player) => Math.min(countLevel(s, player, DEMON), countLevel(s, player, POSSESSED)),
 
+  // Starting lineups of the AI.
+  aiBook: {
+    // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).
+    expertSetups: [
+      [{ col: 2, level: 3 }, { col: 3, level: 4 }, { col: 4, level: 3 }],
+      [{ col: 2, level: 3 }, { col: 3, level: 6 }, { col: 4, level: 1 }],
+      [{ col: 1, level: 2 }, { col: 2, level: 2 }, { col: 3, level: 2 }, { col: 4, level: 2 }, { col: 5, level: 2 }],
+    ],
+  },
+
   // Click paths for the user interface (see engine/paths.js).
   actionPath(a) {
     switch (a.ability || a.kind) {

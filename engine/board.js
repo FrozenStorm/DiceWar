@@ -24,15 +24,21 @@ function neighbours(s, deltas) {
   return out;
 }
 
-export const adjacent = (s) => neighbours(s, ORTHO);
-export const diagonal = (s) => neighbours(s, DIAG);
-export const surrounding = (s) => neighbours(s, SURROUND);
+// Neighbour lists are computed once (the AI asks for them millions of times).
+// The lists are shared: never change them (copy first).
+const table = (deltas) => Array.from({ length: SQUARES }, (_, s) => neighbours(s, deltas));
+const ADJACENT = table(ORTHO), DIAGONAL = table(DIAG), SURROUNDING = table(SURROUND);
+const STEP = Array.from({ length: SQUARES }, (_, s) => ORTHO.map(([dr, dc]) => {
+  const r = rowOf(s) + dr, c = colOf(s) + dc;
+  return onBoard(r, c) ? sq(r, c) : -1;
+}));
+
+export const adjacent = (s) => ADJACENT[s];
+export const diagonal = (s) => DIAGONAL[s];
+export const surrounding = (s) => SURROUNDING[s];
 
 /** Square one step from s in direction d (0..3), or -1 if off the board. */
-export function step(s, d) {
-  const r = rowOf(s) + ORTHO[d][0], c = colOf(s) + ORTHO[d][1];
-  return onBoard(r, c) ? sq(r, c) : -1;
-}
+export const step = (s, d) => STEP[s][d];
 
 export const isAdjacent = (a, b) =>
   Math.abs(rowOf(a) - rowOf(b)) + Math.abs(colOf(a) - colOf(b)) === 1;

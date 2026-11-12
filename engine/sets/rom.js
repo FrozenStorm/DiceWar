@@ -344,6 +344,16 @@ export const RoM = {
 
   aiGreedyChoices: [A.children],
 
+  // Starting lineups of the AI.
+  aiBook: {
+    // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).
+    expertSetups: [
+      [{ col: 2, level: 4 }, { col: 3, level: 6 }],
+      [{ col: 2, level: 4 }, { col: 3, level: 5 }, { col: 4, level: 1 }],
+      [{ col: 1, level: 1 }, { col: 2, level: 3 }, { col: 3, level: 4 }, { col: 4, level: 2 }],
+    ],
+  },
+
   actionPath(a) {
     switch (a.ability || a.kind) {
       case A.breeding: return [a.at, `Breeding (${a.line})`];
