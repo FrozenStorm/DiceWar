@@ -7,6 +7,7 @@
 //   --a, --b       AI levels (default: expert, hard)
 //   --ta, --tb     time per move in ms (default: the level's own time)
 //   --na, --nb     node budget per move instead of a time limit (reproducible)
+//   --oa, --ob     level settings to replace, as JSON, e.g. '{"weights":{"ruin":60}}'
 //   --games        games per pairing (default 4; sides and starting player alternate)
 //   --pairs        e.g. "RoX-RoX,LoD-KoS" (default: every set against itself);
 //                  "all" = all 36 ordered pairings; A always plays the first set
@@ -39,6 +40,7 @@ function playGame(g) {
     const opts = { level: cfg.level, random };
     if (cfg.nodes) opts.maxNodes = cfg.nodes;
     else if (cfg.timeMs) opts.overrides = { timeMs: cfg.timeMs };
+    if (cfg.overrides) opts.overrides = { ...(opts.overrides || {}), ...cfg.overrides };
     let action;
     if (s.phase === "setup") action = chooseSetup(s, opts);
     else {
@@ -70,8 +72,8 @@ if (!isMainThread) {
     const i = process.argv.indexOf(`--${name}`);
     return i < 0 ? def : process.argv[i + 1];
   };
-  const a = { level: arg("a", "expert"), timeMs: Number(arg("ta", 0)), nodes: Number(arg("na", 0)) };
-  const b = { level: arg("b", "hard"), timeMs: Number(arg("tb", 0)), nodes: Number(arg("nb", 0)) };
+  const a = { level: arg("a", "expert"), timeMs: Number(arg("ta", 0)), nodes: Number(arg("na", 0)), overrides: JSON.parse(arg("oa", "null")) };
+  const b = { level: arg("b", "hard"), timeMs: Number(arg("tb", 0)), nodes: Number(arg("nb", 0)), overrides: JSON.parse(arg("ob", "null")) };
   const gamesPer = Number(arg("games", 4));
   const pairsArg = arg("pairs", "mirror");
   const pairs = pairsArg === "mirror" ? SETS.map((x) => [x, x])

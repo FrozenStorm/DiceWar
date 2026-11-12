@@ -8,7 +8,7 @@ import { mulberry32, deriveSeed } from "../ai/rng.js";
 
 export const LAB_SETS = ["RoX", "BoD", "LoD", "RoM", "KoS", "DoA"];
 export const LAB_LOCATIONS = ["", "craters", "oracle", "ruins", "camp", "knoll", "river"];
-export const LAB_LEVELS = ["easy", "medium", "hard"];
+export const LAB_LEVELS = ["easy", "medium", "hard", "expert"];
 
 /** Safety net against endless loops inside a turn (the engine's turn limit ends normal games). */
 const MAX_ACTIONS = 20_000;

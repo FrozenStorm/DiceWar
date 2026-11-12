@@ -1,4 +1,4 @@
-const CACHE_NAME = "dicewar-v30";
+const CACHE_NAME = "dicewar-v32";
 
 const PRECACHE_ASSETS = [
   "./",
@@ -23,7 +23,7 @@ const PRECACHE_ASSETS = [
   "img/ui/board.jpg", "img/ui/crown.png", "img/ui/claw.png", "img/ui/exile.png", "img/ui/reserve.png",
   "fonts/cinzel.woff2", "fonts/crimson-text-400.woff2", "fonts/crimson-text-600.woff2", "fonts/crimson-text-400-italic.woff2",
   "ui/ai-worker.js",
-  "ai/ai.js",
+  "ai/ai.js", "ai/eval.js", "ai/common.js", "ai/setup.js", "ai/expert.js",
   "ai/rng.js",
   "lab/runner.js", "lab/stats.js", "lab/report.js", "lab/zip.js", "lab/lab-worker.js",
   "ui/lab.js",

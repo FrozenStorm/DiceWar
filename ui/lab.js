@@ -9,9 +9,9 @@ import { gamesCSV, summaryCSV } from "../lab/stats.js";
 import { reportFragment, reportHTML, formatDuration, LOCATION_NAMES, REASON_NAMES, REPORT_CSS } from "../lab/report.js";
 import { makeZip } from "../lab/zip.js";
 
-const LEVELS = [["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"]];
-/** Rough seconds per game on one core at budget 1 (measured: easy < 1 s, medium 25-100 s, hard 3-5 min). */
-const SEC_PER_GAME = { easy: 1, medium: 45, hard: 240 };
+const LEVELS = [["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"], ["expert", "Expert"]];
+/** Rough seconds per game on one core at budget 1 (measured: easy < 1 s, medium 25-100 s, hard 3-5 min, expert about twice as long as hard). */
+const SEC_PER_GAME = { easy: 1, medium: 45, hard: 240, expert: 480 };
 const MAX_GAMES = 20000;
 const COLS = "abcdefg";
 

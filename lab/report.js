@@ -12,7 +12,7 @@ export const REASON_NAMES = {
   victoryPoints: "Victory points", endOfWar: "End of War", turnLimit: "Turn limit",
   noValidAction: "No valid action", ruins: "The Ruins", knoll: "The Knoll",
 };
-const LEVEL_NAMES = { easy: "Easy", medium: "Medium", hard: "Hard" };
+const LEVEL_NAMES = { easy: "Easy", medium: "Medium", hard: "Hard", expert: "Expert" };
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const pct = (x) => `${Math.round(x * 100)}%`;
