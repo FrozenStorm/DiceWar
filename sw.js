@@ -1,4 +1,4 @@
-const CACHE_NAME = "dicewar-v29";
+const CACHE_NAME = "dicewar-v31";
 
 const PRECACHE_ASSETS = [
   "./",
