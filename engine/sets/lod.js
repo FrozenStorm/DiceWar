@@ -304,6 +304,16 @@ export const LoD = {
   // The AI resolves these step-by-step decisions greedily instead of searching them.
   aiGreedyChoices: [A.bloodUpgrade, A.excess],
 
+  // Starting lineups of the AI.
+  aiBook: {
+    // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).
+    expertSetups: [
+      [{ col: 1, level: 1 }, { col: 2, level: 3 }, { col: 3, level: 4 }, { col: 4, level: 1 }, { col: 5, level: 1 }],
+      [{ col: 1, level: 1 }, { col: 2, level: 4 }, { col: 3, level: 4 }, { col: 4, level: 1 }],
+      [{ col: 1, level: 1 }, { col: 2, level: 3 }, { col: 3, level: 5 }, { col: 4, level: 1 }],
+    ],
+  },
+
   actionPath(a) {
     switch (a.ability || a.kind) {
       case A.floating: return [a.from, a.to];
