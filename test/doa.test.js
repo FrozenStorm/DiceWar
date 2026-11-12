@@ -83,6 +83,18 @@ test("DoA.riverwatch.wave_ride: orthogonal path around friendly creatures", () =
   assert.equal(byAbility(u, "DoA.riverwatch.wave_ride").length, 0);
 });
 
+test("DoA.riverwatch.wave_ride: only around one group, no change to the ring of another group", () => {
+  // River Watch d3 next to the Fisher d4. A second Fisher on g4 is not adjacent
+  // to d4 (another group): its ring (f3..f5) touches the ring of d4 at e3..e5.
+  const s = position(["......f", ".......", ".......", "...1..1", "...3...", ".......", "......."], DOA);
+  const targets = byAbility(s, "DoA.riverwatch.wave_ride").filter((a) => a.from === at("d3")).map((a) => a.to);
+  assert.deepEqual(sorted(targets), sorted([at("c4"), at("e4"), at("c5"), at("d5"), at("e5")]));
+  // Fishers on d4 and e4 are one group: the ride goes around both.
+  const u = position(["......f", ".......", ".......", "...11..", "...3...", ".......", "......."], DOA);
+  const around = byAbility(u, "DoA.riverwatch.wave_ride").filter((a) => a.from === at("d3")).map((a) => a.to);
+  assert.deepEqual(sorted(around), sorted([at("c4"), at("c5"), at("d5"), at("e5"), at("f5"), at("f4"), at("f3")]));
+});
+
 test("DoA.weaver.water_pearls: +1 TP at the start of the own turn, -1 when the last Weaver leaves", () => {
   let s = position(["......f", ".......", ".......", ".......", ".......", ".......", "4......"], { ...DOA, current: 2 });
   s = applyAction(s, { type: "move", from: at("g7"), to: at("f7") });
