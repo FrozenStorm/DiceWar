@@ -62,7 +62,7 @@ const now = () => (typeof performance !== "undefined" ? performance.now() : Date
  * Play one game. Returns the result row (flat, for the statistics) and the
  * replay (final state plus the complete list of actions).
  */
-export function playGame(game) {
+export function playGame(game, { onProgress } = {}) {
   const random = mulberry32(game.seed);
   let s = createGame({
     set1: game.set1,
@@ -102,6 +102,7 @@ export function playGame(game) {
     }
     actions.push(action);
     s = applyAction(s, action);
+    if (onProgress && actions.length % 5 === 0) onProgress({ turn: s.turnNumber, actions: actions.length });
   }
 
   const winner = s.result.winner;

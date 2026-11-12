@@ -10,8 +10,8 @@ import { reportFragment, reportHTML, formatDuration, LOCATION_NAMES, REASON_NAME
 import { makeZip } from "../lab/zip.js";
 
 const LEVELS = [["easy", "Easy"], ["medium", "Medium"], ["hard", "Hard"]];
-/** Rough seconds per game on one core at budget 1 (measured: easy < 1 s, medium 25-100 s). */
-const SEC_PER_GAME = { easy: 1, medium: 45, hard: 100 };
+/** Rough seconds per game on one core at budget 1 (measured: easy < 1 s, medium 25-100 s, hard 3-5 min). */
+const SEC_PER_GAME = { easy: 1, medium: 45, hard: 240 };
 const MAX_GAMES = 20000;
 const COLS = "abcdefg";
 
@@ -22,6 +22,7 @@ const lab = {
   results: new Map(),   // id -> { row, replay }
   queue: [],
   running: new Set(),
+  progress: new Map(),  // id -> { turn, actions } of running games
   workers: [],
   paused: false,
   stopped: false,
@@ -347,6 +348,7 @@ function beginRun() {
   lab.stopped = false;
   lab.queue = lab.games.filter((g) => !lab.results.has(g.id));
   lab.running = new Set();
+  lab.progress = new Map();
   lab.startedAt = performance.now();
   el("lab-config").style.display = "none";
   el("lab-run").style.display = "";
@@ -366,11 +368,33 @@ function makeWorker() {
   w.onmessage = (e) => onResult(w, e.data);
   w.onerror = (e) => {
     e.preventDefault();
-    lab.errors.push(`Worker error: ${e.message || "unknown"}`);
-    if (w.busy) { lab.running.delete(w.busy.id); lab.queue.unshift(w.busy); w.busy = null; }
-    renderRun(true);
+    workerFailed(w, e.message || "unknown error");
   };
   return w;
+}
+
+/** A worker crashed (e.g. out of memory): replace it and try the game once more. */
+function workerFailed(w, message) {
+  const game = w.busy;
+  w.busy = null;
+  w.terminate();
+  if (game) {
+    lab.running.delete(game.id);
+    lab.progress.delete(game.id);
+    game.tries = (game.tries || 0) + 1;
+    if (game.tries < 2) lab.queue.unshift(game);
+    lab.errors.push(`Game ${game.id}: ${message}${game.tries < 2 ? " (retrying)" : " (skipped)"}`);
+  } else {
+    lab.errors.push(`Worker error: ${message}`);
+  }
+  const i = lab.workers.indexOf(w);
+  if (i >= 0 && !lab.stopped) {
+    const fresh = makeWorker();
+    lab.workers[i] = fresh;
+    dispatch(fresh);
+  }
+  if (!lab.queue.length && !lab.running.size && lab.view === "run") finishRun();
+  renderRun(true);
 }
 
 function dispatch(w) {
@@ -386,9 +410,15 @@ function dispatch(w) {
 }
 
 function onResult(w, data) {
+  if (data.progress) {
+    lab.progress.set(data.id, data.progress);
+    renderRun();
+    return;
+  }
   const game = w.busy;
   w.busy = null;
   if (game) lab.running.delete(game.id);
+  lab.progress.delete(data.id);
   if (data.error) {
     lab.errors.push(`Game ${data.id}: ${data.error}`);
   } else {
@@ -520,6 +550,11 @@ function renderRun(force = false) {
       eta = ` · about ${formatDuration((total - done) / rate)} left`;
     }
     status = `${lab.paused ? "Paused" : "Running"}: <b>${done} of ${total}</b> games · ${formatDuration(ms)}${eta}${lab.paused && lab.running.size ? ` · finishing ${lab.running.size} running games` : ""}`;
+    const now = [...lab.running].sort((a, b) => a - b).map((id) => {
+      const pr = lab.progress.get(id);
+      return `#${id} ${pr ? `turn ${pr.turn}` : "starting"}`;
+    });
+    if (now.length) status += `<br><small>Playing now: ${now.join(", ")} (games end at turn ${lab.cfg.maxTurns} at the latest)</small>`;
     if (el("lab-pause")) el("lab-pause").textContent = lab.paused ? "Continue" : "Pause";
   } else {
     status = `Finished: <b>${done} of ${total}</b> games in ${formatDuration(ms)}.${done < total ? " The run was stopped early." : ""}`;
