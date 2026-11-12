@@ -142,6 +142,7 @@ function leaveLobby() {
     ON.db.cancelOnDisconnect(`lobby/${ON.db.uid}`);
   }
   closeLobbyOverlay();
+  $("lobby-overlay").classList.remove("player2");
   $("lobby-overlay").style.display = "flex";
 }
 
@@ -536,7 +537,7 @@ async function resume() {
   if (!meta || meta.result || !db || (meta.p1 !== db.uid && meta.p2 !== db.uid)) {
     store.del(KEY_GAME);
     setStatusText("");
-    if (!ON.game) $("lobby-overlay").style.display = "flex";
+    if (!ON.game) { $("lobby-overlay").classList.remove("player2"); $("lobby-overlay").style.display = "flex"; }
     return;
   }
   beginGame(id, meta, meta.p1 === db.uid ? 1 : 2);

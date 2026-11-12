@@ -266,25 +266,45 @@
 
     .cell-label { display: none; }
 
+    /* Field bonus markers: triangles on the board edge as on the printed board.
+       Right edge (+3/+2/+1 for the player moving up): brown with light text.
+       Left edge (for the player moving down): parchment with dark text, which
+       faces player 2 in a duel on one device. */
     .bonus-tag {
       position: absolute; top: 50%; z-index: 1; pointer-events: none;
       transform: translateY(-50%);
-      height: 34%; min-height: 17px; aspect-ratio: 1.1;
+      height: 66%; aspect-ratio: 0.62;
       background: #2b2420;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
     }
     .bonus-tag::after {
       content: attr(data-v);
-      position: absolute; inset: 1.5px;
-      display: flex; align-items: center; justify-content: center;
-      background: #e8dcc0; color: #3b3127;
-      font-family: var(--display); font-weight: 700; font-size: clamp(10px, 3.4cqmin, 22px);
-      clip-path: inherit;
+      position: absolute; inset: 0;
+      display: flex; align-items: center;
+      font-family: var(--display); font-weight: 700; font-size: clamp(9px, 2.9cqmin, 20px); line-height: 1;
+      letter-spacing: -0.02em;
     }
-    .bonus-tag.right { right: 0; clip-path: polygon(36% 0, 100% 0, 100% 100%, 36% 100%, 0 50%); }
-    .bonus-tag.right::after { padding-left: 22%; }
-    .bonus-tag.left { left: 0; clip-path: polygon(0 0, 64% 0, 100% 50%, 64% 100%, 0 100%); }
-    .bonus-tag.left::after { padding-right: 22%; }
-    #app.online-player2 .bonus-tag { rotate: 180deg; }
+    .bonus-tag.right { right: 0; clip-path: polygon(100% 0, 100% 100%, 0 50%); }
+    .bonus-tag.right::after {
+      justify-content: flex-end; padding-right: 11%;
+      background: #9c8a70; color: #f6f0e2;
+      clip-path: polygon(calc(100% - 1.5px) 3px, calc(100% - 1.5px) calc(100% - 3px), 3px 50%);
+    }
+    .bonus-tag.left { left: 0; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+    .bonus-tag.left::after {
+      justify-content: flex-start; padding-left: 11%;
+      background: #e8dcc0; color: #3b3127;
+      clip-path: polygon(1.5px 3px, calc(100% - 3px) 50%, 1.5px calc(100% - 3px));
+    }
+    /* Text turned by 180 degrees: the inner triangle is mirrored so it still fits its outline. */
+    #app.duel .bonus-tag.left::after, #app.online-player2 .bonus-tag.left::after {
+      rotate: 180deg; justify-content: flex-end; padding: 0 11% 0 0;
+      clip-path: polygon(calc(100% - 1.5px) 3px, calc(100% - 1.5px) calc(100% - 3px), 3px 50%);
+    }
+    #app.online-player2 .bonus-tag.right::after {
+      rotate: 180deg; justify-content: flex-start; padding: 0 0 0 11%;
+      clip-path: polygon(1.5px 3px, calc(100% - 3px) 50%, 1.5px calc(100% - 3px));
+    }
 
     .die {
       position: relative;
@@ -295,11 +315,14 @@
       display: flex; align-items: center; justify-content: center;
       font-family: var(--display); font-weight: 700; color: #fff;
       font-size: clamp(12px, 4cqmin, 22px);
-      box-shadow: 0 0 0 2px var(--p1), 0 3px 6px rgba(0, 0, 0, 0.55);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.55);
       background-position: center; background-repeat: no-repeat; background-size: contain;
     }
-    .die.p1 { background: radial-gradient(circle at 30% 20%, #111, var(--p1-color)); box-shadow: 0 0 0 2px var(--p1), 0 3px 6px rgba(0, 0, 0, 0.55); }
-    .die.p2 { background: radial-gradient(circle at 30% 20%, #111, var(--p2-color)); box-shadow: 0 0 0 2px var(--p2), 0 3px 6px rgba(0, 0, 0, 0.55); }
+    /* Dice with artwork: no player tint, the die image is the die. */
+    .die:has(> img) { background: transparent; border-radius: 6px; }
+    /* Numbers set (no artwork): light dice for player 1, dark dice for player 2 */
+    .die.numbers.p1 { background: radial-gradient(circle at 30% 20%, #fbf6ea, #d9cfb8); color: var(--ink); box-shadow: 0 0 0 1px var(--edge), 0 3px 6px rgba(0, 0, 0, 0.55); }
+    .die.numbers.p2 { background: radial-gradient(circle at 30% 20%, #5a5550, #1c1c1c); color: #f4eedf; box-shadow: 0 0 0 1px var(--edge), 0 3px 6px rgba(0, 0, 0, 0.55); }
 
     /* Online, player 2: the board is seen from the other side. */
     #app.online-player2 #board { transform: rotate(180deg); }
@@ -373,7 +396,7 @@
     .big-btn.secondary { background: var(--paper-2); color: var(--ink); }
 
     #rules-overlay { gap: 8px; }
-    #rules-overlay.player2 { transform: rotate(180deg); }
+    #rules-overlay.player2, #lobby-overlay.player2 { transform: rotate(180deg); }
     .rules-stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .rules-stage img { max-width: calc(100% - 80px); max-height: 100%; object-fit: contain; }
     .rules-arrow {
@@ -447,8 +470,8 @@
       #board-area { grid-area: board; max-height: none; }
       #dock-top { grid-area: top; }
       #dock-bottom { grid-area: bottom; }
-      #app.duel #dock-top { transform: none; justify-content: flex-start; }
-      #app.duel #dock-top > .player-bar { order: 0; }
+      /* Duel: each player gets half of the side column; the upper half faces player 2. */
+      #app.duel { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
     }
     @media (min-aspect-ratio: 5/4) and (min-width: 1100px) {
       #app { grid-template-columns: minmax(0, 1fr) 400px; max-width: 1400px; }
@@ -547,25 +570,25 @@
       <div class="paper lobby-card">
         <h1>DiceWar</h1>
         <div class="lobby-inner">
-          <p>Choose a game mode, a dice set for each player and any landscapes, then start the match.</p>
+          <p>Choose a game mode, a dice set for each player and any landscapes.</p>
           <div id="lobby-config">
             <div class="lobby-player-config">
               <label>Game Mode
                 <select id="game-mode-select">
-                  <option value="ai">Single player vs AI</option>
-                  <option value="solo">Solo</option>
-                  <option value="duel">Duel</option>
-                  <option value="online">Online lobby</option>
+                  <option value="ai">Against the AI</option>
+                  <option value="solo">Solo (play both sides)</option>
+                  <option value="duel">Duel (two players, one device)</option>
+                  <option value="online">Online (play over the internet)</option>
                 </select>
               </label>
             </div>
             <div class="lobby-player-config">
-              <label>Player 1 – Dice Set
+              <label><span id="p1-set-title">Player 1 – Dice Set</span>
                 <select id="p1-dice-set"></select>
               </label>
             </div>
             <div class="lobby-player-config">
-              <label>Player 2 – Dice Set
+              <label><span id="p2-set-title">Player 2 – Dice Set</span>
                 <select id="p2-dice-set"></select>
               </label>
             </div>
@@ -587,7 +610,7 @@
           </div>
 
           <div class="lobby-player-config" id="rules-options">
-            <label id="enforce-rules-label"><input type="checkbox" id="enforce-rules" checked> Enforce rules (beta)</label>
+            <label id="enforce-rules-label"><input type="checkbox" id="enforce-rules" checked> Enforce rules</label>
             <label id="ai-level-label">AI strength
               <select id="ai-level">
                 <option value="easy">Easy</option>
@@ -605,7 +628,7 @@
           </div>
 
           <p id="ai-note" style="display: none; font-size: 14px;">
-            The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
+            You play at the bottom, the AI plays at the top.
           </p>
 
           <button class="big-btn" id="start-game-btn">Start New Game</button>
@@ -728,9 +751,9 @@
       };
     })();
 
-    // --- Würfel-Sets ---
+    // --- Dice sets ---
     const DICE_SETS = [
-      { id: "numbers", label: "Numbers" },
+      { id: "numbers", label: "Numbers (no rules)" },
       { id: "LoD", label: "Light of Dragons" },
       { id: "RoM", label: "Roots of Mali" },
       { id: "BoD", label: "Bond of Demons" },
@@ -739,7 +762,7 @@
       { id: "DoA", label: "Dawn of Awakening" }
     ];
 
-    // --- Spielzustand ---
+    // --- Game state ---
     const SIZE = 7;
     const FIELD_TYPES = [
       "neutral",
@@ -821,7 +844,7 @@
     function pushUndoState() {
       // Im Online-Modus keine Undo-Historie aufbauen
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-        return;  // Still deaktivieren
+        return;  // silently ignored
       }
       undoStack.push(createStateSnapshot());
       if (undoStack.length > MAX_HISTORY) {
@@ -859,7 +882,7 @@
     function undo() {
       if (window.RulesMode && RulesMode.active) return RulesMode.undo();
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-        return;  // Still deaktivieren
+        return;  // silently ignored
       }
       if (undoStack.length === 0) return;
       const currentSnap = createStateSnapshot();
@@ -878,7 +901,7 @@
     function redo() {
       if (window.RulesMode && RulesMode.active) return RulesMode.redo();
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-        return;  // Still deaktivieren
+        return;  // silently ignored
       }
       if (redoStack.length === 0) return;
       const currentSnap = createStateSnapshot();
@@ -905,7 +928,7 @@
       });
     }
 
-    // --- Board & Feldtypen ---
+    // --- Board & field types ---
     function initBoardState() {
       state.board = [];
       for (let r = 0; r < SIZE; r++) {
@@ -1038,16 +1061,10 @@
             const diceSet = player && player.diceSet ? player.diceSet : "numbers";
 
             const die = document.createElement("div");
-            die.className = "die " + (owner === 1 ? "p1" : "p2");
+            die.className = "die " + (owner === 1 ? "p1" : "p2") + (diceSet === "numbers" ? " numbers" : "");
 
             if (diceSet === "numbers") {
               die.textContent = data.value;
-              die.style.backgroundImage = "none";
-              die.style.background =
-                owner === 1
-                  ? "radial-gradient(circle at 30% 20%, #ff877d, var(--p1-color))"
-                  : "radial-gradient(circle at 30% 20%, #79b5ff, var(--p2-color))";
-              die.style.color = "#fff";
               let transform = "";
               if ((state.gameMode === "duel" || state.gameMode === "online") && owner === 2) {
                 transform = "rotate(180deg)";
@@ -1243,7 +1260,7 @@
       }
 
       pushUndoState();
-      // nur wenn noch in erster Spielrunde
+      // only during the first round
       if(state.roundNumber === 1) {
         const index = FIELD_TYPES.indexOf(cell.type);
         const nextIndex = (index + 1) % FIELD_TYPES.length;
@@ -1513,7 +1530,7 @@
       p2Btn.innerHTML = cardFace(p2Set, folder2);
     }
 
-    // --- Lobby / Würfel-Set-Auswahl ---
+    // --- Lobby / dice set choice ---
     function initLobbyDiceSets() {
       const p1Select = document.getElementById("p1-dice-set");
       const p2Select = document.getElementById("p2-dice-set");
@@ -1546,6 +1563,8 @@
 
     document.getElementById("btn-lobby").addEventListener("click", () => {
       document.getElementById("btn-close-lobby").style.display = gameInProgress ? "" : "none";
+      // Duel on one device: the menu faces the player who opened it.
+      lobbyOverlay.classList.toggle("player2", state.gameMode === "duel" && GameUI.actingPlayer() === 2);
       lobbyOverlay.style.display = "flex";
     });
 
@@ -1555,6 +1574,7 @@
 
     function startNewGameBase(p1Set, p2Set, gameMode) {
       document.getElementById("app").classList.remove("online-player2");
+      lobbyOverlay.classList.remove("player2");
       markGameStarted();
       state.currentPlayer = 1;
       state.gameOver = false;
@@ -1634,7 +1654,7 @@
       showRulesImage();
     }
 
-    // --- Online-UI Aktiv/Deaktiv ---
+    // --- Online UI on/off ---
     function enableAllGameElements() {
       document.querySelectorAll(".cell").forEach(cell => {
         cell.style.pointerEvents = "auto";
@@ -1721,7 +1741,7 @@
       }
     }
 
-    // --- Event-Handler für Reserve/Exil etc. ---
+    // --- Event handlers for reserve/exile etc. ---
     function attachBoardListeners() {
       document
         .getElementById("p1-reserve")
@@ -1892,14 +1912,14 @@
       // NEU: Speichern / Laden
       document.getElementById("btn-save").addEventListener("click", () => {
         if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-          return;  // Still deaktivieren
+          return;  // silently ignored
         }
         exportGameStateToFile();
       });
 
       document.getElementById("btn-load").addEventListener("click", () => {
         if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-          return;  // Still deaktivieren
+          return;  // silently ignored
         }
         document.getElementById("load-file-input").click();
       });
@@ -2050,7 +2070,7 @@
       if (window.RulesMode) RulesMode.stop();
       if (gameMode === "ai") {
         if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
-          alert("The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only.");
+          alert("The Numbers set has no rules, so it can't be played against the AI. Choose another dice set.");
           return;
         }
         originalStartNewGame(p1Set, p2Set, "ai");
@@ -2120,9 +2140,18 @@
     }
 
     function updateRulesOptions() {
+      const mode = document.getElementById("game-mode-select").value;
+      // The Numbers set has no rules, so the AI can't play with it.
+      for (const id of ["p1-dice-set", "p2-dice-set"]) {
+        const sel = document.getElementById(id);
+        const opt = sel.querySelector('option[value="numbers"]');
+        if (opt) opt.disabled = mode === "ai";
+        if (mode === "ai" && sel.value === "numbers") sel.value = "RoX";
+      }
       const p1Set = document.getElementById("p1-dice-set").value;
       const p2Set = document.getElementById("p2-dice-set").value;
-      const mode = document.getElementById("game-mode-select").value;
+      document.getElementById("p1-set-title").textContent = mode === "ai" ? "Your Dice Set" : "Player 1 – Dice Set";
+      document.getElementById("p2-set-title").textContent = mode === "ai" ? "AI Dice Set" : "Player 2 – Dice Set";
       const online = mode === "online";
       document.getElementById("lobby-config").querySelectorAll(".lobby-player-config").forEach((el, i) => {
         if (i > 0) el.style.display = online ? "none" : "";
