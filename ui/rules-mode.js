@@ -471,9 +471,9 @@ function screenDir(dir) {
 
 const SIDE_NAMES = ["top", "right", "bottom", "left"];
 
-/** Is the radial menu turned towards player 2 (duel on one device, portrait)? */
+/** Is the radial menu turned towards player 2 (duel on one device)? */
 function ringFlipped(player) {
-  return state.gameMode === "duel" && player === 2 && !(window.GameUI && GameUI.isLandscape());
+  return state.gameMode === "duel" && player === 2;
 }
 
 function arrowItems(labels, tokens, flip) {

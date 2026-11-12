@@ -94,6 +94,8 @@
         name.appendChild(document.createTextNode(` · ${SET_NAMES[pl.diceSet] || ""}`));
       }
       const bar = $(`bar-${p}`);
+      // Score markers in the colour of the player's dice set
+      if (bar) bar.style.setProperty("--player", setColor(p));
       if (bar) bar.classList.toggle("active", p === acting && !(rulesActive() && RulesMode.game && RulesMode.game.phase === "over"));
     }
     layout();
@@ -120,7 +122,7 @@
     if (topBar.parentElement !== top) top.appendChild(topBar);
     if (bottomBar.parentElement !== bottom) bottom.appendChild(bottomBar);
 
-    const controlsDock = duel && actingPlayer() === 2 && !isLandscape() ? top : bottom;
+    const controlsDock = duel && actingPlayer() === 2 ? top : bottom;
     if (hint.parentElement !== controlsDock) {
       // Duel: the controls change sides and the board slides along.
       const board = $("board");
@@ -220,7 +222,7 @@
     const owner = cell.owner;
     Ring.show({
       square: { row: sel.row, col: sel.col },
-      flip: state.gameMode === "duel" && owner === 2 && !isLandscape(),
+      flip: state.gameMode === "duel" && owner === 2,
       dieImg: dieImage(cell),
       dieText: dieImage(cell) ? "" : String(cell.value),
       dieRotation: dieImageRotation(cell),
