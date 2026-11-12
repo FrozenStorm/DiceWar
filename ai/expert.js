@@ -15,16 +15,19 @@
 // Values are always seen from the player `p` passed to the function
 // (negamax); a turn is one ply of depth, decisions inside a turn are free.
 
-import { legalActions, mainActions, applyAction, actor, totalVP } from "../engine/core.js";
+import { legalActions, mainActions, applyAction, actor, totalVP, diceOf } from "../engine/core.js";
 import { fieldBonus, SQUARES } from "../engine/board.js";
 import { WIN, evaluateExpert, EXPERT_WEIGHTS } from "./eval.js";
-import { Timeout, isRedundant, greedyPending, greedyChoice, resolveGreedy } from "./common.js";
+import { Timeout, isRedundant, greedyPending, resolveGreedy } from "./common.js";
 
 const MAX_PLY = 64;
+/** Share of the thinking time for a decision inside a turn (e.g. where to place a die). */
+const CHOICE_SHARE = 0.2;
 /** Plies of captures searched beyond the horizon. */
 const QUIESCENCE_PLIES = 4;
-/** From this turn on the AI declares the End of War whenever it leads. */
-const END_OF_WAR_FROM_TURN = 60;
+/** The AI declares the End of War when it leads, the game is past this turn
+ *  and the opponent has at most this many creatures left (a chase). */
+const END_OF_WAR_FROM_TURN = 40, END_OF_WAR_MAX_DICE = 2;
 
 // --- Position keys -----------------------------------------------------------
 // Two independent 32-bit hashes of a position (Zobrist): one is the slot in
@@ -154,7 +157,7 @@ function tick(ctx) {
 }
 
 /** Apply `a`, settle the decisions the AI takes greedily. */
-const play = (s, a, ctx) => resolveGreedy(applyAction(s, a), ctx.W, ctx.evalFn);
+const play = (s, a, ctx) => resolveGreedy(applyAction(s, a), ctx.W, ctx.evalFn, true);
 
 /** Value of `child` for `p`, searched with the given routine. */
 function childValue(child, p, search, depth, alpha, beta, ply, ctx) {
@@ -278,19 +281,21 @@ export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
   const me = actor(s);
   const W = { ...EXPERT_WEIGHTS, ...(cfg.weights || {}) };
   const evalFn = evaluateExpert;
-  if (greedyPending(s)) return { action: greedyChoice(s, W, evalFn), score: 0, depth: 0, nodes: 0, ties: 1 };
+  // Small decisions inside a turn (which the look-ahead settles greedily) are
+  // searched like any other move here, with a part of the thinking time.
+  const share = greedyPending(s) ? CHOICE_SHARE : 1;
 
-  // The End of War costs no action. In a long game the leading side declares
-  // it, so the opponent cannot run away for ever.
+  // The End of War costs no action. When the opponent has only a few
+  // creatures left and could run away for ever, the leading side declares it.
   if (!s.pending.length && !s.endOfWar && !s.turn.declared && s.turnNumber >= END_OF_WAR_FROM_TURN
-    && totalVP(s, me) > totalVP(s, 3 - me)) {
+    && totalVP(s, me) > totalVP(s, 3 - me) && diceOf(s, 3 - me).length <= END_OF_WAR_MAX_DICE) {
     return { action: { type: "declareEndOfWar" }, score: 0, depth: 0, nodes: 0, ties: 1 };
   }
 
   const ctx = {
     nodes: 0,
-    deadline: maxNodes ? Infinity : Date.now() + cfg.timeMs,
-    maxNodes: maxNodes || Infinity,
+    deadline: maxNodes ? Infinity : Date.now() + cfg.timeMs * share,
+    maxNodes: maxNodes ? Math.ceil(maxNodes * share) : Infinity,
     W, evalFn,
     lateFrom: cfg.lateFrom ?? 4,
     veryLateFrom: cfg.veryLateFrom ?? 12,
@@ -346,7 +351,7 @@ export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
     root = [best, ...root.filter((x) => x !== best)];
     if (Math.abs(best.v) >= WIN / 2) break; // forced result found
     // The next iteration takes several times as long: stop if it cannot finish.
-    if (!maxNodes && Date.now() - started > cfg.timeMs * 0.6) break;
+    if (!maxNodes && Date.now() - started > cfg.timeMs * share * 0.6) break;
   }
   return { action: best.a, score: best.v, depth: reached, nodes: ctx.nodes, ties: 1 };
 }

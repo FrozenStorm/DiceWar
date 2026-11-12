@@ -20,6 +20,10 @@ const FORMATION_POWER = 9;
 const FACES = [0, 1, 2, 3];
 /** One option per alignment for a die placed on `place`. */
 const withFaces = (opt) => FACES.map((face) => ({ ...opt, face }));
+/** The same for a First Sword of `player`: its alignment only matters once it
+ *  has been upgraded, so the AI only looks at the one facing the opponent. */
+const withSwordFaces = (opt, player) =>
+  FACES.map((face) => (face === defaultDir(player) ? { ...opt, face } : { ...opt, face, redundant: true }));
 
 const A = {
   agile: "KoS.sword.agile",
@@ -288,7 +292,8 @@ function reinforcementOptions(s, pending) {
   const level = REINF_ORDER[stage];
   const out = [];
   for (const place of free) {
-    out.push(...withFaces({ type: "choice", kind: A.reinforcements, place }));
+    const opt = { type: "choice", kind: A.reinforcements, place };
+    out.push(...(level === SWORD ? withSwordFaces(opt, pending.player) : withFaces(opt)));
   }
   return out;
 }
@@ -436,13 +441,13 @@ export const KoS = {
       case A.relentless: return relentlessOptions(s, pending);
       case A.rescue:
         if (s.players[player].exile < 1) return [];
-        return [...edgeFields(s, player).flatMap((place) => withFaces({ type: "choice", kind: A.rescue, place })), { type: "choice", kind: A.rescue, skip: true }];
+        return [...edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.rescue, place }, player)), { type: "choice", kind: A.rescue, skip: true }];
       case A.toSpears:
         return diceOf(s, player, SHIELD).map((upgrade) => ({ type: "choice", kind: A.toSpears, upgrade }));
       case A.leadership: return leadershipOptions(s, pending);
       case A.supply:
         if (s.players[player].reserve < 1) return [];
-        return edgeFields(s, player).flatMap((place) => withFaces({ type: "choice", kind: A.supply, place }));
+        return edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.supply, place }, player));
       case A.reinforcements: return reinforcementOptions(s, pending);
       default: return [];
     }
@@ -493,6 +498,9 @@ export const KoS = {
   virtualVP: breakthrough,
 
   aiGreedyChoices: [A.relentless, A.rescue, A.toSpears, A.leadership, A.supply, A.reinforcements],
+  // Inside its look-ahead the expert AI skips the additional actions of the
+  // other First Swords (it still decides them properly when they come up).
+  aiSkipInSearch: (pending) => (pending.kind === A.relentless ? { type: "choice", kind: A.relentless, skip: true } : null),
 
   actionPath(a) {
     switch (a.ability || a.kind) {

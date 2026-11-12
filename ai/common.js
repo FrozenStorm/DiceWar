@@ -32,9 +32,16 @@ export function greedyChoice(s, W, evalFn = evaluate) {
   return best;
 }
 
-/** Resolve greedy decisions until the state needs a real choice again. */
-export function resolveGreedy(s, W, evalFn = evaluate) {
+/** Resolve greedy decisions until the state needs a real choice again.
+ *  `inSearch`: decisions a set marks with aiSkipInSearch get that fixed answer
+ *  (keeps the look-ahead of the expert level fast). */
+export function resolveGreedy(s, W, evalFn = evaluate, inSearch = false) {
   let guard = 0;
-  while (greedyPending(s) && guard++ < 20) s = applyAction(s, greedyChoice(s, W, evalFn));
+  while (greedyPending(s) && guard++ < 20) {
+    const p = s.pending[0];
+    const set = getSet(s.players[p.player].set);
+    const fixed = inSearch && set.aiSkipInSearch ? set.aiSkipInSearch(p) : null;
+    s = applyAction(s, fixed || greedyChoice(s, W, evalFn));
+  }
   return s;
 }
