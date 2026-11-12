@@ -287,7 +287,6 @@ function bookAbility(s, me) {
 /** Choose a starting lineup (Power Level 10 in the Supply Zone). */
 export function chooseSetup(s, opts = {}) {
   const action = chooseLineup(s, opts);
-  if (s.players[s.current].set === "KoS") chooseAlignments(s, action);
   if (s.locations.includes("camp")) {
     // The Camp: on a free field of the Supply Zone, preferably at the side.
     const random = opts.random || Math.random;
@@ -295,6 +294,8 @@ export function chooseSetup(s, opts = {}) {
     const free = [0, 6, 1, 5, 2, 4, 3].filter((c) => !used.has(c));
     action.camp = free[Math.min(free.length - 1, Math.floor(random() * 2))];
   }
+  // After the camp: the alignments are rated on the complete, valid lineup.
+  if (s.players[s.current].set === "KoS") chooseAlignments(s, action);
   return action;
 }
 

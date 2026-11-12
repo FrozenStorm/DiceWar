@@ -247,25 +247,37 @@ function backMoves(s, from) {
 
 /** KoS.knight.breakthrough: 1 virtual VP per Formation with Power Level 9+. */
 function breakthrough(s, player) {
-  if (!countLevel(s, player, KNIGHT)) return 0;
-  const seen = new Set();
+  const board = s.board;
+  let knight = false;
+  for (let i = 0; i < SQUARES; i++) {
+    const d = board[i];
+    if (d && d.owner === player && d.level === KNIGHT) { knight = true; break; }
+  }
+  if (!knight) return 0;
+  // Flood fill over the own creatures; `seenMark` is reused between calls.
+  const mark = ++seenMark;
   let vp = 0;
-  for (const start of diceOf(s, player)) {
-    if (seen.has(start)) continue;
-    let sum = 0;
-    const stack = [start];
-    seen.add(start);
-    while (stack.length) {
-      const x = stack.pop();
-      sum += s.board[x].level;
-      for (const n of adjacent(x)) {
-        if (!seen.has(n) && isOwn(s, n, player)) { seen.add(n); stack.push(n); }
+  for (let start = 0; start < SQUARES; start++) {
+    const first = board[start];
+    if (!first || first.owner !== player || seen[start] === mark) continue;
+    let sum = 0, top = 0;
+    stack[top++] = start;
+    seen[start] = mark;
+    while (top) {
+      const x = stack[--top];
+      sum += board[x].level;
+      const adj = adjacent(x);
+      for (let k = 0; k < adj.length; k++) {
+        const n = adj[k], d = board[n];
+        if (d && d.owner === player && seen[n] !== mark) { seen[n] = mark; stack[top++] = n; }
       }
     }
     if (sum >= FORMATION_POWER) vp++;
   }
   return vp;
 }
+const seen = new Int32Array(SQUARES), stack = new Int32Array(SQUARES);
+let seenMark = 0;
 
 const REINF_ORDER = [SPEAR, SHIELD, SWORD];
 

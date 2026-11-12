@@ -389,13 +389,27 @@ export function legalActions(s) {
     const p = s.pending[0];
     return setOf(s, p.player).choiceOptions(s, p);
   }
-  const actions = mainActions(s);
+  const actions = [...mainActions(s)];
   if (!s.endOfWar && !s.turn.declared) actions.push({ type: "declareEndOfWar" });
   return actions;
 }
 
-/** Standard actions (and set abilities) of the current player. */
+// The actions at the start of a turn are needed twice: to check that the
+// player has a valid action at all, and when the player (or the AI search)
+// asks for them. They are remembered on the state object. States returned by
+// applyAction are never changed afterwards, so the list stays valid. The
+// entry names its state, so a copy of a state ({...s}) does not inherit it,
+// and the symbol key keeps it out of save files and worker messages.
+const TURN_START_ACTIONS = Symbol("turnStartActions");
+
+/** Standard actions (and set abilities) of the current player. The returned
+ *  list may be shared: do not change it. */
 export function mainActions(s) {
+  const cached = s[TURN_START_ACTIONS];
+  return cached && cached.state === s ? cached.actions : computeMainActions(s);
+}
+
+function computeMainActions(s) {
   const player = s.current;
   let out = [];
   for (const from of diceOf(s, player)) out.push(...standardActionsOf(s, from));
@@ -595,8 +609,10 @@ function startTurn(s) {
   if (set.onTurnStart) set.onTurnStart(s, player);
   settlePending(s);
   // A player without any valid action loses.
-  if (!s.pending.length && mainActions(s).length === 0) {
-    finish(s, opponent(player), "noValidAction");
+  if (!s.pending.length) {
+    const actions = computeMainActions(s);
+    if (actions.length === 0) finish(s, opponent(player), "noValidAction");
+    else s[TURN_START_ACTIONS] = { state: s, actions };
   }
 }
 
