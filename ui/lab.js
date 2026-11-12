@@ -194,6 +194,7 @@ function renderConfig(cfg) {
       <label class="lab-field">AI level player 2<select id="lab-level2">${levelOptions(cfg.level2)}</select></label>
     </div>
     <h3 class="lab-h">Landscapes</h3>
+    <p class="lab-note">Every game is played with one landscape (or none). Each chosen landscape gets its own games; several landscapes in one game are not used in the lab.</p>
     <div class="lab-checks">${LAB_LOCATIONS.map((l) =>
       `<label><input type="checkbox" data-loc="${l}"${cfg.locations.includes(l) ? " checked" : ""}> ${esc(LOCATION_NAMES[l || "none"])}</label>`).join("")}</div>
     <div class="lab-row">

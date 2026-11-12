@@ -54,6 +54,9 @@ const MATCHUPS = [
   { name: "DoA vs RoM", set1: "DoA", set2: "RoM", locations: (g) => [["river"], ["camp"], []][g % 3] },
   { name: "KoS vs DoA", set1: "KoS", set2: "DoA", locations: (g) => [["river"], ["knoll"], ["oracle"]][g % 3] },
   { name: "DoA vs BoD", set1: "DoA", set2: "BoD", locations: (g) => [["river"], ["oracle"], []][g % 3] },
+  // Several landscapes in one game (all combinations allowed, Daniel 2026-11-12).
+  { name: "RoX vs DoA, all landscapes", set1: "RoX", set2: "DoA", locations: () => ["river", "craters", "oracle", "ruins", "camp", "knoll"] },
+  { name: "LoD vs RoM, mixed landscapes", set1: "LoD", set2: "RoM", locations: (g) => [["oracle", "ruins", "river"], ["craters", "river"], ["camp", "knoll", "ruins"]][g % 3] },
 ];
 
 for (const m of MATCHUPS) test(`random ${m.name} games always reach a valid end without errors`, () => {

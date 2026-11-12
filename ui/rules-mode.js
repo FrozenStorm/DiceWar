@@ -434,7 +434,8 @@ function project() {
       state.board[r][c] = {
         owner: d ? d.owner : null,
         value: d ? d.level : null,
-        type: tile ? (LOCATION_TILE_TYPE[tile] || "neutral") : "neutral",
+        // Several tiles on one field are shown as a split tile ("DoA+BoD+LoD").
+        type: tile ? tile.map((id) => LOCATION_TILE_TYPE[id] || "neutral").join("+") : "neutral",
         rotation: d ? alignmentRotation(d) : 0,
         flow: g.locations.includes("river") && RIVER_ROWS.includes(r) && !tile,
       };
@@ -540,9 +541,9 @@ function screenDir(dir) {
 
 const SIDE_NAMES = ["top", "right", "bottom", "left"];
 
-/** Is the radial menu turned towards player 2 (duel on one device, portrait)? */
+/** Is the radial menu turned towards player 2 (duel on one device)? */
 function ringFlipped(player) {
-  return state.gameMode === "duel" && player === 2 && !(window.GameUI && GameUI.isLandscape());
+  return state.gameMode === "duel" && player === 2;
 }
 
 function arrowItems(labels, tokens, flip) {

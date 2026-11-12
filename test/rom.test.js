@@ -148,7 +148,7 @@ test("Camp: placed in the setup; own creature back to the Reserve, opposing camp
 
 test("Camp: dice can't be placed on a camp, only moved into it", () => {
   const s = position(["......f", ".......", ".......", ".......", ".......", "...1...", "..4...."], ROM);
-  s.tiles[at("d1")] = "camp";
+  s.tiles[at("d1")] = ["camp"];
   s.camps = { 1: at("d1") };
   const splits = byAbility(s, "RoM.fruit.breeding");
   assert.ok(splits.length > 0);

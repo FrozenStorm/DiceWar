@@ -3,7 +3,7 @@
 //
 // Database layout (rules in database.rules.json):
 //   lobby/{uid}               { name, status: "free" | "challenging" | "in_game", gameId, at }
-//   challenges/{to}/{from}    { fromName, set, location, riverCol, start, rules, status, gameId, at }
+//   challenges/{to}/{from}    { fromName, set, location (landscape ids, comma-separated), riverCol, start, rules, status, gameId, at }
 //   games/{id}/meta           { p1, p2, name1, name2, set1, set2, location, riverCol, rules,
 //                               startingPlayer, created, result, left }
 //   games/{id}/state          { seq, by, json }  (the full game snapshot as JSON text)
@@ -142,6 +142,7 @@ function leaveLobby() {
     ON.db.cancelOnDisconnect(`lobby/${ON.db.uid}`);
   }
   closeLobbyOverlay();
+  $("lobby-overlay").classList.remove("player2");
   $("lobby-overlay").style.display = "flex";
 }
 
@@ -226,15 +227,13 @@ function setOptions(selected) {
   return DICE_SETS.map((s) => `<option value="${s.id}"${s.id === selected ? " selected" : ""}>${esc(s.label)}</option>`).join("");
 }
 
-function locationLabel(v) {
-  const opt = [...$("use-location").options].find((o) => o.value === (v || ""));
-  return opt ? (opt.dataset.label || opt.textContent) : "None";
-}
+/** Landscapes are stored as a comma-separated list of ids, e.g. "oracle,ruins". */
+const landscapes = (v) => window.Landscapes.parse(v);
 
 function challengeSummary(c) {
   const start = c.start === "me" ? `${c.fromName} starts` : c.start === "opponent" ? "you start" : "random start player";
-  const river = c.location === "river" ? ` (column ${"abcdefg"[c.riverCol] || "b"})` : "";
-  return `${setLabel(c.set)} · Landscape: ${locationLabel(c.location)}${river} · ${start} · rules ${c.rules ? "on" : "off"}`;
+  const river = landscapes(c.location).includes("river") ? ` (river in column ${"abcdefg"[c.riverCol] || "b"})` : "";
+  return `${setLabel(c.set)} · Landscapes: ${window.Landscapes.label(c.location)}${river} · ${start} · rules ${c.rules ? "on" : "off"}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -249,24 +248,16 @@ function openChallengeDialog(to) {
   $("challenge-title").textContent = `Challenge ${displayName(to, p.name)}`;
   $("challenge-set").innerHTML = setOptions(store.get("dicewar.online.set") || "RoX");
   const loc = $("challenge-location");
-  loc.innerHTML = $("use-location").innerHTML;
-  [...loc.options].forEach((o) => { o.disabled = false; if (o.dataset.label) o.textContent = o.dataset.label; });
-  loc.value = "";
+  if (!loc.children.length) window.Landscapes.render(loc);
+  window.Landscapes.select(loc, landscapes(store.get("dicewar.online.landscapes")));
   $("challenge-river-col").value = "1";
   updateChallengeDialog();
   dlg.style.display = "flex";
 }
 
 function updateChallengeDialog() {
-  const loc = $("challenge-location");
-  const rules = $("challenge-rules").checked && $("challenge-set").value !== "numbers";
-  const known = window.RulesMode ? RulesMode.implementedLocations : [];
-  for (const o of loc.options) {
-    if (!o.value) continue;
-    o.disabled = rules && !known.includes(o.value);
-  }
-  if (loc.selectedOptions[0] && loc.selectedOptions[0].disabled) loc.value = "";
-  $("challenge-river-label").style.display = loc.value === "river" ? "flex" : "none";
+  const river = window.Landscapes.selected($("challenge-location")).includes("river");
+  $("challenge-river-label").style.display = river ? "flex" : "none";
 }
 
 async function sendChallenge() {
@@ -275,10 +266,12 @@ async function sendChallenge() {
   if (!db || !to || ON.outgoing) return;
   const set = $("challenge-set").value;
   store.set("dicewar.online.set", set);
+  const location = window.Landscapes.stringify(window.Landscapes.selected($("challenge-location")));
+  store.set("dicewar.online.landscapes", location);
   const c = {
     fromName: ON.name,
     set,
-    location: $("challenge-location").value || "",
+    location,
     riverCol: Number($("challenge-river-col").value),
     start: $("challenge-start").value,
     rules: $("challenge-rules").checked && set !== "numbers",
@@ -544,7 +537,7 @@ async function resume() {
   if (!meta || meta.result || !db || (meta.p1 !== db.uid && meta.p2 !== db.uid)) {
     store.del(KEY_GAME);
     setStatusText("");
-    if (!ON.game) $("lobby-overlay").style.display = "flex";
+    if (!ON.game) { $("lobby-overlay").classList.remove("player2"); $("lobby-overlay").style.display = "flex"; }
     return;
   }
   beginGame(id, meta, meta.p1 === db.uid ? 1 : 2);

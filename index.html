@@ -233,6 +233,29 @@
     .cell.type-KoS::before { background-image: url("img/KoS/marker.png"); }
     .cell.type-DoA::before { background-image: url("img/DoA/marker.png"); }
 
+    /* Several landscape tiles on one field: diagonally split tile, one part per landscape */
+    /* Each part is a section of the tile in the tile's paper colour, with the
+       symbol shrunk, centred in the section and faded out at its edges. */
+    .cell .tile-part { position: absolute; inset: 8%; pointer-events: none; background: var(--tile-bg); }
+    .cell .tile-part .sym {
+      position: absolute; background: var(--tile) center / contain no-repeat;
+      -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
+      mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
+    }
+    .cell .tile-part.n2.p0 .sym { left: -3%; top: -3%; width: 72%; height: 72%; }
+    .cell .tile-part.n2.p1 .sym { left: 31%; top: 31%; width: 72%; height: 72%; }
+    .cell .tile-part.n3.p0 .sym { left: -3%; top: -3%; width: 50%; height: 50%; }
+    .cell .tile-part.n3.p1 .sym { left: 19%; top: 19%; width: 62%; height: 62%; }
+    .cell .tile-part.n3.p2 .sym { left: 53%; top: 53%; width: 50%; height: 50%; }
+    .cell .tile-part.n2.p0 { clip-path: polygon(0 0, 100% 0, 0 100%); }
+    .cell .tile-part.n2.p1 { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+    .cell .tile-part.n3.p0 { clip-path: polygon(0 0, 67% 0, 0 67%); }
+    .cell .tile-part.n3.p1 { clip-path: polygon(67% 0, 100% 0, 100% 33%, 33% 100%, 0 100%, 0 67%); }
+    .cell .tile-part.n3.p2 { clip-path: polygon(100% 33%, 100% 100%, 33% 100%); }
+    .cell .tile-seam { position: absolute; inset: 8%; pointer-events: none; }
+    .cell .tile-seam.n2 { background: linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(43, 34, 24, 0.9) calc(50% - 1px), rgba(43, 34, 24, 0.9) calc(50% + 1px), transparent calc(50% + 1px)); }
+    .cell .tile-seam.n3 { background: linear-gradient(to bottom right, transparent calc(33.5% - 1px), rgba(43, 34, 24, 0.9) calc(33.5% - 1px), rgba(43, 34, 24, 0.9) calc(33.5% + 1px), transparent calc(33.5% + 1px), transparent calc(66.5% - 1px), rgba(43, 34, 24, 0.9) calc(66.5% - 1px), rgba(43, 34, 24, 0.9) calc(66.5% + 1px), transparent calc(66.5% + 1px)); }
+
     /* DoA River: fields in the three middle rows where the flow pushes creatures */
     .cell.flow { background: linear-gradient(90deg, rgba(40, 110, 170, 0.12), rgba(40, 110, 170, 0.32)); }
 
@@ -243,25 +266,45 @@
 
     .cell-label { display: none; }
 
+    /* Field bonus markers: triangles on the board edge as on the printed board.
+       Right edge (+3/+2/+1 for the player moving up): brown with light text.
+       Left edge (for the player moving down): parchment with dark text, which
+       faces player 2 in a duel on one device. */
     .bonus-tag {
       position: absolute; top: 50%; z-index: 1; pointer-events: none;
       transform: translateY(-50%);
-      height: 34%; min-height: 17px; aspect-ratio: 1.1;
+      height: 66%; aspect-ratio: 0.62;
       background: #2b2420;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
     }
     .bonus-tag::after {
       content: attr(data-v);
-      position: absolute; inset: 1.5px;
-      display: flex; align-items: center; justify-content: center;
-      background: #e8dcc0; color: #3b3127;
-      font-family: var(--display); font-weight: 700; font-size: clamp(10px, 3.4cqmin, 22px);
-      clip-path: inherit;
+      position: absolute; inset: 0;
+      display: flex; align-items: center;
+      font-family: var(--display); font-weight: 700; font-size: clamp(9px, 2.9cqmin, 20px); line-height: 1;
+      letter-spacing: -0.02em;
     }
-    .bonus-tag.right { right: 0; clip-path: polygon(36% 0, 100% 0, 100% 100%, 36% 100%, 0 50%); }
-    .bonus-tag.right::after { padding-left: 22%; }
-    .bonus-tag.left { left: 0; clip-path: polygon(0 0, 64% 0, 100% 50%, 64% 100%, 0 100%); }
-    .bonus-tag.left::after { padding-right: 22%; }
-    #app.online-player2 .bonus-tag { rotate: 180deg; }
+    .bonus-tag.right { right: 0; clip-path: polygon(100% 0, 100% 100%, 0 50%); }
+    .bonus-tag.right::after {
+      justify-content: flex-end; padding-right: 11%;
+      background: #9c8a70; color: #f6f0e2;
+      clip-path: polygon(calc(100% - 1.5px) 3px, calc(100% - 1.5px) calc(100% - 3px), 3px 50%);
+    }
+    .bonus-tag.left { left: 0; clip-path: polygon(0 0, 100% 50%, 0 100%); }
+    .bonus-tag.left::after {
+      justify-content: flex-start; padding-left: 11%;
+      background: #e8dcc0; color: #3b3127;
+      clip-path: polygon(1.5px 3px, calc(100% - 3px) 50%, 1.5px calc(100% - 3px));
+    }
+    /* Text turned by 180 degrees: the inner triangle is mirrored so it still fits its outline. */
+    #app.duel .bonus-tag.left::after, #app.online-player2 .bonus-tag.left::after {
+      rotate: 180deg; justify-content: flex-end; padding: 0 11% 0 0;
+      clip-path: polygon(calc(100% - 1.5px) 3px, calc(100% - 1.5px) calc(100% - 3px), 3px 50%);
+    }
+    #app.online-player2 .bonus-tag.right::after {
+      rotate: 180deg; justify-content: flex-start; padding: 0 0 0 11%;
+      clip-path: polygon(1.5px 3px, calc(100% - 3px) 50%, 1.5px calc(100% - 3px));
+    }
 
     .die {
       position: relative;
@@ -272,11 +315,14 @@
       display: flex; align-items: center; justify-content: center;
       font-family: var(--display); font-weight: 700; color: #fff;
       font-size: clamp(12px, 4cqmin, 22px);
-      box-shadow: 0 0 0 2px var(--p1), 0 3px 6px rgba(0, 0, 0, 0.55);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.55);
       background-position: center; background-repeat: no-repeat; background-size: contain;
     }
-    .die.p1 { background: radial-gradient(circle at 30% 20%, #111, var(--p1-color)); box-shadow: 0 0 0 2px var(--p1), 0 3px 6px rgba(0, 0, 0, 0.55); }
-    .die.p2 { background: radial-gradient(circle at 30% 20%, #111, var(--p2-color)); box-shadow: 0 0 0 2px var(--p2), 0 3px 6px rgba(0, 0, 0, 0.55); }
+    /* Dice with artwork: no player tint, the die image is the die. */
+    .die:has(> img) { background: transparent; border-radius: 6px; }
+    /* Numbers set (no artwork): light dice for player 1, dark dice for player 2 */
+    .die.numbers.p1 { background: radial-gradient(circle at 30% 20%, #fbf6ea, #d9cfb8); color: var(--ink); box-shadow: 0 0 0 1px var(--edge), 0 3px 6px rgba(0, 0, 0, 0.55); }
+    .die.numbers.p2 { background: radial-gradient(circle at 30% 20%, #5a5550, #1c1c1c); color: #f4eedf; box-shadow: 0 0 0 1px var(--edge), 0 3px 6px rgba(0, 0, 0, 0.55); }
 
     /* Online, player 2: the board is seen from the other side. */
     #app.online-player2 #board { transform: rotate(180deg); }
@@ -326,6 +372,21 @@
       background: #f3ecdc; color: var(--ink);
       font-family: var(--body); font-size: 16px;
     }
+    .lobby-card .field-title { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: 0.03em; }
+    .landscape-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 3px; }
+    .landscape-picks .pick {
+      display: flex; flex-direction: row; align-items: center; gap: 6px;
+      min-height: 40px; padding: 3px 6px; cursor: pointer;
+      border: 1px solid var(--edge); border-radius: 6px; background: #f3ecdc; color: var(--ink);
+      font-family: var(--body); font-size: 15px; font-weight: 400; letter-spacing: 0;
+    }
+    .landscape-picks .pick input { position: absolute; opacity: 0; pointer-events: none; }
+    .landscape-picks .pick img { width: 28px; height: 28px; border-radius: 3px; flex: 0 0 auto; opacity: 0.55; filter: grayscale(0.6); }
+    .landscape-picks .pick small { display: block; font-size: 11px; color: var(--ink-soft); line-height: 1; }
+    .landscape-picks .pick span { line-height: 1.1; }
+    .landscape-picks .pick:has(input:checked) { background: #e7d4a8; box-shadow: inset 0 0 0 2px var(--accent); }
+    .landscape-picks .pick:has(input:checked) img { opacity: 1; filter: none; }
+    .landscape-picks .pick:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
     .big-btn {
       min-height: 46px; padding: 8px 18px;
       border: 1px solid var(--edge); border-radius: 8px;
@@ -335,7 +396,7 @@
     .big-btn.secondary { background: var(--paper-2); color: var(--ink); }
 
     #rules-overlay { gap: 8px; }
-    #rules-overlay.player2 { transform: rotate(180deg); }
+    #rules-overlay.player2, #lobby-overlay.player2 { transform: rotate(180deg); }
     .rules-stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .rules-stage img { max-width: calc(100% - 80px); max-height: 100%; object-fit: contain; }
     .rules-arrow {
@@ -409,8 +470,8 @@
       #board-area { grid-area: board; max-height: none; }
       #dock-top { grid-area: top; }
       #dock-bottom { grid-area: bottom; }
-      #app.duel #dock-top { transform: none; justify-content: flex-start; }
-      #app.duel #dock-top > .player-bar { order: 0; }
+      /* Duel: each player gets half of the side column; the upper half faces player 2. */
+      #app.duel { grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); }
     }
     @media (min-aspect-ratio: 5/4) and (min-width: 1100px) {
       #app { grid-template-columns: minmax(0, 1fr) 400px; max-width: 1400px; }
@@ -458,7 +519,7 @@
           <h1 id="challenge-title">Challenge</h1>
           <div class="lobby-inner">
             <label>Your dice set <select id="challenge-set"></select></label>
-            <label>Landscape <select id="challenge-location"></select></label>
+            <div><span class="field-title">Landscapes</span><div class="landscape-picks" id="challenge-location"></div></div>
             <label id="challenge-river-label" style="display: none;">River column
               <select id="challenge-river-col">
                 <option value="0">a</option><option value="1" selected>b</option><option value="2">c</option>
@@ -509,41 +570,32 @@
       <div class="paper lobby-card">
         <h1>DiceWar</h1>
         <div class="lobby-inner">
-          <p>Choose a game mode, a dice set for each player and a landscape, then start the match.</p>
+          <p>Choose a game mode, a dice set for each player and any landscapes.</p>
           <div id="lobby-config">
             <div class="lobby-player-config">
               <label>Game Mode
                 <select id="game-mode-select">
-                  <option value="ai">Single player vs AI</option>
-                  <option value="solo">Solo</option>
-                  <option value="duel">Duel</option>
-                  <option value="online">Online lobby</option>
+                  <option value="ai">Against the AI</option>
+                  <option value="solo">Solo (play both sides)</option>
+                  <option value="duel">Duel (two players, one device)</option>
+                  <option value="online">Online (play over the internet)</option>
                   <option value="lab">AI Lab (AI vs AI test runs)</option>
                 </select>
               </label>
             </div>
             <div class="lobby-player-config">
-              <label>Player 1 – Dice Set
+              <label><span id="p1-set-title">Player 1 – Dice Set</span>
                 <select id="p1-dice-set"></select>
               </label>
             </div>
             <div class="lobby-player-config">
-              <label>Player 2 – Dice Set
+              <label><span id="p2-set-title">Player 2 – Dice Set</span>
                 <select id="p2-dice-set"></select>
               </label>
             </div>
             <div class="lobby-player-config">
-              <label>Landscape
-                <select id="use-location">
-                  <option value="">None</option>
-                  <option value="craters">The Craters (RoX)</option>
-                  <option value="oracle">The Oracle (BoD)</option>
-                  <option value="ruins">The Ruins (LoD)</option>
-                  <option value="camp">The Camp (RoM)</option>
-                  <option value="knoll">The Knoll (KoS)</option>
-                  <option value="river">The River (DoA)</option>
-                </select>
-              </label>
+              <span class="field-title">Landscapes</span>
+              <div class="landscape-picks" id="use-location"></div>
               <label id="river-col-label" style="display: none; margin-top: 8px;">River column
                 <select id="river-col">
                   <option value="0">a</option>
@@ -559,7 +611,7 @@
           </div>
 
           <div class="lobby-player-config" id="rules-options">
-            <label id="enforce-rules-label"><input type="checkbox" id="enforce-rules" checked> Enforce rules (beta)</label>
+            <label id="enforce-rules-label"><input type="checkbox" id="enforce-rules" checked> Enforce rules</label>
             <label id="ai-level-label">AI strength
               <select id="ai-level">
                 <option value="easy">Easy</option>
@@ -581,7 +633,7 @@
           </p>
 
           <p id="ai-note" style="display: none; font-size: 14px;">
-            The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only. You play Player 1 (bottom), the AI plays Player 2.
+            You play at the bottom, the AI plays at the top.
           </p>
 
           <button class="big-btn" id="start-game-btn">Start New Game</button>
@@ -668,9 +720,45 @@
   <script src="ui/ring.js"></script>
   <script src="ui/hud.js"></script>
   <script>
-    // --- Würfel-Sets ---
+    // --- Landscapes (location tiles). Any combination can be used in one game. ---
+    // Stored as a comma-separated list of ids (e.g. "oracle,ruins") in online
+    // challenges and games; the order is the order the rules engine applies them.
+    window.Landscapes = (() => {
+      const LIST = [
+        { id: "river", name: "The River", set: "DoA" },
+        { id: "craters", name: "The Craters", set: "RoX" },
+        { id: "oracle", name: "The Oracle", set: "BoD" },
+        { id: "ruins", name: "The Ruins", set: "LoD" },
+        { id: "camp", name: "The Camp", set: "RoM" },
+        { id: "knoll", name: "The Knoll", set: "KoS" },
+      ];
+      const byId = (id) => LIST.find((l) => l.id === id);
+      const sort = (ids) => LIST.map((l) => l.id).filter((id) => ids.includes(id));
+      return {
+        LIST,
+        typeOf: (id) => (byId(id) ? byId(id).set : "neutral"),
+        /** "oracle,ruins" (or an array, or "") -> ["oracle", "ruins"] */
+        parse: (v) => sort(Array.isArray(v) ? v : String(v || "").split(",")),
+        stringify: (ids) => sort(ids).join(","),
+        label: (v) => {
+          const ids = sort(Array.isArray(v) ? v : String(v || "").split(","));
+          return ids.length ? ids.map((id) => byId(id).name.replace(/^The /, "")).join(", ") : "None";
+        },
+        render(container) {
+          container.innerHTML = LIST.map((l) =>
+            `<label class="pick"><input type="checkbox" value="${l.id}"><img src="img/${l.set}/marker.png" alt="">` +
+            `<span>${l.name.replace(/^The /, "")}<small>${l.set}</small></span></label>`).join("");
+        },
+        selected: (container) => sort([...container.querySelectorAll("input:checked")].map((i) => i.value)),
+        select(container, ids) {
+          for (const i of container.querySelectorAll("input")) i.checked = ids.includes(i.value);
+        },
+      };
+    })();
+
+    // --- Dice sets ---
     const DICE_SETS = [
-      { id: "numbers", label: "Numbers" },
+      { id: "numbers", label: "Numbers (no rules)" },
       { id: "LoD", label: "Light of Dragons" },
       { id: "RoM", label: "Roots of Mali" },
       { id: "BoD", label: "Bond of Demons" },
@@ -679,7 +767,7 @@
       { id: "DoA", label: "Dawn of Awakening" }
     ];
 
-    // --- Spielzustand ---
+    // --- Game state ---
     const SIZE = 7;
     const FIELD_TYPES = [
       "neutral",
@@ -761,7 +849,7 @@
     function pushUndoState() {
       // Im Online-Modus keine Undo-Historie aufbauen
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-        return;  // Still deaktivieren
+        return;  // silently ignored
       }
       undoStack.push(createStateSnapshot());
       if (undoStack.length > MAX_HISTORY) {
@@ -799,7 +887,7 @@
     function undo() {
       if (window.RulesMode && RulesMode.active) return RulesMode.undo();
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-        return;  // Still deaktivieren
+        return;  // silently ignored
       }
       if (undoStack.length === 0) return;
       const currentSnap = createStateSnapshot();
@@ -818,7 +906,7 @@
     function redo() {
       if (window.RulesMode && RulesMode.active) return RulesMode.redo();
       if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-        return;  // Still deaktivieren
+        return;  // silently ignored
       }
       if (redoStack.length === 0) return;
       const currentSnap = createStateSnapshot();
@@ -845,7 +933,7 @@
       });
     }
 
-    // --- Board & Feldtypen ---
+    // --- Board & field types ---
     function initBoardState() {
       state.board = [];
       for (let r = 0; r < SIZE; r++) {
@@ -931,9 +1019,30 @@
             "type-RoX",
             "type-KoS",
             "type-DoA",
+            "type-multi",
             "selected"
           );
-          cellEl.classList.add("type-" + data.type);
+          cellEl.querySelectorAll(".tile-part, .tile-seam").forEach((el) => el.remove());
+          const tileTypes = String(data.type || "neutral").split("+");
+          if (tileTypes.length > 1) {
+            // Several landscapes on this field: a diagonally split tile.
+            cellEl.classList.add("type-multi");
+            const n = tileTypes.length;
+            tileTypes.forEach((t, i) => {
+              const part = document.createElement("div");
+              part.className = `tile-part n${n} p${i}`;
+              part.style.setProperty("--tile", `url("img/${t}/marker.png")`);
+              part.style.setProperty("--tile-bg", TILE_PAPER[t] || "#cbb9ae");
+              part.appendChild(document.createElement("div")).className = "sym";
+              cellEl.prepend(part);
+            });
+            const seam = document.createElement("div");
+            seam.className = `tile-seam n${n}`;
+            cellEl.prepend(seam);
+            cellEl.prepend(...cellEl.querySelectorAll(".tile-part"));
+          } else {
+            cellEl.classList.add("type-" + data.type);
+          }
           cellEl.classList.toggle("flow", !!data.flow);
 
           if (
@@ -957,16 +1066,10 @@
             const diceSet = player && player.diceSet ? player.diceSet : "numbers";
 
             const die = document.createElement("div");
-            die.className = "die " + (owner === 1 ? "p1" : "p2");
+            die.className = "die " + (owner === 1 ? "p1" : "p2") + (diceSet === "numbers" ? " numbers" : "");
 
             if (diceSet === "numbers") {
               die.textContent = data.value;
-              die.style.backgroundImage = "none";
-              die.style.background =
-                owner === 1
-                  ? "radial-gradient(circle at 30% 20%, #ff877d, var(--p1-color))"
-                  : "radial-gradient(circle at 30% 20%, #79b5ff, var(--p2-color))";
-              die.style.color = "#fff";
               let transform = "";
               if ((state.gameMode === "duel" || state.gameMode === "online") && owner === 2) {
                 transform = "rotate(180deg)";
@@ -1004,6 +1107,9 @@
         }
       }
     }
+
+    // Paper colour of each landscape tile, for the sections of a split tile.
+    const TILE_PAPER = { RoX: "#c8b5ac", BoD: "#cfbdb4", LoD: "#b3a5a0", RoM: "#ccbab1", KoS: "#c9b5ae", DoA: "#7e94a3" };
 
     function getFieldTypeShortLabel(type) {
       switch (type) {
@@ -1159,7 +1265,7 @@
       }
 
       pushUndoState();
-      // nur wenn noch in erster Spielrunde
+      // only during the first round
       if(state.roundNumber === 1) {
         const index = FIELD_TYPES.indexOf(cell.type);
         const nextIndex = (index + 1) % FIELD_TYPES.length;
@@ -1429,7 +1535,7 @@
       p2Btn.innerHTML = cardFace(p2Set, folder2);
     }
 
-    // --- Lobby / Würfel-Set-Auswahl ---
+    // --- Lobby / dice set choice ---
     function initLobbyDiceSets() {
       const p1Select = document.getElementById("p1-dice-set");
       const p2Select = document.getElementById("p2-dice-set");
@@ -1462,6 +1568,8 @@
 
     document.getElementById("btn-lobby").addEventListener("click", () => {
       document.getElementById("btn-close-lobby").style.display = gameInProgress ? "" : "none";
+      // Duel on one device: the menu faces the player who opened it.
+      lobbyOverlay.classList.toggle("player2", state.gameMode === "duel" && GameUI.actingPlayer() === 2);
       lobbyOverlay.style.display = "flex";
     });
 
@@ -1471,6 +1579,7 @@
 
     function startNewGameBase(p1Set, p2Set, gameMode) {
       document.getElementById("app").classList.remove("online-player2");
+      lobbyOverlay.classList.remove("player2");
       markGameStarted();
       state.currentPlayer = 1;
       state.gameOver = false;
@@ -1550,7 +1659,7 @@
       showRulesImage();
     }
 
-    // --- Online-UI Aktiv/Deaktiv ---
+    // --- Online UI on/off ---
     function enableAllGameElements() {
       document.querySelectorAll(".cell").forEach(cell => {
         cell.style.pointerEvents = "auto";
@@ -1637,7 +1746,7 @@
       }
     }
 
-    // --- Event-Handler für Reserve/Exil etc. ---
+    // --- Event handlers for reserve/exile etc. ---
     function attachBoardListeners() {
       document
         .getElementById("p1-reserve")
@@ -1808,14 +1917,14 @@
       // NEU: Speichern / Laden
       document.getElementById("btn-save").addEventListener("click", () => {
         if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-          return;  // Still deaktivieren
+          return;  // silently ignored
         }
         exportGameStateToFile();
       });
 
       document.getElementById("btn-load").addEventListener("click", () => {
         if (state.gameMode === "online" && state.currentPlayer !== onlineState.localPlayer) {
-          return;  // Still deaktivieren
+          return;  // silently ignored
         }
         document.getElementById("load-file-input").click();
       });
@@ -1950,12 +2059,12 @@
     function initOnlineGameState(meta) {
       if (meta.rules && window.RulesMode && RulesMode.isAvailable(meta.set1, meta.set2)) {
         RulesMode.start(meta.set1, meta.set2, {
-          locations: meta.location ? [meta.location] : [],
+          locations: Landscapes.parse(meta.location),
           riverCol: meta.riverCol,
           startingPlayer: meta.startingPlayer,
         });
       } else {
-        placeLandscapeTiles(meta.location, meta.riverCol);
+        placeLandscapeTiles(Landscapes.parse(meta.location), meta.riverCol);
         setStatus(GameUI.playerName(state.currentPlayer) === "You" ? "Your turn." : GameUI.playerName(state.currentPlayer) + "'s turn.");
       }
     }
@@ -1985,7 +2094,7 @@
       if (window.RulesMode) RulesMode.stop();
       if (gameMode === "ai") {
         if (!window.RulesMode || !RulesMode.isAvailable(p1Set, p2Set)) {
-          alert("The AI opponent is available for Light of Dragons, Rise of Xeladron, Bond of Demons, Roots of Mali, Knights of Steel and Dawn of Awakening. Numbers is played without rules, by humans only.");
+          alert("The Numbers set has no rules, so it can't be played against the AI. Choose another dice set.");
           return;
         }
         originalStartNewGame(p1Set, p2Set, "ai");
@@ -2008,27 +2117,34 @@
     // The Camp is placed by the players (click a field in round 1); the River
     // lies in the three middle rows of the column chosen in the lobby.
     const LANDSCAPE_TILES = {
-      craters: { type: "RoX", fields: [[2, 1], [4, 5]] },
-      oracle: { type: "BoD", fields: [[3, 3]] },
-      ruins: { type: "LoD", fields: [[1, 5], [3, 3], [5, 1]] },
-      knoll: { type: "KoS", fields: [[2, 2], [2, 4], [4, 2], [4, 4]] },
+      craters: [[2, 1], [4, 5]],
+      oracle: [[3, 3]],
+      ruins: [[1, 5], [3, 3], [5, 1]],
+      knoll: [[2, 2], [2, 4], [4, 2], [4, 4]],
     };
 
-    /** Without rules mode: show the chosen landscape's tiles on the board. */
-    function placeLandscapeTiles(v = document.getElementById("use-location").value, riverCol = chosenRiverCol()) {
-      const l = v === "river"
-        ? { type: "DoA", fields: [2, 3, 4].map((r) => [r, riverCol]) }
-        : LANDSCAPE_TILES[v];
-      if (!l) return;
-      for (const [r, c] of l.fields) state.board[r][c].type = l.type;
+    /** Without rules mode: show the chosen landscapes' tiles on the board.
+     *  A field with several tiles gets the type "DoA+BoD+LoD" (split tile). */
+    function placeLandscapeTiles(ids = chosenLocations(), riverCol = chosenRiverCol()) {
+      ids = Landscapes.parse(ids);
+      if (!ids.length) return;
+      for (const id of ids) {
+        const fields = id === "river" ? [2, 3, 4].map((r) => [r, riverCol]) : LANDSCAPE_TILES[id] || [];
+        const type = Landscapes.typeOf(id);
+        for (const [r, c] of fields) {
+          const cell = state.board[r][c];
+          const types = cell.type && cell.type !== "neutral" ? cell.type.split("+") : [];
+          if (!types.includes(type)) types.push(type);
+          cell.type = types.join("+");
+        }
+      }
       updateBoardDOM();
       if (state.gameMode === "online") sendGameState();
     }
 
     // --- Rules mode (engine/ + ui/rules-mode.js) ---
     function chosenLocations() {
-      const v = document.getElementById("use-location").value;
-      return v ? [v] : [];
+      return Landscapes.selected(document.getElementById("use-location"));
     }
 
     function chosenRiverCol() {
@@ -2048,9 +2164,18 @@
     }
 
     function updateRulesOptions() {
+      const mode = document.getElementById("game-mode-select").value;
+      // The Numbers set has no rules, so the AI can't play with it.
+      for (const id of ["p1-dice-set", "p2-dice-set"]) {
+        const sel = document.getElementById(id);
+        const opt = sel.querySelector('option[value="numbers"]');
+        if (opt) opt.disabled = mode === "ai";
+        if (mode === "ai" && sel.value === "numbers") sel.value = "RoX";
+      }
       const p1Set = document.getElementById("p1-dice-set").value;
       const p2Set = document.getElementById("p2-dice-set").value;
-      const mode = document.getElementById("game-mode-select").value;
+      document.getElementById("p1-set-title").textContent = mode === "ai" ? "Your Dice Set" : "Player 1 – Dice Set";
+      document.getElementById("p2-set-title").textContent = mode === "ai" ? "AI Dice Set" : "Player 2 – Dice Set";
       const online = mode === "online";
       const labMode = mode === "lab";
       document.getElementById("lobby-config").querySelectorAll(".lobby-player-config").forEach((el, i) => {
@@ -2063,21 +2188,10 @@
       document.getElementById("enforce-rules-label").style.display = mode === "ai" ? "none" : "flex";
       document.getElementById("ai-level-label").style.display = mode === "ai" ? "flex" : "none";
       document.getElementById("ai-note").style.display = mode === "ai" ? "block" : "none";
-      // With rules enforcement only landscapes the rules engine knows can be chosen.
-      const enforced = available && (mode === "ai" || document.getElementById("enforce-rules").checked);
-      const known = window.RulesMode ? RulesMode.implementedLocations : [];
-      const sel = document.getElementById("use-location");
-      for (const opt of sel.options) {
-        if (!opt.value) continue;
-        if (!opt.dataset.label) opt.dataset.label = opt.textContent;
-        const ok = !enforced || known.includes(opt.value);
-        opt.disabled = !ok;
-        opt.textContent = opt.dataset.label + (ok ? "" : " – coming soon");
-      }
-      if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) sel.value = "";
-      document.getElementById("river-col-label").style.display = sel.value === "river" ? "flex" : "none";
+      document.getElementById("river-col-label").style.display = chosenLocations().includes("river") ? "flex" : "none";
     }
 
+    Landscapes.render(document.getElementById("use-location"));
     ["p1-dice-set", "p2-dice-set", "game-mode-select", "enforce-rules", "use-location"].forEach((id) =>
       document.getElementById(id).addEventListener("change", updateRulesOptions));
     window.addEventListener("rules-mode-ready", updateRulesOptions);
