@@ -45,7 +45,8 @@ Surrounding opposing creatures (8 neighbouring fields) cannot perform Spell acti
 
 ### `DoA.riverwatch.wave_ride` (movement)
 Move any distance around a surrounding friendly creature, or any distance around multiple surrounding friendly creatures. End the movement on a surrounding space of the friendly creature, but not on the original space.
-- **[Confirmed]** The path runs over free fields that surround a friendly creature (ring of 8 neighbouring fields). With several friendly creatures, the River Watch may switch from one ring to an adjacent ring.
+- **[Confirmed]** The path runs over free fields that surround a friendly creature (ring of 8 neighbouring fields).
+- **[Corrected 2026-11-12]** The River Watch rides around one group of friendly creatures only. A group are friendly creatures that are adjacent to each other (horizontally or vertically). It cannot jump from the ring of one group to the ring of another group, even if the rings touch.
 - **[Answer DoA1]** Only orthogonal steps.
 
 ## 4 · Water Weaver

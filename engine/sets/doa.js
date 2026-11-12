@@ -86,33 +86,46 @@ function asleep(s, at) {
 // --- River Watch ------------------------------------------------------------------------------
 
 /** DoA.riverwatch.wave_ride: any distance over free fields (orthogonal steps)
- *  that surround friendly creatures; ends on such a field, not the start. */
+ *  that surround ONE group of friendly creatures; ends on such a field, not on
+ *  the start. A group are friendly creatures that are adjacent to each other
+ *  (horizontally or vertically); the River Watch cannot change from the ring
+ *  of one group to the ring of another group (Daniel, 2026-11-12). */
 function waveRideActions(s, from) {
   const player = s.board[from].owner;
-  const ring = new Set();
-  for (const f of diceOf(s, player)) {
-    if (f === from) continue;
-    for (const n of surrounding(f)) if (empty(s, n) || n === from) ring.add(n);
-  }
-  if (!ring.has(from)) return [];
-  const prev = new Map([[from, null]]);
-  const queue = [from];
-  while (queue.length) {
-    const at = queue.shift();
-    for (const n of adjacent(at)) {
-      if (prev.has(n) || !ring.has(n) || !empty(s, n)) continue;
-      prev.set(n, at);
-      queue.push(n);
+  const others = diceOf(s, player).filter((f) => f !== from);
+  const grouped = new Set();
+  const best = new Map(); // target -> shortest path
+  for (const start of others) {
+    if (grouped.has(start)) continue;
+    // The group of `start` and the free fields around it.
+    const group = [start];
+    grouped.add(start);
+    for (let i = 0; i < group.length; i++) {
+      for (const n of adjacent(group[i])) {
+        if (!grouped.has(n) && n !== from && isOwn(s, n, player)) { grouped.add(n); group.push(n); }
+      }
+    }
+    const ring = new Set();
+    for (const f of group) for (const n of surrounding(f)) if (empty(s, n) || n === from) ring.add(n);
+    if (!ring.has(from)) continue;
+    const prev = new Map([[from, null]]);
+    const queue = [from];
+    for (let i = 0; i < queue.length; i++) {
+      const at = queue[i];
+      for (const n of adjacent(at)) {
+        if (prev.has(n) || !ring.has(n) || !empty(s, n)) continue;
+        prev.set(n, at);
+        queue.push(n);
+      }
+    }
+    for (const to of prev.keys()) {
+      if (to === from || adjacent(from).includes(to)) continue; // 1 field = standard Movement
+      const path = [];
+      for (let at = to; at !== null; at = prev.get(at)) path.unshift(at);
+      if (!best.has(to) || path.length < best.get(to).length) best.set(to, path);
     }
   }
-  const out = [];
-  for (const to of prev.keys()) {
-    if (to === from || adjacent(from).includes(to)) continue; // 1 field = standard Movement
-    const path = [];
-    for (let at = to; at !== null; at = prev.get(at)) path.unshift(at);
-    out.push({ type: "move", ability: A.waveRide, from, to, path });
-  }
-  return out;
+  return [...best].map(([to, path]) => ({ type: "move", ability: A.waveRide, from, to, path }));
 }
 
 // --- Water Weaver ----------------------------------------------------------------------------
