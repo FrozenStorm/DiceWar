@@ -9,7 +9,7 @@ import {
   SQUARES, adjacent, opponent, supplyRow, sq, fieldBonus, defaultDir, step,
 } from "./board.js";
 import { getSet } from "./sets/index.js";
-import { getLocation } from "./locations/index.js";
+import { getLocation, sortLocations } from "./locations/index.js";
 
 export const DICE_PER_PLAYER = 15;
 export const SETUP_POWER = 10;
@@ -36,16 +36,20 @@ export const DEFAULT_MAX_TURNS = 400;
 export function createGame({ set1, set2, startingPlayer = 1, locations = [], maxTurns = DEFAULT_MAX_TURNS, riverCol = 1 }) {
   getSet(set1); getSet(set2); // throws on unknown sets
   const options = { riverCol };
+  // Any combination of locations is allowed (Daniel, 2026-11-12). A field can
+  // carry up to three tiles (Oracle + Ruin + River on the centre field), so
+  // tiles[at] is null or the list of location ids on that field.
+  locations = sortLocations([...new Set(locations)]);
   const tiles = new Array(SQUARES).fill(null);
   for (const id of locations) {
     const loc = getLocation(id);
-    for (const s of loc.squaresFor ? loc.squaresFor(options) : loc.squares) tiles[s] = id;
+    for (const at of loc.squaresFor ? loc.squaresFor(options) : loc.squares) tiles[at] = [...(tiles[at] || []), id];
   }
   return {
     options,
     board: new Array(SQUARES).fill(null),
     tiles,
-    locations: [...locations],
+    locations,
     players: {
       1: { set: set1, reserve: DICE_PER_PLAYER, exile: 0, tp: 0, vp: 0 },
       2: { set: set2, reserve: DICE_PER_PLAYER, exile: 0, tp: 0, vp: 0 },
@@ -130,13 +134,13 @@ export function gainVP(s, player, n) {
 /** Can a die be placed (not moved) onto `at`? The square must be free and no
  *  camp: a camp can only be entered by moving (confirmed by the rules owner). */
 export function canPlace(s, at) {
-  return at >= 0 && !s.board[at] && s.tiles[at] !== "camp";
+  return at >= 0 && !s.board[at] && !hasTile(s, at, "camp");
 }
 
 /** Place a die from the owner's Reserve onto an empty square. */
 export function placeDie(s, at, owner, level, { dir = defaultDir(owner), cause = "ability", source = "reserve" } = {}) {
   if (s.board[at]) throw new Error("placeDie: square occupied");
-  if (s.tiles[at] === "camp" && cause !== "setup") throw new Error("placeDie: dice can't be placed on a camp");
+  if (hasTile(s, at, "camp") && cause !== "setup") throw new Error("placeDie: dice can't be placed on a camp");
   if (s.players[owner][source] <= 0) throw new Error(`placeDie: ${source} empty`);
   s.players[owner][source]--;
   const die = { id: s.nextDieId++, owner, level, dir };
@@ -222,6 +226,9 @@ export function defaultBeats(attLevel, defLevel) {
 export function canDefeat(s, from, to) {
   return canDefeatWith(s, s.board[from], from, to);
 }
+
+/** Does the field `at` carry the tile of location `id`? */
+export const hasTile = (s, at, id) => !!s.tiles[at] && s.tiles[at].includes(id);
 
 /** Like canDefeat, for an attacker `att` that attacks from square `from`
  *  (which may differ from where the die currently stands, e.g. Wormhole). */

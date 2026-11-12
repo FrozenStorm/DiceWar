@@ -1,7 +1,7 @@
 # Online lobby
 
 Players enter a name and land in one shared lobby. They can challenge a free
-player (own dice set, landscape, who starts, rules on/off); the challenged
+player (own dice set, landscapes (any combination), who starts, rules on/off); the challenged
 player picks their dice set and accepts or declines. On accept the game starts
 for both. The challenger is Player 1 (bottom), the challenged player Player 2.
 

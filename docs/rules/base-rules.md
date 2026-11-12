@@ -27,7 +27,7 @@ Each side of the board has 7 areas: Reserve, Warlands, Supply Zone, Exile, Field
 2. All 15 creature dice go into the player's Reserve.
 3. The indicator dice start at 0 (VP and TP).
 4. Each player rolls a die, the higher number starts (reroll on a tie).
-5. Location tiles, if used, are placed as shown on the location card before the setup.
+5. Location tiles, if used, are placed as shown on the location card before the setup. Several locations can be used in the same game (see "Combining locations").
 
 ### Setup phase
 The starting player places any number of dice in their Supply Zone until the creatures there have a combined Power Level of exactly 10. Then the opponent sets up their starting lineup the same way.
@@ -106,6 +106,15 @@ A creature with a higher Power Level defeats all creatures with a lower Power Le
 - **Moving vs. pushing:** an ability that *moves* a creature (also an opposing one) only works on creatures that can move (e.g. not on RoX Portals). Effects that *push* creatures (e.g. the DoA River) affect all creatures. Confirmed by the rules owner.
 - **Exile vs. defeat:** putting a creature straight into the Exile (e.g. RoX Impact) is not a defeat and triggers no "defeated" effects. Confirmed by the publisher.
 - **Alignment** per die is needed for KoS (see [KoS.md](KoS.md)).
+
+## Combining locations
+
+Confirmed (Daniel, 2026-11-12):
+- Every combination of locations is allowed, from none to all six.
+- Tiles may share a field. The field then counts as every tile on it, and all their rules apply. At most three tiles can meet on one field (Oracle, Ruin and River on the centre field). The board shows such a field as a diagonally split tile with a part of each symbol.
+- The River can be placed in any column, also over other tiles.
+- At the end of a turn the River flows first; the end-of-turn effects of the other tiles (Craters, Oracle) follow after it. Order of the location effects: River, Craters, Oracle, Ruins, Camp, Knoll.
+- Creatures with Power Level 1 that the River washes onto a ruin go to the Reserve immediately, as if they had moved there.
 
 ## Glossary
 

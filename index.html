@@ -233,6 +233,29 @@
     .cell.type-KoS::before { background-image: url("img/KoS/marker.png"); }
     .cell.type-DoA::before { background-image: url("img/DoA/marker.png"); }
 
+    /* Several landscape tiles on one field: diagonally split tile, one part per landscape */
+    /* Each part is a section of the tile in the tile's paper colour, with the
+       symbol shrunk, centred in the section and faded out at its edges. */
+    .cell .tile-part { position: absolute; inset: 8%; pointer-events: none; background: var(--tile-bg); }
+    .cell .tile-part .sym {
+      position: absolute; background: var(--tile) center / contain no-repeat;
+      -webkit-mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
+      mask-image: radial-gradient(closest-side, #000 72%, transparent 100%);
+    }
+    .cell .tile-part.n2.p0 .sym { left: -3%; top: -3%; width: 72%; height: 72%; }
+    .cell .tile-part.n2.p1 .sym { left: 31%; top: 31%; width: 72%; height: 72%; }
+    .cell .tile-part.n3.p0 .sym { left: -3%; top: -3%; width: 50%; height: 50%; }
+    .cell .tile-part.n3.p1 .sym { left: 19%; top: 19%; width: 62%; height: 62%; }
+    .cell .tile-part.n3.p2 .sym { left: 53%; top: 53%; width: 50%; height: 50%; }
+    .cell .tile-part.n2.p0 { clip-path: polygon(0 0, 100% 0, 0 100%); }
+    .cell .tile-part.n2.p1 { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+    .cell .tile-part.n3.p0 { clip-path: polygon(0 0, 67% 0, 0 67%); }
+    .cell .tile-part.n3.p1 { clip-path: polygon(67% 0, 100% 0, 100% 33%, 33% 100%, 0 100%, 0 67%); }
+    .cell .tile-part.n3.p2 { clip-path: polygon(100% 33%, 100% 100%, 33% 100%); }
+    .cell .tile-seam { position: absolute; inset: 8%; pointer-events: none; }
+    .cell .tile-seam.n2 { background: linear-gradient(to bottom right, transparent calc(50% - 1px), rgba(43, 34, 24, 0.9) calc(50% - 1px), rgba(43, 34, 24, 0.9) calc(50% + 1px), transparent calc(50% + 1px)); }
+    .cell .tile-seam.n3 { background: linear-gradient(to bottom right, transparent calc(33.5% - 1px), rgba(43, 34, 24, 0.9) calc(33.5% - 1px), rgba(43, 34, 24, 0.9) calc(33.5% + 1px), transparent calc(33.5% + 1px), transparent calc(66.5% - 1px), rgba(43, 34, 24, 0.9) calc(66.5% - 1px), rgba(43, 34, 24, 0.9) calc(66.5% + 1px), transparent calc(66.5% + 1px)); }
+
     /* DoA River: fields in the three middle rows where the flow pushes creatures */
     .cell.flow { background: linear-gradient(90deg, rgba(40, 110, 170, 0.12), rgba(40, 110, 170, 0.32)); }
 
@@ -326,6 +349,21 @@
       background: #f3ecdc; color: var(--ink);
       font-family: var(--body); font-size: 16px;
     }
+    .lobby-card .field-title { font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: 0.03em; }
+    .landscape-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 3px; }
+    .landscape-picks .pick {
+      display: flex; flex-direction: row; align-items: center; gap: 6px;
+      min-height: 40px; padding: 3px 6px; cursor: pointer;
+      border: 1px solid var(--edge); border-radius: 6px; background: #f3ecdc; color: var(--ink);
+      font-family: var(--body); font-size: 15px; font-weight: 400; letter-spacing: 0;
+    }
+    .landscape-picks .pick input { position: absolute; opacity: 0; pointer-events: none; }
+    .landscape-picks .pick img { width: 28px; height: 28px; border-radius: 3px; flex: 0 0 auto; opacity: 0.55; filter: grayscale(0.6); }
+    .landscape-picks .pick small { display: block; font-size: 11px; color: var(--ink-soft); line-height: 1; }
+    .landscape-picks .pick span { line-height: 1.1; }
+    .landscape-picks .pick:has(input:checked) { background: #e7d4a8; box-shadow: inset 0 0 0 2px var(--accent); }
+    .landscape-picks .pick:has(input:checked) img { opacity: 1; filter: none; }
+    .landscape-picks .pick:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
     .big-btn {
       min-height: 46px; padding: 8px 18px;
       border: 1px solid var(--edge); border-radius: 8px;
@@ -458,7 +496,7 @@
           <h1 id="challenge-title">Challenge</h1>
           <div class="lobby-inner">
             <label>Your dice set <select id="challenge-set"></select></label>
-            <label>Landscape <select id="challenge-location"></select></label>
+            <div><span class="field-title">Landscapes</span><div class="landscape-picks" id="challenge-location"></div></div>
             <label id="challenge-river-label" style="display: none;">River column
               <select id="challenge-river-col">
                 <option value="0">a</option><option value="1" selected>b</option><option value="2">c</option>
@@ -509,7 +547,7 @@
       <div class="paper lobby-card">
         <h1>DiceWar</h1>
         <div class="lobby-inner">
-          <p>Choose a game mode, a dice set for each player and a landscape, then start the match.</p>
+          <p>Choose a game mode, a dice set for each player and any landscapes, then start the match.</p>
           <div id="lobby-config">
             <div class="lobby-player-config">
               <label>Game Mode
@@ -532,17 +570,8 @@
               </label>
             </div>
             <div class="lobby-player-config">
-              <label>Landscape
-                <select id="use-location">
-                  <option value="">None</option>
-                  <option value="craters">The Craters (RoX)</option>
-                  <option value="oracle">The Oracle (BoD)</option>
-                  <option value="ruins">The Ruins (LoD)</option>
-                  <option value="camp">The Camp (RoM)</option>
-                  <option value="knoll">The Knoll (KoS)</option>
-                  <option value="river">The River (DoA)</option>
-                </select>
-              </label>
+              <span class="field-title">Landscapes</span>
+              <div class="landscape-picks" id="use-location"></div>
               <label id="river-col-label" style="display: none; margin-top: 8px;">River column
                 <select id="river-col">
                   <option value="0">a</option>
@@ -663,6 +692,42 @@
   <script src="ui/ring.js"></script>
   <script src="ui/hud.js"></script>
   <script>
+    // --- Landscapes (location tiles). Any combination can be used in one game. ---
+    // Stored as a comma-separated list of ids (e.g. "oracle,ruins") in online
+    // challenges and games; the order is the order the rules engine applies them.
+    window.Landscapes = (() => {
+      const LIST = [
+        { id: "river", name: "The River", set: "DoA" },
+        { id: "craters", name: "The Craters", set: "RoX" },
+        { id: "oracle", name: "The Oracle", set: "BoD" },
+        { id: "ruins", name: "The Ruins", set: "LoD" },
+        { id: "camp", name: "The Camp", set: "RoM" },
+        { id: "knoll", name: "The Knoll", set: "KoS" },
+      ];
+      const byId = (id) => LIST.find((l) => l.id === id);
+      const sort = (ids) => LIST.map((l) => l.id).filter((id) => ids.includes(id));
+      return {
+        LIST,
+        typeOf: (id) => (byId(id) ? byId(id).set : "neutral"),
+        /** "oracle,ruins" (or an array, or "") -> ["oracle", "ruins"] */
+        parse: (v) => sort(Array.isArray(v) ? v : String(v || "").split(",")),
+        stringify: (ids) => sort(ids).join(","),
+        label: (v) => {
+          const ids = sort(Array.isArray(v) ? v : String(v || "").split(","));
+          return ids.length ? ids.map((id) => byId(id).name.replace(/^The /, "")).join(", ") : "None";
+        },
+        render(container) {
+          container.innerHTML = LIST.map((l) =>
+            `<label class="pick"><input type="checkbox" value="${l.id}"><img src="img/${l.set}/marker.png" alt="">` +
+            `<span>${l.name.replace(/^The /, "")}<small>${l.set}</small></span></label>`).join("");
+        },
+        selected: (container) => sort([...container.querySelectorAll("input:checked")].map((i) => i.value)),
+        select(container, ids) {
+          for (const i of container.querySelectorAll("input")) i.checked = ids.includes(i.value);
+        },
+      };
+    })();
+
     // --- Würfel-Sets ---
     const DICE_SETS = [
       { id: "numbers", label: "Numbers" },
@@ -926,9 +991,30 @@
             "type-RoX",
             "type-KoS",
             "type-DoA",
+            "type-multi",
             "selected"
           );
-          cellEl.classList.add("type-" + data.type);
+          cellEl.querySelectorAll(".tile-part, .tile-seam").forEach((el) => el.remove());
+          const tileTypes = String(data.type || "neutral").split("+");
+          if (tileTypes.length > 1) {
+            // Several landscapes on this field: a diagonally split tile.
+            cellEl.classList.add("type-multi");
+            const n = tileTypes.length;
+            tileTypes.forEach((t, i) => {
+              const part = document.createElement("div");
+              part.className = `tile-part n${n} p${i}`;
+              part.style.setProperty("--tile", `url("img/${t}/marker.png")`);
+              part.style.setProperty("--tile-bg", TILE_PAPER[t] || "#cbb9ae");
+              part.appendChild(document.createElement("div")).className = "sym";
+              cellEl.prepend(part);
+            });
+            const seam = document.createElement("div");
+            seam.className = `tile-seam n${n}`;
+            cellEl.prepend(seam);
+            cellEl.prepend(...cellEl.querySelectorAll(".tile-part"));
+          } else {
+            cellEl.classList.add("type-" + data.type);
+          }
           cellEl.classList.toggle("flow", !!data.flow);
 
           if (
@@ -999,6 +1085,9 @@
         }
       }
     }
+
+    // Paper colour of each landscape tile, for the sections of a split tile.
+    const TILE_PAPER = { RoX: "#c8b5ac", BoD: "#cfbdb4", LoD: "#b3a5a0", RoM: "#ccbab1", KoS: "#c9b5ae", DoA: "#7e94a3" };
 
     function getFieldTypeShortLabel(type) {
       switch (type) {
@@ -1931,12 +2020,12 @@
     function initOnlineGameState(meta) {
       if (meta.rules && window.RulesMode && RulesMode.isAvailable(meta.set1, meta.set2)) {
         RulesMode.start(meta.set1, meta.set2, {
-          locations: meta.location ? [meta.location] : [],
+          locations: Landscapes.parse(meta.location),
           riverCol: meta.riverCol,
           startingPlayer: meta.startingPlayer,
         });
       } else {
-        placeLandscapeTiles(meta.location, meta.riverCol);
+        placeLandscapeTiles(Landscapes.parse(meta.location), meta.riverCol);
         setStatus(GameUI.playerName(state.currentPlayer) === "You" ? "Your turn." : GameUI.playerName(state.currentPlayer) + "'s turn.");
       }
     }
@@ -1984,27 +2073,34 @@
     // The Camp is placed by the players (click a field in round 1); the River
     // lies in the three middle rows of the column chosen in the lobby.
     const LANDSCAPE_TILES = {
-      craters: { type: "RoX", fields: [[2, 1], [4, 5]] },
-      oracle: { type: "BoD", fields: [[3, 3]] },
-      ruins: { type: "LoD", fields: [[1, 5], [3, 3], [5, 1]] },
-      knoll: { type: "KoS", fields: [[2, 2], [2, 4], [4, 2], [4, 4]] },
+      craters: [[2, 1], [4, 5]],
+      oracle: [[3, 3]],
+      ruins: [[1, 5], [3, 3], [5, 1]],
+      knoll: [[2, 2], [2, 4], [4, 2], [4, 4]],
     };
 
-    /** Without rules mode: show the chosen landscape's tiles on the board. */
-    function placeLandscapeTiles(v = document.getElementById("use-location").value, riverCol = chosenRiverCol()) {
-      const l = v === "river"
-        ? { type: "DoA", fields: [2, 3, 4].map((r) => [r, riverCol]) }
-        : LANDSCAPE_TILES[v];
-      if (!l) return;
-      for (const [r, c] of l.fields) state.board[r][c].type = l.type;
+    /** Without rules mode: show the chosen landscapes' tiles on the board.
+     *  A field with several tiles gets the type "DoA+BoD+LoD" (split tile). */
+    function placeLandscapeTiles(ids = chosenLocations(), riverCol = chosenRiverCol()) {
+      ids = Landscapes.parse(ids);
+      if (!ids.length) return;
+      for (const id of ids) {
+        const fields = id === "river" ? [2, 3, 4].map((r) => [r, riverCol]) : LANDSCAPE_TILES[id] || [];
+        const type = Landscapes.typeOf(id);
+        for (const [r, c] of fields) {
+          const cell = state.board[r][c];
+          const types = cell.type && cell.type !== "neutral" ? cell.type.split("+") : [];
+          if (!types.includes(type)) types.push(type);
+          cell.type = types.join("+");
+        }
+      }
       updateBoardDOM();
       if (state.gameMode === "online") sendGameState();
     }
 
     // --- Rules mode (engine/ + ui/rules-mode.js) ---
     function chosenLocations() {
-      const v = document.getElementById("use-location").value;
-      return v ? [v] : [];
+      return Landscapes.selected(document.getElementById("use-location"));
     }
 
     function chosenRiverCol() {
@@ -2037,21 +2133,10 @@
       document.getElementById("enforce-rules-label").style.display = mode === "ai" ? "none" : "flex";
       document.getElementById("ai-level-label").style.display = mode === "ai" ? "flex" : "none";
       document.getElementById("ai-note").style.display = mode === "ai" ? "block" : "none";
-      // With rules enforcement only landscapes the rules engine knows can be chosen.
-      const enforced = available && (mode === "ai" || document.getElementById("enforce-rules").checked);
-      const known = window.RulesMode ? RulesMode.implementedLocations : [];
-      const sel = document.getElementById("use-location");
-      for (const opt of sel.options) {
-        if (!opt.value) continue;
-        if (!opt.dataset.label) opt.dataset.label = opt.textContent;
-        const ok = !enforced || known.includes(opt.value);
-        opt.disabled = !ok;
-        opt.textContent = opt.dataset.label + (ok ? "" : " – coming soon");
-      }
-      if (sel.selectedOptions[0] && sel.selectedOptions[0].disabled) sel.value = "";
-      document.getElementById("river-col-label").style.display = sel.value === "river" ? "flex" : "none";
+      document.getElementById("river-col-label").style.display = chosenLocations().includes("river") ? "flex" : "none";
     }
 
+    Landscapes.render(document.getElementById("use-location"));
     ["p1-dice-set", "p2-dice-set", "game-mode-select", "enforce-rules", "use-location"].forEach((id) =>
       document.getElementById(id).addEventListener("change", updateRulesOptions));
     window.addEventListener("rules-mode-ready", updateRulesOptions);

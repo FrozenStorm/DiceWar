@@ -174,7 +174,7 @@ test("DoA.awakening.sint_flut: all opposing creatures 1 field, own creatures blo
 test("DoA River: the flow pushes creatures in the middle rows at the end of the starting player's turn", () => {
   let s = position(["......f", ".......", "......d", ".a.....", "2......", ".......", "......."], { ...DOA, locations: ["river"] });
   // River in column b (default): b5, b4 and b3 are river fields.
-  assert.equal(s.tiles[at("b4")], "river");
+  assert.deepEqual(s.tiles[at("b4")], ["river"]);
   s = applyAction(s, { type: "move", from: at("a3"), to: at("a2") }); // leaves the middle rows
   // b4 stands on the river tile and is not moved; g5 is pushed over the edge: 4 VP for player 1.
   assert.equal(s.board[at("b4")].level, 1);
@@ -191,7 +191,7 @@ test("DoA River: the flow pushes creatures in the middle rows at the end of the 
 
 test("DoA River: a creature flowing onto an occupied location tile pushes the occupant downstream", () => {
   const g = createGame({ set1: "DoA", set2: "DoA", locations: ["river"], riverCol: 3 });
-  assert.equal(g.tiles[at("d4")], "river");
+  assert.deepEqual(g.tiles[at("d4")], ["river"]);
   assert.equal(g.tiles[at("b4")], null);
   let s = position(["......f", ".......", ".......", "..1a...", ".......", ".......", "1......"], { ...DOA, locations: ["river"] });
   s.tiles = g.tiles;
