@@ -41,20 +41,27 @@ function chooseAlignments(s, action) {
   }
 }
 
+/** Placements for the given Power Levels: strongest creatures in the centre. */
+export function centredPlacements(levels, start = 0) {
+  const order = [3, 2, 4, 1, 5, 0, 6];
+  const cols = order.slice(start, start + levels.length);
+  if (cols.length < levels.length) cols.push(...order.filter((c) => !cols.includes(c)).slice(0, levels.length - cols.length));
+  return [...levels].sort((x, y) => y - x).map((level, i) => ({ col: cols[i], level }));
+}
+
 function chooseLineup(s, opts) {
   const random = opts.random || Math.random;
+  if (opts.placements) return { type: "setup", placements: opts.placements.map((p) => ({ ...p })) }; // given (developer tools)
   const book = getSet(s.players[s.current].set).aiBook;
+  if (book && book.expertSetups && opts.level === "expert") {
+    // Lineups that did best in self-play tournaments (tools/setups.mjs).
+    const pick = book.expertSetups[Math.floor(random() * book.expertSetups.length)];
+    return { type: "setup", placements: pick.map((p) => ({ ...p })) };
+  }
   if (book && book.setups && opts.level !== "easy") {
     return { type: "setup", placements: book.setups[Math.floor(random() * book.setups.length)] };
   }
   const pool = opts.level === "easy" ? setupLevelCombinations().filter((c) => c.length <= 5) : PREFERRED_LINEUPS;
   const levels = [...pool[Math.floor(random() * pool.length)]];
-  // Strongest creatures in the centre, spread out.
-  const order = [3, 2, 4, 1, 5, 0, 6];
-  const start = Math.floor(random() * 2);
-  const cols = order.slice(start, start + levels.length);
-  if (cols.length < levels.length) cols.push(...order.filter((c) => !cols.includes(c)).slice(0, levels.length - cols.length));
-  levels.sort((a, b) => b - a);
-  return { type: "setup", placements: levels.map((level, i) => ({ col: cols[i], level })) };
+  return { type: "setup", placements: centredPlacements(levels, Math.floor(random() * 2)) };
 }
-

@@ -1,7 +1,7 @@
 // Static evaluation of a position for the AI, in "VP x 100" units.
 
 import { actor, totalVP, diceOf, standardAttacks } from "../engine/core.js";
-import { opponent, fieldBonus, rowOf, colOf, SQUARES } from "../engine/board.js";
+import { opponent, fieldBonus, rowOf, colOf, adjacent, SQUARES } from "../engine/board.js";
 import { getLocation } from "../engine/locations/index.js";
 
 /** Value of a won game. */
@@ -93,6 +93,9 @@ export function evaluate(s, me, W = DEFAULT_WEIGHTS) {
 export const EXPERT_WEIGHTS = {
   tp: 12, reserve: 3, advance: 6, fieldBonus: 10, nearPrey: 12,
   craterOne: 35, craterBoth: 100, oracle: 40, ruin: 40,
+  // Two Ruins held and the third one free next to an own creature (level 2+):
+  // a win is one Movement away, for the player to move / for the other player.
+  ruinThreatToMove: 500, ruinThreatOther: 120,
 };
 
 const CRATERS = getLocation("craters").squares;
@@ -103,7 +106,7 @@ const ORACLE = getLocation("oracle").squares[0];
 const squaresOf = [null, new Int32Array(SQUARES), new Int32Array(SQUARES)];
 const countOf = [0, 0, 0];
 
-function expertSide(s, p, W) {
+function expertSide(s, p, W, toMove) {
   const board = s.board;
   const pl = s.players[p];
   const o = 3 - p;
@@ -139,9 +142,19 @@ function expertSide(s, p, W) {
       }
       case "ruins": {
         // Holding all Ruins at the end of the own turn wins the game.
-        let held = 0;
-        for (const at of RUINS) { const d = board[at]; if (d && d.owner === p) held++; }
+        let held = 0, open = -1;
+        for (const at of RUINS) { const d = board[at]; if (d && d.owner === p) held++; else if (!d) open = at; }
         v += W.ruin * held * held;
+        if (held === RUINS.length - 1 && open >= 0) {
+          const adj = adjacent(open);
+          for (let k = 0; k < adj.length; k++) {
+            const d = board[adj[k]];
+            if (d && d.owner === p && d.level >= 2 && !RUINS.includes(adj[k])) {
+              v += toMove === p ? W.ruinThreatToMove : W.ruinThreatOther;
+              break;
+            }
+          }
+        }
         break;
       }
       case "oracle": {
@@ -168,5 +181,6 @@ export function evaluateExpert(s, me, W = EXPERT_WEIGHTS) {
     if (d) { if (d.owner === 1) squaresOf[1][n1++] = i; else squaresOf[2][n2++] = i; }
   }
   countOf[1] = n1; countOf[2] = n2;
-  return expertSide(s, me, W) - expertSide(s, 3 - me, W);
+  const toMove = s.pending.length ? actor(s) : s.current;
+  return expertSide(s, me, W, toMove) - expertSide(s, 3 - me, W, toMove);
 }
