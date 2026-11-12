@@ -1967,7 +1967,7 @@
       markGameStarted();
       // Last, so that the rules panel (e.g. "Game over") is not overwritten.
       if (window.RulesMode && rg) RulesMode.loadSave(json);
-      if (!quiet) alert(json.lab ? "AI Lab replay loaded (final position)." : "Save loaded.");
+      if (!quiet) alert(json.lab ? "AI Lab replay loaded." : "Save loaded.");
     }
     window.loadSaveData = loadSaveData;
 
