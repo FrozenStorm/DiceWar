@@ -396,7 +396,7 @@
     .big-btn.secondary { background: var(--paper-2); color: var(--ink); }
 
     #rules-overlay { gap: 8px; }
-    #rules-overlay.player2 { transform: rotate(180deg); }
+    #rules-overlay.player2, #lobby-overlay.player2 { transform: rotate(180deg); }
     .rules-stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .rules-stage img { max-width: calc(100% - 80px); max-height: 100%; object-fit: contain; }
     .rules-arrow {
@@ -1563,6 +1563,8 @@
 
     document.getElementById("btn-lobby").addEventListener("click", () => {
       document.getElementById("btn-close-lobby").style.display = gameInProgress ? "" : "none";
+      // Duel on one device: the menu faces the player who opened it.
+      lobbyOverlay.classList.toggle("player2", state.gameMode === "duel" && GameUI.actingPlayer() === 2);
       lobbyOverlay.style.display = "flex";
     });
 
@@ -1572,6 +1574,7 @@
 
     function startNewGameBase(p1Set, p2Set, gameMode) {
       document.getElementById("app").classList.remove("online-player2");
+      lobbyOverlay.classList.remove("player2");
       markGameStarted();
       state.currentPlayer = 1;
       state.gameOver = false;

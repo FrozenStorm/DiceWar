@@ -241,5 +241,5 @@
     });
   }
 
-  window.GameUI = { SET_COLORS, SET_NAMES, setColor, playerName, refreshBars, layout, renderHint, renderManual, isLandscape };
+  window.GameUI = { actingPlayer, SET_COLORS, SET_NAMES, setColor, playerName, refreshBars, layout, renderHint, renderManual, isLandscape };
 })();
