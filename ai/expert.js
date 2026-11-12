@@ -357,3 +357,79 @@ export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
   }
   return { action: best.a, score: best.v, depth: reached, nodes: ctx.nodes, ties: 1 };
 }
+
+// ---------------------------------------------------------------------------
+// Parts for the multi-core search (expert-parallel.js): the root is split up,
+// several background threads each search single root actions.
+// ---------------------------------------------------------------------------
+
+const newContext = (cfg) => ({
+  nodes: 0,
+  deadline: Infinity,
+  maxNodes: Infinity,
+  W: { ...EXPERT_WEIGHTS, ...(cfg.weights || {}) },
+  evalFn: evaluateExpert,
+  lateFrom: cfg.lateFrom ?? 4,
+  veryLateFrom: cfg.veryLateFrom ?? 12,
+  killers: new Int32Array(2 * (MAX_PLY + 2)).fill(-1),
+  history: [new Float64Array(SIGNATURES), new Float64Array(SIGNATURES)],
+});
+
+/**
+ * The start of a search: either the decision is clear without searching
+ * (`result`), or the root actions come back sorted by a first rating.
+ * @returns {{result: object}|{share: number, actions: object[], values: number[]}}
+ */
+export function expertRoot(s, cfg, random) {
+  const me = actor(s);
+  if (!s.pending.length && !s.endOfWar && !s.turn.declared && s.turnNumber >= END_OF_WAR_FROM_TURN
+    && totalVP(s, me) > totalVP(s, 3 - me) && diceOf(s, 3 - me).length <= END_OF_WAR_MAX_DICE) {
+    return { result: { action: { type: "declareEndOfWar" }, score: 0, depth: 0, nodes: 0, ties: 1 } };
+  }
+  const ctx = newContext(cfg);
+  const actions = orderedActions(s, me, ctx, 0, -1);
+  if (actions.length === 1) return { result: { action: actions[0], score: 0, depth: 0, nodes: 0, ties: 1 } };
+  const root = actions.map((a) => {
+    const child = play(s, a, ctx);
+    return { a, v: child.phase === "over" ? overValue(child, me, 1) : ctx.evalFn(child, me, ctx.W), jitter: random() };
+  });
+  root.sort((x, y) => y.v - x.v || x.jitter - y.jitter);
+  return { share: greedyPending(s) ? CHOICE_SHARE : 1, actions: root.map((x) => x.a), values: root.map((x) => x.v) };
+}
+
+/**
+ * One thread of the multi-core search. `start` takes the position and its
+ * root actions; `run` searches one of them to the given depth. With `alpha`
+ * the thread first only checks whether the action beats that value and
+ * searches it exactly only if it does (null: exact straight away).
+ */
+export function createRootSearcher() {
+  let ctx = null, me = 0, children = [], current = 0;
+  return {
+    start(s, cfg, actions) {
+      ctx = newContext(cfg);
+      me = actor(s);
+      current = s.current;
+      ttMeta.fill(0);
+      children = actions.map((a) => play(s, a, ctx));
+    },
+    run(index, depth, alpha, deadline) {
+      const child = children[index];
+      const next = child.phase === "over" || child.current !== current ? depth - 1 : depth;
+      const before = ctx.nodes;
+      ctx.deadline = deadline;
+      try {
+        let v;
+        if (alpha === null) v = childValue(child, me, negamax, next, -Infinity, Infinity, 1, ctx);
+        else {
+          v = childValue(child, me, negamax, next, alpha, alpha + 1e-3, 1, ctx);
+          if (v > alpha) v = childValue(child, me, negamax, next, alpha, Infinity, 1, ctx);
+        }
+        return { v, nodes: ctx.nodes - before };
+      } catch (e) {
+        if (!(e instanceof Timeout)) throw e;
+        return { timeout: true, nodes: ctx.nodes - before };
+      }
+    },
+  };
+}

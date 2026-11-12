@@ -1953,7 +1953,9 @@
       const rg = snapshot.rulesGame;
       if (window.RulesMode) RulesMode.stop();
       if (!snapshot.board && rg && rg.players) {
-        startNewGameBase(rg.players[1].set, rg.players[2].set, "duel");
+        // AI Lab replays are usually looked at by one person on a computer:
+        // board as in a game against the AI (nothing turned towards player 2).
+        startNewGameBase(rg.players[1].set, rg.players[2].set, json.lab ? "ai" : "duel");
       } else {
         applyStateSnapshot(snapshot);
       }

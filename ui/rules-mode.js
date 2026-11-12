@@ -130,7 +130,54 @@ function getWorker() {
   return worker;
 }
 
+// Expert uses several processor cores when the device has them: a pool of
+// search threads (ai/expert-parallel.js), coordinated from here.
+let expertPool = null;
+let expertPoolFailed = false;
+
+async function getExpertPool() {
+  if (expertPool || expertPoolFailed) return expertPool;
+  const cores = navigator.hardwareConcurrency || 1;
+  const size = Math.min(8, cores - 1); // one core stays free for the page
+  if (size < 2) { expertPoolFailed = true; return null; }
+  try {
+    const { createPool } = await import("../ai/expert-parallel.js");
+    const workers = Array.from({ length: size }, () => new Worker(new URL("./expert-worker.js", import.meta.url), { type: "module" }));
+    const pool = createPool(workers, (w, handler) => { w.onmessage = (e) => handler(e.data); });
+    for (const w of workers) {
+      w.onerror = (e) => {
+        console.warn("Expert search thread failed, using a single core", e);
+        expertPoolFailed = true;
+        expertPool = null;
+        pool.fail(new Error("search thread failed"));
+        for (const x of workers) x.terminate();
+      };
+    }
+    expertPool = pool;
+  } catch (err) {
+    console.warn("Multi-core search not available", err);
+    expertPoolFailed = true;
+  }
+  return expertPool;
+}
+
+async function askExpertParallel(game) {
+  const pool = await getExpertPool();
+  if (!pool) return null;
+  try {
+    const [{ chooseExpertActionParallel }, { LEVELS }] = await Promise.all([import("../ai/expert-parallel.js"), import("../ai/ai.js")]);
+    return (await chooseExpertActionParallel(game, LEVELS.expert, Math.random, pool)).action;
+  } catch (err) {
+    console.warn("Multi-core search failed, using a single core", err);
+    return null;
+  }
+}
+
 async function askAI(game, level) {
+  if (level === "expert" && game.phase !== "setup") {
+    const action = await askExpertParallel(game);
+    if (action) return action;
+  }
   const w = getWorker();
   if (w) {
     const res = await new Promise((resolve) => {
