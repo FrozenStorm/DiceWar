@@ -166,7 +166,9 @@ function bloodUpgradeOptions(s, pending) {
   const targets = upgradeTargets(s, player, pending.data.caster);
   if (!targets.length) return [];
   return [
-    ...targets.map((t) => ({ type: "choice", kind: A.bloodUpgrade, upgrade: t })),
+    // Upgrades in another order end the same way: for the AI, only the
+    // order by square counts (the others are marked redundant).
+    ...targets.map((t) => ({ type: "choice", kind: A.bloodUpgrade, upgrade: t, ...(t < (pending.data.last ?? -1) ? { redundant: true } : {}) })),
     { type: "choice", kind: A.bloodUpgrade, finish: true },
   ];
 }
@@ -286,7 +288,7 @@ export const LoD = {
         } else {
           gainTP(s, player, -1);
           setLevel(s, a.upgrade, s.board[a.upgrade].level + 1);
-          pushChoice(s, player, A.bloodUpgrade, pending.data);
+          pushChoice(s, player, A.bloodUpgrade, { ...pending.data, last: a.upgrade });
           settleBloodTrade(s, player, pending.data.caster);
         }
         break;

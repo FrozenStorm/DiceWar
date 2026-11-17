@@ -13,9 +13,10 @@ export const isRedundant = (a) => !!(a.redundant || (a.sub && a.sub.redundant));
 
 /** Is the next step a decision the AI makes greedily (long chains of small
  *  steps such as LoD Blood Trade upgrades would blow up the search)? */
-export function greedyPending(s) {
+export function greedyPending(s, full = null) {
   if (!s.pending.length || s.phase === "over") return false;
   const p = s.pending[0];
+  if (full && full.includes(p.kind)) return false; // searched like any other move
   const set = getSet(s.players[p.player].set);
   return !!(set.aiGreedyChoices && set.aiGreedyChoices.includes(p.kind));
 }
@@ -34,10 +35,11 @@ export function greedyChoice(s, W, evalFn = evaluate) {
 
 /** Resolve greedy decisions until the state needs a real choice again.
  *  `inSearch`: decisions a set marks with aiSkipInSearch get that fixed answer
- *  (keeps the look-ahead of the expert level fast). */
-export function resolveGreedy(s, W, evalFn = evaluate, inSearch = false) {
+ *  (keeps the look-ahead of the expert level fast). `full`: decision kinds
+ *  that are searched instead of decided greedily. */
+export function resolveGreedy(s, W, evalFn = evaluate, inSearch = false, full = null) {
   let guard = 0;
-  while (greedyPending(s) && guard++ < 20) {
+  while (greedyPending(s, full) && guard++ < 20) {
     const p = s.pending[0];
     const set = getSet(s.players[p.player].set);
     const fixed = inSearch && set.aiSkipInSearch ? set.aiSkipInSearch(p) : null;

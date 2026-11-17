@@ -157,7 +157,7 @@ function tick(ctx) {
 }
 
 /** Apply `a`, settle the decisions the AI takes greedily. */
-const play = (s, a, ctx) => resolveGreedy(applyAction(s, a), ctx.W, ctx.evalFn, true);
+const play = (s, a, ctx) => resolveGreedy(applyAction(s, a), ctx.W, ctx.evalFn, true, ctx.full);
 
 /** Value of `child` for `p`, searched with the given routine. */
 function childValue(child, p, search, depth, alpha, beta, ply, ctx) {
@@ -285,7 +285,7 @@ export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
   const evalFn = evaluateExpert;
   // Small decisions inside a turn (which the look-ahead settles greedily) are
   // searched like any other move here, with a part of the thinking time.
-  const share = greedyPending(s) ? CHOICE_SHARE : 1;
+  const share = greedyPending(s, cfg.fullChoices) ? CHOICE_SHARE : 1;
 
   // The End of War costs no action. When the opponent has only a few
   // creatures left and could run away for ever, the leading side declares it.
@@ -301,6 +301,7 @@ export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
     W, evalFn,
     lateFrom: cfg.lateFrom ?? 4,
     veryLateFrom: cfg.veryLateFrom ?? 12,
+    full: cfg.fullChoices || null, // decision kinds searched instead of decided greedily
     killers: new Int32Array(2 * (MAX_PLY + 2)).fill(-1),
     history: [new Float64Array(SIGNATURES), new Float64Array(SIGNATURES)],
   };
@@ -371,6 +372,7 @@ const newContext = (cfg) => ({
   evalFn: evaluateExpert,
   lateFrom: cfg.lateFrom ?? 4,
   veryLateFrom: cfg.veryLateFrom ?? 12,
+  full: cfg.fullChoices || null,
   killers: new Int32Array(2 * (MAX_PLY + 2)).fill(-1),
   history: [new Float64Array(SIGNATURES), new Float64Array(SIGNATURES)],
 });
@@ -394,7 +396,7 @@ export function expertRoot(s, cfg, random) {
     return { a, v: child.phase === "over" ? overValue(child, me, 1) : ctx.evalFn(child, me, ctx.W), jitter: random() };
   });
   root.sort((x, y) => y.v - x.v || x.jitter - y.jitter);
-  return { share: greedyPending(s) ? CHOICE_SHARE : 1, actions: root.map((x) => x.a), values: root.map((x) => x.v) };
+  return { share: greedyPending(s, cfg.fullChoices) ? CHOICE_SHARE : 1, actions: root.map((x) => x.a), values: root.map((x) => x.v) };
 }
 
 /**
