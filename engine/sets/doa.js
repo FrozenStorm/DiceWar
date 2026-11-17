@@ -379,7 +379,8 @@ export const DoA = {
         return godcatcherOptions(s, pending.player);
       case A.newBeginning:
         if (s.players[pending.player].reserve < 1) return [];
-        return inSquareOrder(freeFields(s).map((place) => ({ type: "choice", kind: A.newBeginning, place })), pending.data.last);
+        return inSquareOrder(freeFields(s).map((place) => ({ type: "choice", kind: A.newBeginning, place })),
+          pending.data.last, "place", Math.min(pending.data.left, s.players[pending.player].reserve));
       default:
         return [];
     }

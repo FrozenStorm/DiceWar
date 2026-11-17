@@ -312,7 +312,8 @@ export const RoM = {
         return followOptions(s, pending);
       case A.children:
         if (s.players[pending.player].reserve < 1) return [];
-        return inSquareOrder(freeOwnZone(s, pending.player).map((place) => ({ type: "choice", kind: A.children, place })), pending.data.last);
+        return inSquareOrder(freeOwnZone(s, pending.player).map((place) => ({ type: "choice", kind: A.children, place })),
+          pending.data.last, "place", Math.min(pending.data.left, s.players[pending.player].reserve));
       default:
         return [];
     }

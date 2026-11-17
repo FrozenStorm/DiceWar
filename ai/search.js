@@ -180,13 +180,14 @@ function childValue(child, p, search, depth, alpha, beta, ply, ctx) {
 }
 
 /** The options of the decision open in `s` with their results, best rated
- *  first for the player who decides. */
-function optionsByEvaluation(s, ctx) {
+ *  first for the player who decides. Placements in square order: after a
+ *  placement on a late square only "redundant" earlier squares may be left;
+ *  that order of placements is tried elsewhere, so there are no options then,
+ *  unless `deadEnd` asks for the redundant ones. */
+function optionsByEvaluation(s, ctx, deadEnd = false) {
   const who = actor(s);
   const all = legalActions(s);
-  // Placements in square order: after a placement on a late square, only the
-  // "redundant" earlier squares may be left. They are taken then.
-  const skip = all.some((a) => !isRedundant(a));
+  const skip = !deadEnd || all.some((a) => !isRedundant(a));
   const acts = [], children = [], values = [];
   for (let i = 0; i < all.length; i++) {
     if (skip && isRedundant(all[i])) continue;
@@ -205,7 +206,7 @@ function quiescence(s, p, depth, alpha, beta, ply, ctx) {
   if (s.pending.length) {
     // Beyond the horizon a decision inside the turn is taken by the
     // evaluation of its options.
-    const { children } = optionsByEvaluation(s, ctx);
+    const { children } = optionsByEvaluation(s, ctx, true);
     if (!children.length || ply >= MAX_PLY) return ctx.evalFn(s, p, ctx.W);
     const child = children[0];
     const next = child.phase !== "over" && child.current !== s.current ? depth - 1 : depth;
@@ -267,7 +268,7 @@ function negamax(s, p, depth, alpha, beta, ply, ctx) {
   let acts, children = null;
   if (inTurn) ({ acts, children } = optionsByEvaluation(s, ctx));
   else acts = orderedActions(s, p, ctx, ply, tableMove);
-  if (!acts.length) return ctx.evalFn(s, p, ctx.W);
+  if (!acts.length) return inTurn ? -Infinity : ctx.evalFn(s, p, ctx.W); // in a turn: an order tried elsewhere
   let best = -Infinity, bestSig = -1;
   for (let i = 0; i < acts.length; i++) {
     const a = acts[i];
@@ -342,7 +343,7 @@ function declaresEndOfWar(s, me) {
 function rootStart(s, cfg, random, ctx) {
   const me = actor(s);
   if (declaresEndOfWar(s, me)) return { result: { action: { type: "declareEndOfWar" }, score: 0, depth: 0, nodes: 0 } };
-  const actions = s.pending.length ? optionsByEvaluation(s, ctx).acts : orderedActions(s, me, ctx, 0, -1);
+  const actions = s.pending.length ? optionsByEvaluation(s, ctx, true).acts : orderedActions(s, me, ctx, 0, -1);
   if (actions.length === 1) return { result: { action: actions[0], score: 0, depth: 0, nodes: 0 } };
   const root = actions.map((a) => {
     const child = applyAction(s, a);

@@ -448,7 +448,8 @@ export const KoS = {
       case A.leadership: return leadershipOptions(s, pending);
       case A.supply:
         if (s.players[player].reserve < 1) return [];
-        return inSquareOrder(swordPlacements({ type: "choice", kind: A.supply }, edgeFields(s, player), player), pending.data.last);
+        return inSquareOrder(swordPlacements({ type: "choice", kind: A.supply }, edgeFields(s, player), player),
+          pending.data.last, "place", Math.min(pending.data.left, s.players[player].reserve));
       case A.reinforcements: return reinforcementOptions(s, pending);
       default: return [];
     }

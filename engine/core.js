@@ -226,10 +226,13 @@ export function pushChoice(s, player, kind, data = {}) {
 /** Several steps of the same kind in a row whose order does not change the
  *  result (placing 3 Sprouts, spending Blood Trade TP): options on a square
  *  before the one of the previous step (`last`) are marked `redundant`, so the
- *  AI tries every combination only once. The user interface offers them all. */
-export function inSquareOrder(options, last, field = "place") {
-  if (last === undefined) return options;
-  return options.map((o) => (o[field] < last ? { ...o, redundant: true } : o));
+ *  AI tries every combination only once. With `remaining` placements still to
+ *  come (this one included), so are squares with too few later squares left
+ *  for the others. The user interface offers all options. */
+export function inSquareOrder(options, last, field = "place", remaining = 1) {
+  const squares = [...new Set(options.map((o) => o[field]))].sort((a, b) => a - b);
+  const latest = remaining > 1 ? squares[squares.length - remaining] : Infinity;
+  return options.map((o) => (o[field] < (last ?? -1) || o[field] > latest ? { ...o, redundant: true } : o));
 }
 
 // ---------------------------------------------------------------------------
