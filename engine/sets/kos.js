@@ -255,12 +255,12 @@ function backMoves(s, from) {
 /** KoS.knight.breakthrough: 1 virtual VP per Formation with Power Level 9+. */
 function breakthrough(s, player) {
   const board = s.board;
-  let knight = false;
+  let knight = false, power = 0;
   for (let i = 0; i < SQUARES; i++) {
     const d = board[i];
-    if (d && d.owner === player && d.level === KNIGHT) { knight = true; break; }
+    if (d && d.owner === player) { power += d.level; if (d.level === KNIGHT) knight = true; }
   }
-  if (!knight) return 0;
+  if (!knight || power < FORMATION_POWER) return 0;
   // Flood fill over the own creatures; `seenMark` is reused between calls.
   const mark = ++seenMark;
   let vp = 0;
@@ -306,9 +306,10 @@ function reinforcementOptions(s, pending) {
  *  - Silver Spear (Impatience, Daniel 2026-11-11): before and/or after.
  *  - Burning Stag (Cautiousness): after the action.
  *  Turning before a Movement or Attack that does not depend on the alignment
- *  gives the same result as turning afterwards; these variants are marked
- *  `redundant` so the AI skips them (the UI offers them when a die is clicked). */
-function decorate(s, player, actions) {
+ *  gives the same result as turning afterwards; these variants are only made
+ *  with `variants` (the UI offers them when a die is clicked) and are marked
+ *  `redundant`. */
+function decorate(s, player, actions, variants) {
   const out = [];
   for (const a of actions) {
     if ((a.type === "move" || a.type === "attack") && a.face === undefined) {
@@ -316,7 +317,7 @@ function decorate(s, player, actions) {
       if (d && d.owner === player && ORIENTING.includes(d.level)) {
         if (d.level === SHIELD && a.pre !== undefined) { out.push(a); continue; } // Shield Strike after turning
         for (const face of FACES) out.push({ ...a, face });
-        if (d.level === STAG) continue;
+        if (d.level === STAG || !variants) continue;
         for (const pre of FACES) {
           if (pre === d.dir) continue;
           if (d.level === SHIELD) out.push({ ...a, pre, redundant: true });

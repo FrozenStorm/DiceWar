@@ -184,9 +184,12 @@ function childValue(child, p, search, depth, alpha, beta, ply, ctx) {
 function optionsByEvaluation(s, ctx) {
   const who = actor(s);
   const all = legalActions(s);
+  // Placements in square order: after a placement on a late square, only the
+  // "redundant" earlier squares may be left. They are taken then.
+  const skip = all.some((a) => !isRedundant(a));
   const acts = [], children = [], values = [];
   for (let i = 0; i < all.length; i++) {
-    if (isRedundant(all[i])) continue;
+    if (skip && isRedundant(all[i])) continue;
     const child = applyAction(s, all[i]);
     acts.push(all[i]); children.push(child);
     values.push(child.phase === "over" ? overValue(child, who, 0) : ctx.evalFn(child, who, ctx.W));

@@ -24,7 +24,8 @@
 //   afterAttack(s, at, die)              -> a die of this set defeated a creature by attacking
 //   beforeTurnEnd(s, player)             -> may queue last decisions before the turn ends
 //   defeatRules(s, at, die)             -> { noVP, dest } for a defeat of this set's creature
-//   decorateActions(s, player, actions)  -> variants of the own actions (e.g. KoS alignment)
+//   decorateActions(s, player, actions, variants) -> variants of the own actions (e.g. KoS alignment);
+//                                           `variants`: also those that end like another one (marked redundant)
 //   afterAction(s, player)               -> after every action of either player (e.g. KoS Phalanx)
 //
 // Rule texts: docs/rules/<SET>.md. Ability IDs in the code match the docs.

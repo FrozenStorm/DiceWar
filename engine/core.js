@@ -408,7 +408,9 @@ export function legalActions(s) {
     const p = s.pending[0];
     return setOf(s, p.player).choiceOptions(s, p);
   }
-  const actions = [...mainActions(s)];
+  // With the variants that end the same way as another action (the user
+  // interface offers them), e.g. KoS: turning before instead of after.
+  const actions = computeMainActions(s, true);
   if (!s.endOfWar && !s.turn.declared) actions.push({ type: "declareEndOfWar" });
   return actions;
 }
@@ -421,14 +423,15 @@ export function legalActions(s) {
 // and the symbol key keeps it out of save files and worker messages.
 const TURN_START_ACTIONS = Symbol("turnStartActions");
 
-/** Standard actions (and set abilities) of the current player. The returned
- *  list may be shared: do not change it. */
+/** Standard actions (and set abilities) of the current player, without
+ *  variants that end the same way as another action (used by the AI). The
+ *  returned list may be shared: do not change it. */
 export function mainActions(s) {
   const cached = s[TURN_START_ACTIONS];
   return cached && cached.state === s ? cached.actions : computeMainActions(s);
 }
 
-function computeMainActions(s) {
+function computeMainActions(s, variants = false) {
   const player = s.current;
   let out = [];
   for (const from of diceOf(s, player)) out.push(...standardActionsOf(s, from));
@@ -438,7 +441,7 @@ function computeMainActions(s) {
   const other = setOf(s, opponent(player));
   if (other.constrainOpponent) out = other.constrainOpponent(s, player, out);
   // Variants of actions, e.g. KoS: the alignment chosen with a Movement or Attack.
-  if (set.decorateActions) out = set.decorateActions(s, player, out);
+  if (set.decorateActions) out = set.decorateActions(s, player, out, variants);
   return out;
 }
 

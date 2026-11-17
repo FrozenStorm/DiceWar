@@ -299,7 +299,10 @@ export const LoD = {
   },
 
   // LoD.dragon.luminous_flame: 1 virtual VP per Light Dragon (level 6) more than the opponent.
-  virtualVP: (s, player) => Math.max(0, countLevel(s, player, DRAGON) - countLevel(s, opponent(player), 6)),
+  virtualVP(s, player) {
+    const dragons = countLevel(s, player, DRAGON);
+    return dragons ? Math.max(0, dragons - countLevel(s, opponent(player), 6)) : 0;
+  },
 
   // Starting lineups of the AI.
   aiBook: {
