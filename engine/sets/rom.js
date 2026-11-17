@@ -3,7 +3,7 @@
 import { adjacent, step, rowOf, colOf, sq, SIZE, SQUARES, inOwnZone, opponent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, doAttack, relocate, canDefeatWith, standardActionsOf, performAction,
+  pushChoice, inSquareOrder, doMove, doAttack, relocate, canDefeatWith, standardActionsOf, performAction,
   finishMoveOrAttack, lineSplits,
   canPlace,
 } from "../core.js";
@@ -312,7 +312,7 @@ export const RoM = {
         return followOptions(s, pending);
       case A.children:
         if (s.players[pending.player].reserve < 1) return [];
-        return freeOwnZone(s, pending.player).map((place) => ({ type: "choice", kind: A.children, place }));
+        return inSquareOrder(freeOwnZone(s, pending.player).map((place) => ({ type: "choice", kind: A.children, place })), pending.data.last);
       default:
         return [];
     }
@@ -330,7 +330,7 @@ export const RoM = {
       case A.children: {
         placeDie(s, a.place, player, SPROUT);
         const left = pending.data.left - 1;
-        if (left > 0) pushChoice(s, player, A.children, { ...pending.data, left });
+        if (left > 0) pushChoice(s, player, A.children, { ...pending.data, left, last: a.place });
         else removeDie(s, pending.data.at, "reserve", "split");
         break;
       }
@@ -342,7 +342,6 @@ export const RoM = {
   // RoM.mali.deep_roots: 1 virtual VP per own Mali in the opponent's zone.
   virtualVP: (s, player) => diceOf(s, player, MALI).filter((at) => inOwnZone(opponent(player), at)).length,
 
-  aiGreedyChoices: [A.children],
 
   // Starting lineups of the AI.
   aiBook: {

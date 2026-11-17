@@ -9,7 +9,7 @@
 import { adjacent, diagonal, surrounding, step, rowOf, colOf, sq, onBoard, SIZE, SQUARES, opponent, supplyRow, defaultDir } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, doAttack, relocate, defeat, canDefeatWith, canMove, canRaise,
+  pushChoice, inSquareOrder, doMove, doAttack, relocate, defeat, canDefeatWith, canMove, canRaise,
   isProtected, standardActionsOf, standardMoves, performAction, mainActions, actionOrigin,
   canPlace,
 } from "../core.js";
@@ -20,10 +20,13 @@ const FORMATION_POWER = 9;
 const FACES = [0, 1, 2, 3];
 /** One option per alignment for a die placed on `place`. */
 const withFaces = (opt) => FACES.map((face) => ({ ...opt, face }));
-/** The same for a First Sword of `player`: its alignment only matters once it
- *  has been upgraded, so the AI only looks at the one facing the opponent. */
-const withSwordFaces = (opt, player) =>
-  FACES.map((face) => (face === defaultDir(player) ? { ...opt, face } : { ...opt, face, redundant: true }));
+/** Options to place a First Sword of `player` on one of `places`, every
+ *  alignment. Facing the opponent comes first for all places (the alignment
+ *  of a First Sword only matters once it has been upgraded). */
+function swordPlacements(opt, places, player) {
+  const forward = defaultDir(player);
+  return [forward, ...FACES.filter((f) => f !== forward)].flatMap((face) => places.map((place) => ({ ...opt, place, face })));
+}
 
 const A = {
   agile: "KoS.sword.agile",
@@ -290,12 +293,9 @@ function reinforcementOptions(s, pending) {
   if (s.players[pending.player].reserve < 1) return [];
   const free = surrounding(at).filter((t) => canPlace(s, t));
   const level = REINF_ORDER[stage];
-  const out = [];
-  for (const place of free) {
-    const opt = { type: "choice", kind: A.reinforcements, place };
-    out.push(...(level === SWORD ? withSwordFaces(opt, pending.player) : withFaces(opt)));
-  }
-  return out;
+  const opt = { type: "choice", kind: A.reinforcements };
+  if (level === SWORD) return swordPlacements(opt, free, pending.player);
+  return free.flatMap((place) => withFaces({ ...opt, place }));
 }
 
 // --- Orientation ---------------------------------------------------------------------------
@@ -441,13 +441,13 @@ export const KoS = {
       case A.relentless: return relentlessOptions(s, pending);
       case A.rescue:
         if (s.players[player].exile < 1) return [];
-        return [...edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.rescue, place }, player)), { type: "choice", kind: A.rescue, skip: true }];
+        return [...swordPlacements({ type: "choice", kind: A.rescue }, edgeFields(s, player), player), { type: "choice", kind: A.rescue, skip: true }];
       case A.toSpears:
-        return diceOf(s, player, SHIELD).map((upgrade) => ({ type: "choice", kind: A.toSpears, upgrade }));
+        return inSquareOrder(diceOf(s, player, SHIELD).map((upgrade) => ({ type: "choice", kind: A.toSpears, upgrade })), pending.data.last, "upgrade");
       case A.leadership: return leadershipOptions(s, pending);
       case A.supply:
         if (s.players[player].reserve < 1) return [];
-        return edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.supply, place }, player));
+        return inSquareOrder(swordPlacements({ type: "choice", kind: A.supply }, edgeFields(s, player), player), pending.data.last);
       case A.reinforcements: return reinforcementOptions(s, pending);
       default: return [];
     }
@@ -466,7 +466,7 @@ export const KoS = {
         break;
       case A.toSpears:
         setLevel(s, a.upgrade, s.board[a.upgrade].level + 1);
-        if (pending.data.left > 1) pushChoice(s, player, A.toSpears, { left: pending.data.left - 1 });
+        if (pending.data.left > 1) pushChoice(s, player, A.toSpears, { left: pending.data.left - 1, last: a.upgrade });
         break;
       case A.leadership: {
         if (a.finish) break;
@@ -479,7 +479,7 @@ export const KoS = {
       case A.supply: {
         placeDie(s, a.place, player, SWORD, { dir: a.face ?? defaultDir(player) });
         const left = pending.data.left - 1;
-        if (left > 0) pushChoice(s, player, A.supply, { ...pending.data, left });
+        if (left > 0) pushChoice(s, player, A.supply, { ...pending.data, left, last: a.place });
         else removeDie(s, pending.data.at, "reserve", "split");
         break;
       }
@@ -497,10 +497,6 @@ export const KoS = {
 
   virtualVP: breakthrough,
 
-  aiGreedyChoices: [A.relentless, A.rescue, A.toSpears, A.leadership, A.supply, A.reinforcements],
-  // Inside its look-ahead the expert AI skips the additional actions of the
-  // other First Swords (it still decides them properly when they come up).
-  aiSkipInSearch: (pending) => (pending.kind === A.relentless ? { type: "choice", kind: A.relentless, skip: true } : null),
 
   // Starting lineups of the AI.
   aiBook: {

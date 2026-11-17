@@ -26,8 +26,6 @@
 //   defeatRules(s, at, die)             -> { noVP, dest } for a defeat of this set's creature
 //   decorateActions(s, player, actions)  -> variants of the own actions (e.g. KoS alignment)
 //   afterAction(s, player)               -> after every action of either player (e.g. KoS Phalanx)
-//   aiGreedyChoices                      -> decision kinds the AI resolves greedily
-//   aiSkipInSearch(pending)              -> answer the expert AI assumes for a decision inside its look-ahead (or null)
 //
 // Rule texts: docs/rules/<SET>.md. Ability IDs in the code match the docs.
 

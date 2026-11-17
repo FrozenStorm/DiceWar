@@ -4,7 +4,7 @@ import {
   adjacent, surrounding, step, rowOf, colOf, sq, SQUARES, SURROUND, onBoard, inOwnZone, opponent,
 } from "../board.js";
 import {
-  diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve, pushChoice,
+  diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve, pushChoice, inSquareOrder,
   relocate, defeat, defaultBeats, canMove, canRaise, isProtected, standardMoves, emit,
   finishMoveOrAttack, MAX_LEVEL,
   canPlace,
@@ -370,7 +370,7 @@ export const DoA = {
 
   // DoA.fisher.godcatcher: at the end of the turn, while more than 3 Fishers.
   beforeTurnEnd(s, player) {
-    if (godcatcherOptions(s, player).length) pushChoice(s, player, A.godcatcher);
+    if (diceOf(s, player, FISHER).length > 3) pushChoice(s, player, A.godcatcher);
   },
 
   choiceOptions(s, pending) {
@@ -379,7 +379,7 @@ export const DoA = {
         return godcatcherOptions(s, pending.player);
       case A.newBeginning:
         if (s.players[pending.player].reserve < 1) return [];
-        return freeFields(s).map((place) => ({ type: "choice", kind: A.newBeginning, place }));
+        return inSquareOrder(freeFields(s).map((place) => ({ type: "choice", kind: A.newBeginning, place })), pending.data.last);
       default:
         return [];
     }
@@ -397,7 +397,7 @@ export const DoA = {
         const left = pending.data.left - 1;
         const { at } = pending.data;
         if (left > 0 && s.players[player].reserve > 0 && freeFields(s).length) {
-          pushChoice(s, player, A.newBeginning, { ...pending.data, left });
+          pushChoice(s, player, A.newBeginning, { ...pending.data, left, last: a.place });
         } else if (isOwn(s, at, player, AWAKENING)) {
           setLevel(s, at, WATCH);
         }
@@ -411,7 +411,6 @@ export const DoA = {
   // DoA.awakening.twilight_hour: 1 virtual VP per Awakening in an open line to another.
   virtualVP: (s, player) => diceOf(s, player, AWAKENING).filter((at) => twilight(s, at, player)).length,
 
-  aiGreedyChoices: [A.godcatcher, A.newBeginning],
 
   // Starting lineups of the AI.
   aiBook: {

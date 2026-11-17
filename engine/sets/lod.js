@@ -3,7 +3,7 @@
 import { adjacent, diagonal, step, opponent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, doAttack, relocate, canDefeatWith, canRaise, isProtected,
+  pushChoice, inSquareOrder, doMove, doAttack, relocate, canDefeatWith, canRaise, isProtected,
   standardActionsOf, performAction, lineSplits,
 } from "../core.js";
 
@@ -166,9 +166,7 @@ function bloodUpgradeOptions(s, pending) {
   const targets = upgradeTargets(s, player, pending.data.caster);
   if (!targets.length) return [];
   return [
-    // Upgrades in another order end the same way: for the AI, only the
-    // order by square counts (the others are marked redundant).
-    ...targets.map((t) => ({ type: "choice", kind: A.bloodUpgrade, upgrade: t, ...(t < (pending.data.last ?? -1) ? { redundant: true } : {}) })),
+    ...inSquareOrder(targets.map((t) => ({ type: "choice", kind: A.bloodUpgrade, upgrade: t })), pending.data.last, "upgrade"),
     { type: "choice", kind: A.bloodUpgrade, finish: true },
   ];
 }
@@ -302,9 +300,6 @@ export const LoD = {
 
   // LoD.dragon.luminous_flame: 1 virtual VP per Light Dragon (level 6) more than the opponent.
   virtualVP: (s, player) => Math.max(0, countLevel(s, player, DRAGON) - countLevel(s, opponent(player), 6)),
-
-  // The AI resolves these step-by-step decisions greedily instead of searching them.
-  aiGreedyChoices: [A.bloodUpgrade, A.excess],
 
   // Starting lineups of the AI.
   aiBook: {

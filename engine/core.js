@@ -223,6 +223,15 @@ export function pushChoice(s, player, kind, data = {}) {
   s.pending.push({ player, kind, data });
 }
 
+/** Several steps of the same kind in a row whose order does not change the
+ *  result (placing 3 Sprouts, spending Blood Trade TP): options on a square
+ *  before the one of the previous step (`last`) are marked `redundant`, so the
+ *  AI tries every combination only once. The user interface offers them all. */
+export function inSquareOrder(options, last, field = "place") {
+  if (last === undefined) return options;
+  return options.map((o) => (o[field] < last ? { ...o, redundant: true } : o));
+}
+
 // ---------------------------------------------------------------------------
 // Power hierarchy
 // ---------------------------------------------------------------------------
