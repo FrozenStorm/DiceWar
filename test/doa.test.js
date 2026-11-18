@@ -232,3 +232,18 @@ test("DoA decisions 2026-11-11: Thread of Fate exiles an own level 1, Sint Flut 
   assert.equal(s.players[2].tp, 0, "no Depth Rapture");
   assert.equal(s.players[1].vp, 2);
 });
+
+test("DoA.weaver.ghost_call: click order as on the card (creature next to the Weaver first)", () => {
+  const s = position(["......f", ".......", ".......", "...4...", ".......", ".......", "......."], DOA);
+  const calls = byAbility(s, "DoA.weaver.ghost_call");
+  const fisherNear = calls.find((a) => a.fisher === at("e4") && a.watch === at("e3"));
+  assert.deepEqual(actionPath(fisherNear), [at("d4"), "Ghost Call", "Tidal Fisher next to the Weaver", at("e4"), at("e3")]);
+  const watchNear = calls.find((a) => a.watch === at("e4") && a.fisher === at("e3"));
+  assert.deepEqual(actionPath(watchNear), [at("d4"), "Ghost Call", "River Watch next to the Weaver", at("e4"), at("e3")]);
+});
+
+test("DoA.weaver.thread_of_fate: spell, then the direction, then the targets", () => {
+  const s = position(["......f", ".......", ".......", "...4e..", "..1....", ".......", "......."], { ...DOA, players: { 1: { tp: 3 } } });
+  const a = byAbility(s, "DoA.weaver.thread_of_fate").find((x) => x.foe === at("e4") && x.delta === -1 && x.friend === at("c3"));
+  assert.deepEqual(actionPath(a), [at("d4"), "Thread of Fate", "Opponent −1, own +1", at("e4"), at("c3")]);
+});

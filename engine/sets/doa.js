@@ -427,8 +427,14 @@ export const DoA = {
     switch (a.ability || a.kind) {
       case A.waterPath: return [a.from, a.to];
       case A.waveRide: return [a.from, a.to];
-      case A.ghostCall: return [a.at, "Ghost Call", a.watch, a.fisher];
-      case A.threadOfFate: return [a.at, "Thread of Fate", a.foe, a.delta > 0 ? "Opponent +1, own −1" : "Opponent −1, own +1", a.friend];
+      case A.ghostCall: {
+        // As on the card: first the die next to the Weaver (River Watch or Tidal Fisher), then the other one next to it.
+        const watchFirst = adjacent(a.at).includes(a.watch);
+        return watchFirst
+          ? [a.at, "Ghost Call", "River Watch next to the Weaver", a.watch, a.fisher]
+          : [a.at, "Ghost Call", "Tidal Fisher next to the Weaver", a.fisher, a.watch];
+      }
+      case A.threadOfFate: return [a.at, "Thread of Fate", a.delta > 0 ? "Opponent +1, own −1" : "Opponent −1, own +1", a.foe, a.friend];
       case A.fromTheFog: return a.to !== undefined ? [a.from, "From the Fog", a.swap, a.to] : [a.from, "From the Fog", a.swap];
       case A.newBeginning: return a.place !== undefined ? [a.place] : [a.at, "New Beginning"];
       case A.sintFlut: return [a.at, "Sint Flut", `Flood ${DIR_LABELS[a.dir]}`];
@@ -447,8 +453,8 @@ export const DoA = {
 
   stepHint(ability, index) {
     const hints = {
-      [A.ghostCall]: { 2: "Field of the River Watch.", 3: "Field of the Tidal Fisher." },
-      [A.threadOfFate]: { 2: "Choose a surrounding opposing creature.", 4: "Choose a surrounding friendly creature." },
+      [A.ghostCall]: { 2: "Which creature goes next to the Water Weaver?", 3: "Choose its field next to the Water Weaver.", 4: "Choose the field for the other creature, next to the first one." },
+      [A.threadOfFate]: { 2: "Upgrade or downgrade the opposing creature?", 3: "Choose a surrounding opposing creature.", 4: "Choose a surrounding friendly creature." },
       [A.fromTheFog]: { 2: "Choose the adjacent creature to swap with.", 3: "Standard Movement after the swap." },
       [A.sintFlut]: { 2: "Choose the direction of the flood." },
     };

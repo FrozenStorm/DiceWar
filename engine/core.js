@@ -342,6 +342,21 @@ export function relocate(s, path) {
   return die;
 }
 
+/** Move the die on `from` onto the own die on `to`, which then leaves the board
+ *  into `dest` (Reserve or Exile). Events in card order: first the move, then
+ *  the die underneath leaves (BoD Sacrifice and Dark Fusion, RoM Symbiosis). */
+export function moveOnto(s, from, to, dest, cause = "ability") {
+  const under = s.board[to];
+  if (!under) throw new Error("moveOnto: empty square");
+  s.board[to] = null;
+  const die = relocate(s, [from, to]);
+  s.players[under.owner][dest]++;
+  emit(s, { t: "remove", at: to, owner: under.owner, level: under.level, dest, cause });
+  const set = setOf(s, under.owner);
+  if (set.onLeave) set.onLeave(s, to, under, cause, dest);
+  return die;
+}
+
 /** Resolve a movement of the die on `from` to the empty square `to`. */
 export function doMove(s, from, to) {
   const die = relocate(s, [from, to]);

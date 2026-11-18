@@ -150,3 +150,10 @@ test("BoD Oracle: TP for the owner, level set to 4 at the end of the turn", () =
   s = applyAction(s, { type: "upgrade", at: at("d4") });
   assert.equal(s.board[at("d4")].level, 4);
 });
+
+test("Card order of the events: Sacrifice and Dark Fusion move first, then the die underneath leaves", () => {
+  const s = position(["......f", ".......", ".......", ".3.3...", ".......", ".......", "......."], { set1: "BoD", set2: "BoD" });
+  const t = applyAction(s, byAbility(s, "BoD.hunter.dark_fusion").find((a) => a.from === at("b4") && a.to === at("d4")));
+  assert.deepEqual(t.events.map((e) => e.t).slice(0, 3), ["move", "remove", "level"]);
+  assert.equal(t.players[1].exile, 1);
+});
