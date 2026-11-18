@@ -378,14 +378,8 @@ function choose(token) {
     prefix = typeof token === "number" && candidates([token]).length ? [token] : [];
     cands = candidates(prefix);
   }
-  // Auto-advance when every remaining action continues with the same square.
-  for (;;) {
-    const next = new Set(cands.map((a) => actionPath(a)[prefix.length]));
-    if (next.size !== 1) break;
-    const [t] = next;
-    if (typeof t !== "number") break;
-    prefix = [...prefix, t];
-  }
+  // No auto-advance: every field is clicked, even when it is the only option,
+  // so the order of the clicks is always the same (player feedback 2026-11-18).
   const complete = cands.filter((a) => actionPath(a).length === prefix.length);
   if (complete.length === 1 && cands.length === 1) {
     perform(complete[0]);
