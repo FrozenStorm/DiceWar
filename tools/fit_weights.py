@@ -2,7 +2,7 @@
 """Developer tool: learns the evaluation weights (ai/eval.js) from game results.
 
     node tools/features.mjs <series dirs> --out data.bin
-    python3 tools/fit_weights.py data.bin [--base weights.json] [--l2 1.0] [--out weights.json]
+    python3 tools/fit_weights.py data.bin [--base weights.json] [--l2 1.0] [--out weights.json] [--fixed reserve,...]
 
 Model: P(player to move wins) = sigmoid(evaluation / T), evaluation = features . weights
 in "VP x 100" units. T is fitted first with the base weights, then all weights
@@ -21,6 +21,8 @@ ap.add_argument("--base", help="base weights (JSON name -> value); default: curr
 ap.add_argument("--l2", type=float, default=1.0)
 ap.add_argument("--steps", type=int, default=3000)
 ap.add_argument("--out", default="weights.json")
+ap.add_argument("--signs", action="store_true", help="keep weights on the side the rules give them (see SIGNS)")
+ap.add_argument("--fixed", default="", help="comma-separated features kept at their base value (besides vp)")
 args = ap.parse_args()
 
 meta = json.load(open(args.data + ".json"))
@@ -48,9 +50,24 @@ def loss(w, T, X, y):
 Ts = np.exp(np.linspace(np.log(20), np.log(5000), 200))
 T = Ts[np.argmin([loss(w0, t, Xt, yt) for t in Ts])]
 
+# Signs from the rules: these features can only help their owner (>= 0) or
+# hurt (<= 0); a creature on the board is worth at least half its base value
+# (it is never worse than a die in the Reserve). Learning from game results
+# alone can give a feature the wrong sign when it merely comes along with
+# winning or losing (e.g. a weaker side keeps its dice in the Reserve).
+NONPOS = {"threatened"}
+FREE_SIGN = {"lateVP", "center"}
+lo = np.full(len(names), -np.inf); hi = np.full(len(names), np.inf)
+if args.signs:
+    for i, nme in enumerate(names):
+        if ".L" in nme: lo[i] = w0[i] / 2
+        elif nme in NONPOS: hi[i] = 0
+        elif nme not in FREE_SIGN: lo[i] = 0
+
 # 2) weights: Adam on log loss + l2 towards base (scaled by feature spread)
 std = Xt.std(axis=0)
-free = (std > 1e-9) & (np.array(names) != "vp")
+fixed = {"vp", *filter(None, args.fixed.split(","))}
+free = (std > 1e-9) & ~np.isin(np.array(names), list(fixed))
 scale = np.where(free, T / np.maximum(std, 1e-9), 1.0)  # weight change that moves the evaluation by T per std
 w = w0.copy()
 m = np.zeros_like(w); v = np.zeros_like(w)
@@ -65,6 +82,8 @@ for step in range(1, args.steps + 1):
     g[~free] = 0
     m = b1 * m + (1 - b1) * g; v = b2 * v + (1 - b2) * g * g
     u -= lr * (m / (1 - b1 ** step)) / (np.sqrt(v / (1 - b2 ** step)) + 1e-8)
+    u = np.clip(w0 + u * scale, lo, hi) - w0
+    u = np.where(free, u / scale, 0)
 w = w0 + u * scale
 
 def acc(w, X, y):
