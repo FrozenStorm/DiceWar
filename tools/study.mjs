@@ -6,7 +6,7 @@
 //
 //   node tools/study.mjs --out study [--pairs mixed|all|RoX-KoS,...] [--locs ruins]
 //     [--a expert] [--b expert] [--ms 10000] [--nodes 0] [--maxTurns 200] [--seed 1]
-//     [--repeat 1] [--noise 0] [--locMix none,ruins,...]
+//     [--repeat 1] [--noise 0] [--locMix none,ruins,...] [--w1 file.json] [--w2 file.json]
 //
 // --pairs mixed: the 15 pairings of two different sets, all: the 21 pairings
 // including mirrors. Every pairing is played twice: each set starts once.
@@ -14,6 +14,7 @@
 // --noise: random rating added to every root move (variety for training games).
 // --locMix: one landscape per game, picked by its seed from this list
 // ("none" = no landscape); replaces --locs.
+// --w1/--w2: evaluation weights (JSON name -> value) for player 1/2.
 import { Worker, isMainThread, parentPort } from "node:worker_threads";
 import os from "node:os";
 import fs from "node:fs";
@@ -41,7 +42,8 @@ function playGame(g) {
         timeline.push([s.turnNumber, totalVP(s, 1), totalVP(s, 2), diceOf(s, 1).length, diceOf(s, 2).length, s.players[1].reserve, s.players[2].reserve]);
       }
       const t = performance.now();
-      const r = chooseAction(s, { level: levels[p], random, maxNodes: g.nodes || 0, overrides: { ...(g.nodes ? {} : { timeMs: g.ms }), ...(g.noise ? { noise: g.noise } : {}) } });
+      const weights = g.weights?.[p];
+      const r = chooseAction(s, { level: levels[p], random, maxNodes: g.nodes || 0, overrides: { ...(g.nodes ? {} : { timeMs: g.ms }), ...(g.noise ? { noise: g.noise } : {}), ...(weights ? { weights } : {}) } });
       const ms = performance.now() - t;
       action = r.action;
       // [turn, player, inside a turn, depth, positions, ms, kind of decision]
@@ -80,6 +82,9 @@ if (!isMainThread) {
     ms: Number(arg("ms", 10000)), nodes: Number(arg("nodes", 0)), maxTurns: Number(arg("maxTurns", 200)),
     noise: Number(arg("noise", 0)),
   };
+  const readWeights = (name) => { const f = arg(name, ""); return f ? JSON.parse(fs.readFileSync(f, "utf8")) : null; };
+  const w1 = readWeights("w1"), w2 = readWeights("w2");
+  if (w1 || w2) base.weights = { 1: w1, 2: w2 };
   const repeat = Number(arg("repeat", 1));
   const locMix = arg("locMix", "").split(",").filter(Boolean);
   const seed = Number(arg("seed", 1));
