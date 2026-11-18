@@ -320,7 +320,7 @@ const newContext = (cfg) => ({
   deadline: Infinity,
   maxNodes: Infinity,
   W: { ...WEIGHTS, ...(cfg.weights || {}) },
-  evalFn: evaluate,
+  evalFn: cfg.evalFn ?? evaluate,
   quiescence: cfg.quiescence ?? QUIESCENCE_PLIES,
   lateFrom: cfg.lateFrom ?? 4,
   veryLateFrom: cfg.veryLateFrom ?? 12,
