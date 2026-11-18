@@ -203,3 +203,30 @@ test("KoS: the AI chooses the alignment of its starting lineup", async () => {
   assert.ok(a.placements.every((p) => [0, 1, 2, 3].includes(p.dir)));
   assert.ok(applyAction(g, a));
 });
+
+test("KoS.commander.leadership: choose the TP first, then move creatures up to that total", () => {
+  const s = position(["......f", ".......", ".......", ".......", "...4...", "....3..", "..2...."], { ...KOS, players: { 1: { tp: 5 } } });
+  const spells = byAbility(s, "KoS.commander.leadership");
+  assert.deepEqual(spells.map((a) => a.tp), [2, 3, 4, 5]);
+  assert.deepEqual(actionPath(spells.find((a) => a.tp === 3)), [at("d3"), "Leadership", "3 TP"]);
+  let t = applyAction(s, spells.find((a) => a.tp === 3));
+  assert.ok(!legalActions(t).some((o) => o.finish), "no Finish button");
+  t = applyAction(t, legalActions(t).find((o) => o.sub && o.sub.from === at("c1") && o.sub.to === at("c2") && o.sub.face === UP));
+  assert.equal(t.players[1].tp, 3);
+  assert.equal(t.current, 2, "nothing fits the remaining TP: the spell ends, unused TP stay");
+});
+
+test("KoS.knight.reinforcements: the creatures can be placed in any order", () => {
+  const s = position(["......f", ".......", ".......", "...6...", ".......", ".......", "......."], KOS);
+  let t = applyAction(s, { type: "spell", ability: "KoS.knight.reinforcements", at: at("d4") });
+  const sword = legalActions(t).find((o) => o.level === 1 && o.place === at("c4") && o.face === LEFT);
+  assert.deepEqual(actionPath(sword), ["First Sword", at("c4"), "Face ←"]);
+  t = applyAction(t, sword);
+  assert.deepEqual([...new Set(legalActions(t).map((o) => o.level))].sort(), [2, 3]);
+  t = applyAction(t, legalActions(t).find((o) => o.level === 2 && o.place === at("e4")));
+  t = applyAction(t, legalActions(t).find((o) => o.level === 3 && o.place === at("d5")));
+  assert.equal(t.board[at("d4")], null);
+  assert.equal(t.board[at("c4")].level, 1);
+  assert.equal(t.board[at("e4")].level, 2);
+  assert.equal(t.board[at("d5")].level, 3);
+});

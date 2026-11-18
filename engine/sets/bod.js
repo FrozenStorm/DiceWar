@@ -4,7 +4,7 @@ import { adjacent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, doMove, canRaise, standardActionsOf, actionOrigin, performAction, relocate, lineSplits,
-  canPlace,
+  canPlace, moveOnto, finishMoveOrAttack,
 } from "../core.js";
 
 const GNOME = 1, POSSESSED = 2, HUNTER = 3, HAG = 4, GATHERER = 5, DEMON = 6;
@@ -70,7 +70,8 @@ function fusionActions(s, from) {
 
 function applyFusion(s, a) {
   const player = s.board[a.from].owner;
-  removeDie(s, a.from, "exile", "fusion");
+  // As on the card: the Hunter moves onto the other one, which goes into the Exile; the mover becomes the Demon.
+  moveOnto(s, a.from, a.to, "exile", "fusion");
   setLevel(s, a.to, DEMON);
   s.turn.movedDieId = s.board[a.to].id;
   if (countLevel(s, player, HUNTER) === 0) {
@@ -140,8 +141,11 @@ function sacrificeMoves(s, from) {
 
 function applySacrifice(s, a) {
   const player = s.current;
-  removeDie(s, a.to, "reserve", "sacrifice");
-  doMove(s, a.from, a.to);
+  // As on the card: the Gatherer moves onto the Gnome, then the Gnome goes back to the Reserve.
+  const die = moveOnto(s, a.from, a.to, "reserve", "sacrifice");
+  s.turn.movedDieId = die.id;
+  s.turn.lastStep = { from: a.from, to: a.to, attack: false };
+  finishMoveOrAttack(s, a.to);
   pushChoice(s, player, A.free, { at: a.to, upgrade: true, abilities: false });
 }
 
@@ -293,9 +297,10 @@ export const BoD = {
       case A.hunterPath: return [a.from, a.to];
       case A.fusion: return [a.from, "Dark Fusion", a.to];
       case A.voodoo:
-        if (a.move && a.raise !== undefined) return [a.at, "Voodoo: move + raise (5 TP)", a.move.from, a.move.to, a.raise];
-        if (a.move) return [a.at, "Voodoo: move (3 TP)", a.move.from, a.move.to];
-        return [a.at, "Voodoo: raise (2 TP)", a.raise];
+        // Same flow as the other 4 spells: spell, then the option (with its TP), then the targets.
+        if (a.move && a.raise !== undefined) return [a.at, "Voodoo", "Move + raise (5 TP)", a.move.from, a.move.to, a.raise];
+        if (a.move) return [a.at, "Voodoo", "Move (3 TP)", a.move.from, a.move.to];
+        return [a.at, "Voodoo", "Raise (2 TP)", a.raise];
       case A.servitude: return [a.at, `Servitude (${a.line})`];
       case A.mercy: return [a.at, "Mercy", a.target];
       case A.sacrifice: return [a.from, a.to];
@@ -317,7 +322,7 @@ export const BoD = {
   stepHint(ability, index) {
     const hints = {
       [A.fusion]: { 2: "Choose the other Hunter of Death to fuse with." },
-      [A.voodoo]: { 2: "Choose the Possessed.", 3: "Choose the target field (up to 3 fields).", 4: "Choose another Possessed to raise by 2." },
+      [A.voodoo]: { 2: "Move a Possessed (3 TP), raise one (2 TP), or both?", 3: "Choose the Possessed.", 4: "Choose the target field (up to 3 fields).", 5: "Choose another Possessed to raise by 2." },
       [A.mercy]: { 2: "Choose a free adjacent field for the Gnome." },
       [A.allegiance]: { 2: "Choose a free field next to the new Possessed for the Swamp Hag." },
     };
