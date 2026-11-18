@@ -6,9 +6,14 @@
 //
 //   node tools/study.mjs --out study [--pairs mixed|all|RoX-KoS,...] [--locs ruins]
 //     [--a expert] [--b expert] [--ms 10000] [--nodes 0] [--maxTurns 200] [--seed 1]
+//     [--repeat 1] [--noise 0] [--locMix none,ruins,...]
 //
 // --pairs mixed: the 15 pairings of two different sets, all: the 21 pairings
 // including mirrors. Every pairing is played twice: each set starts once.
+// --repeat: play every pairing and starting player that many times.
+// --noise: random rating added to every root move (variety for training games).
+// --locMix: one landscape per game, picked by its seed from this list
+// ("none" = no landscape); replaces --locs.
 import { Worker, isMainThread, parentPort } from "node:worker_threads";
 import os from "node:os";
 import fs from "node:fs";
@@ -36,7 +41,7 @@ function playGame(g) {
         timeline.push([s.turnNumber, totalVP(s, 1), totalVP(s, 2), diceOf(s, 1).length, diceOf(s, 2).length, s.players[1].reserve, s.players[2].reserve]);
       }
       const t = performance.now();
-      const r = chooseAction(s, { level: levels[p], random, maxNodes: g.nodes || 0, overrides: g.nodes ? {} : { timeMs: g.ms } });
+      const r = chooseAction(s, { level: levels[p], random, maxNodes: g.nodes || 0, overrides: { ...(g.nodes ? {} : { timeMs: g.ms }), ...(g.noise ? { noise: g.noise } : {}) } });
       const ms = performance.now() - t;
       action = r.action;
       // [turn, player, inside a turn, depth, positions, ms, kind of decision]
@@ -73,18 +78,25 @@ if (!isMainThread) {
     locations: arg("locs", "ruins").split(",").filter((l) => l && l !== "none"),
     level1: arg("a", "expert"), level2: arg("b", "expert"),
     ms: Number(arg("ms", 10000)), nodes: Number(arg("nodes", 0)), maxTurns: Number(arg("maxTurns", 200)),
+    noise: Number(arg("noise", 0)),
   };
+  const repeat = Number(arg("repeat", 1));
+  const locMix = arg("locMix", "").split(",").filter(Boolean);
   const seed = Number(arg("seed", 1));
   const games = [];
-  for (const [set1, set2] of pairs) {
-    for (const startingPlayer of [1, 2]) {
-      const id = `${String(games.length + 1).padStart(3, "0")}-${set1}-${set2}-p${startingPlayer}`;
-      games.push({ ...base, id, set1, set2, startingPlayer, seed: deriveSeed(seed, games.length) });
+  for (let r = 0; r < repeat; r++) {
+    for (const [set1, set2] of pairs) {
+      for (const startingPlayer of [1, 2]) {
+        const id = `${String(games.length + 1).padStart(repeat > 1 ? 5 : 3, "0")}-${set1}-${set2}-p${startingPlayer}`;
+        const gameSeed = deriveSeed(seed, games.length);
+        const locations = locMix.length ? [locMix[gameSeed % locMix.length]].filter((l) => l !== "none") : base.locations;
+        games.push({ ...base, id, set1, set2, startingPlayer, seed: gameSeed, locations });
+      }
     }
   }
   const dir = path.join(out, "games");
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(out, "config.json"), JSON.stringify({ ...base, pairs, seed, games: games.length }, null, 2));
+  fs.writeFileSync(path.join(out, "config.json"), JSON.stringify({ ...base, pairs, seed, repeat, locMix, games: games.length }, null, 2));
   const todo = games.filter((g) => !fs.existsSync(path.join(dir, `${g.id}.json`)));
   console.log(`${games.length} games, ${todo.length} to play`);
 

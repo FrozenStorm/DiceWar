@@ -344,6 +344,34 @@ export const RoM = {
   virtualVP: (s, player) => diceOf(s, player, MALI).filter((at) => inOwnZone(opponent(player), at)).length,
 
 
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["breathOfLife", "symbiosis", "maliAdvance"],
+    add(s, player, f, base, sign) {
+      const board = s.board;
+      let protectresses = 0, fruits = 0, symbiosis = 0, maliAdvance = 0;
+      for (let at = 0; at < SQUARES; at++) {
+        const d = board[at];
+        if (!d || d.owner !== player) continue;
+        if (d.level === FRUIT) fruits++;
+        else if (d.level === MALI) maliAdvance += player === 1 ? SIZE - 1 - rowOf(at) : rowOf(at);
+        else if (d.level === PROTECTRESS) {
+          protectresses++;
+          // Symbiosis: a Golden Fruit next to her turns her into a Shadow Runner.
+          for (const n of adjacent(at)) {
+            const x = board[n];
+            if (x && x.owner === player && x.level === FRUIT) { symbiosis++; break; }
+          }
+        }
+      }
+      // Breath of Life: levels the TP can give a Golden Fruit (at most 5).
+      f[base] += sign * (protectresses && fruits ? Math.min(5, s.players[player].tp) : 0);
+      f[base + 1] += sign * symbiosis;
+      // Mali: rows towards the opponent's zone (Deep Roots gives a virtual VP there).
+      f[base + 2] += sign * maliAdvance;
+    },
+  },
+
   // Starting lineups of the AI.
   aiBook: {
     // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).

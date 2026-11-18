@@ -1,6 +1,6 @@
 // Dice set LoD (Light of Dragons, base game). Rules: docs/rules/LoD.md
 
-import { adjacent, diagonal, step, opponent } from "../board.js";
+import { adjacent, diagonal, step, opponent, SQUARES } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, inSquareOrder, doMove, doAttack, relocate, canDefeatWith, canRaise, isProtected,
@@ -302,6 +302,37 @@ export const LoD = {
   virtualVP(s, player) {
     const dragons = countLevel(s, player, DRAGON);
     return dragons ? Math.max(0, dragons - countLevel(s, opponent(player), 6)) : 0;
+  },
+
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["barrierSouls", "bloodTrade"],
+    add(s, player, f, base, sign) {
+      // Souls in a Protective Barrier (groups of 3 to 6): immune to the opponent.
+      const board = s.board;
+      let mages = 0, inBarriers = 0;
+      const seen = new Uint8Array(SQUARES);
+      for (let at = 0; at < SQUARES; at++) {
+        const d = board[at];
+        if (!d || d.owner !== player) continue;
+        if (d.level === MAGE) mages++;
+        if (d.level !== SOUL || seen[at]) continue;
+        let size = 0;
+        const stack = [at];
+        seen[at] = 1;
+        while (stack.length) {
+          const x = stack.pop();
+          size++;
+          for (const n of adjacent(x)) {
+            if (!seen[n] && isOwn(s, n, player, SOUL)) { seen[n] = 1; stack.push(n); }
+          }
+        }
+        if (size >= BARRIER_MIN && size <= BARRIER_MAX) inBarriers += size;
+      }
+      f[base] += sign * inBarriers;
+      // Blood Trade: TP it can raise now (Reserve dice to exile, one per Blood Mage).
+      f[base + 1] += sign * (mages ? Math.min(mages, s.players[player].reserve) : 0);
+    },
   },
 
   // Starting lineups of the AI.
