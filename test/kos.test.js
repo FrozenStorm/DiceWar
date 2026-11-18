@@ -10,8 +10,8 @@ const UP = 0, RIGHT = 1, DOWN = 2, LEFT = 3;
 const face = (s, f, dir) => { s.board[at(f)].dir = dir; return s; };
 // Rows from top (row 7) to bottom (row 1); columns a..g. Player 1 faces up, player 2 down.
 
-test("KoS alignment: Shield, Spear and Stag choose their alignment with every Movement", () => {
-  const s = position(["......f", ".......", ".......", "...3...", ".......", ".......", "......."], KOS);
+test("KoS alignment: Shield and Stag choose their alignment after every Movement", () => {
+  const s = position(["......f", ".......", ".......", "...5...", ".......", ".......", "......."], KOS);
   const moves = legalActions(s).filter((a) => a.type === "move" && a.from === at("d4") && a.to === at("d5") && a.pre === undefined);
   assert.deepEqual(moves.map((a) => a.face).sort(), [0, 1, 2, 3]);
   assert.deepEqual(actionPath(moves[1]), [at("d4"), at("d5"), "Face →"]);
@@ -19,7 +19,7 @@ test("KoS alignment: Shield, Spear and Stag choose their alignment with every Mo
   assert.equal(t.board[at("d5")].dir, RIGHT);
 });
 
-test("KoS alignment: the Loyal Shield turns before OR after, the Silver Spear before and/or after", () => {
+test("KoS alignment: the Loyal Shield turns before OR after, the Silver Spear only before", () => {
   // Loyal Shield (2) on d4, facing up.
   let s = position(["......f", ".......", ".......", "...2...", ".......", ".......", "......."], KOS);
   let moves = legalActions(s).filter((a) => a.from === at("d4") && a.to === at("d5"));
@@ -29,13 +29,16 @@ test("KoS alignment: the Loyal Shield turns before OR after, the Silver Spear be
   assert.ok(pre.every((a) => a.face === undefined));
   assert.deepEqual(actionPath(pre[0]), [at("d4"), "Turn →", at("d5")]);
   assert.equal(applyAction(s, pre[0]).board[at("d5")].dir, RIGHT);
-  // Silver Spear (3): turned before and afterwards again.
+  // Silver Spear (3): keeps its alignment or turns before; never after.
   s = position(["......f", ".......", ".......", "...3...", ".......", ".......", "......."], KOS);
   moves = legalActions(s).filter((a) => a.from === at("d4") && a.to === at("d5"));
-  assert.equal(moves.length, 4 + 3 * 4);
-  const both = moves.find((a) => a.pre === RIGHT && a.face === LEFT);
-  assert.deepEqual(actionPath(both), [at("d4"), "Turn →", at("d5"), "Face ←"]);
-  assert.equal(applyAction(s, both).board[at("d5")].dir, LEFT);
+  assert.equal(moves.length, 4);
+  assert.ok(moves.every((a) => a.face === undefined));
+  assert.deepEqual(moves.map((a) => a.pre ?? UP).sort(), [0, 1, 2, 3]);
+  assert.deepEqual(actionPath(moves.find((a) => a.pre === undefined)), [at("d4"), at("d5")]);
+  const turned = moves.find((a) => a.pre === LEFT);
+  assert.deepEqual(actionPath(turned), [at("d4"), "Turn ←", at("d5")]);
+  assert.equal(applyAction(s, turned).board[at("d5")].dir, LEFT);
 });
 
 test("KoS.shield.shield_strike: sideways only after turning, then no turn afterwards", () => {
@@ -128,7 +131,7 @@ test("KoS.commander: Moral Boost, Leadership moves creatures for TP = Power Leve
   s.players[1].tp = 5;
   s = applyAction(s, { type: "spell", ability: "KoS.commander.leadership", at: at("d3") });
   assert.ok(!legalActions(s).some((o) => o.sub && o.sub.from === at("d3")), "not the Commander himself");
-  s = applyAction(s, legalActions(s).find((o) => o.sub && o.sub.from === at("e2") && o.sub.to === at("e3") && o.sub.face === UP));
+  s = applyAction(s, legalActions(s).find((o) => o.sub && o.sub.from === at("e2") && o.sub.to === at("e3") && o.sub.pre === undefined));
   assert.equal(s.players[1].tp, 2);
   s = applyAction(s, legalActions(s).find((o) => o.sub && o.sub.from === at("c1") && o.sub.to === at("c2") && o.sub.face === UP));
   assert.equal(s.players[1].tp, 0);
