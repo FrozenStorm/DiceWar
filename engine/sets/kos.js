@@ -319,11 +319,12 @@ function reinforcementOptions(s, pending) {
 /** Alignment with every Movement and Attack (a.pre: turned before the action,
  *  a.face: alignment after it):
  *  - Loyal Shield (Mindfulness): before OR after the action, not both.
- *  - Silver Spear (Impatience, Daniel 2026-11-11): before and/or after.
+ *  - Silver Spear (Impatience): before the action only (Daniel 2026-11-18).
  *  - Burning Stag (Cautiousness): after the action.
- *  Turning before a Movement or Attack that does not depend on the alignment
- *  gives the same result as turning afterwards; these variants are marked
- *  `redundant` so the AI skips them (the UI offers them when a die is clicked). */
+ *  For the Shield, turning before a Movement or Attack that does not depend on
+ *  the alignment gives the same result as turning afterwards; these variants
+ *  are marked `redundant` so the AI skips them (the UI offers them when a die
+ *  is clicked). */
 function decorate(s, player, actions) {
   const out = [];
   for (const a of actions) {
@@ -331,13 +332,15 @@ function decorate(s, player, actions) {
       const d = s.board[actionOrigin(a)];
       if (d && d.owner === player && ORIENTING.includes(d.level)) {
         if (d.level === SHIELD && a.pre !== undefined) { out.push(a); continue; } // Shield Strike after turning
+        if (d.level === SPEAR) {
+          // Keep the alignment, or turn before the action.
+          out.push(a);
+          for (const pre of FACES) if (pre !== d.dir) out.push({ ...a, pre });
+          continue;
+        }
         for (const face of FACES) out.push({ ...a, face });
         if (d.level === STAG) continue;
-        for (const pre of FACES) {
-          if (pre === d.dir) continue;
-          if (d.level === SHIELD) out.push({ ...a, pre, redundant: true });
-          else for (const face of FACES) out.push({ ...a, pre, face, redundant: true });
-        }
+        for (const pre of FACES) if (pre !== d.dir) out.push({ ...a, pre, redundant: true });
         continue;
       }
     }
