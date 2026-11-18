@@ -5,7 +5,7 @@ import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, inSquareOrder, doMove, doAttack, relocate, canDefeatWith, standardActionsOf, performAction,
   finishMoveOrAttack, lineSplits,
-  canPlace,
+  canPlace, moveOnto,
 } from "../core.js";
 
 const FRUIT = 1, SPROUT = 2, TORCH = 3, PROTECTRESS = 4, RUNNER = 5, MALI = 6;
@@ -257,8 +257,8 @@ export const RoM = {
         setLevel(s, a.fruit, s.board[a.fruit].level + a.tp);
         break;
       case A.symbiosis:
-        removeDie(s, a.to, "reserve", "symbiosis");
-        relocate(s, [a.from, a.to]);
+        // As on the card: the Protectress moves onto the Golden Fruit, then the fruit goes back to the Reserve.
+        moveOnto(s, a.from, a.to, "reserve", "symbiosis");
         setLevel(s, a.to, s.board[a.to].level + 1);
         break;
       case A.pathway:
@@ -387,7 +387,8 @@ export const RoM = {
       case A.breeding: return [a.at, `Breeding (${a.line})`];
       case A.velocity: return [a.from, a.to];
       case A.fireDemon: return [a.from, ...a.chain, a.to];
-      case A.breath: return [a.at, "Breath of Life", a.fruit, `+${a.tp} (${a.tp} TP)`];
+      // Same flow as the other 4 spells: spell, then the amount, then the target.
+      case A.breath: return [a.at, "Breath of Life", `${a.tp} TP (+${a.tp})`, a.fruit];
       case A.symbiosis: return [a.from, a.to];
       case A.pathway: return [a.from, a.to];
       case A.outOfDark: return [a.from, a.to];
@@ -409,7 +410,7 @@ export const RoM = {
 
   stepHint(ability, index) {
     const hints = {
-      [A.breath]: { 2: "Choose your Golden Fruit.", 3: "How many TP (= levels)?" },
+      [A.breath]: { 2: "How many TP do you spend (= levels)?", 3: "Choose your Golden Fruit." },
     };
     return hints[ability] && hints[ability][index];
   },

@@ -357,12 +357,20 @@ export const LoD = {
       case A.ghosttrail: return [a.from, a.to];
       case A.brotherhood: return [a.at, `Brotherhood (${a.line})`];
       case A.dragonBlood: return [a.at, `Dragon Blood (${a.line})`];
-      case A.bloodTrade: return [a.at, `Blood Trade: exile ${a.exile}`];
+      // Same flow as the other 4 spells: spell, then the amount, then the targets (as choices).
+      case A.bloodTrade: return [a.at, "Blood Trade", `Exile ${a.exile} (+${a.exile + 1} TP)`];
       case A.bloodUpgrade: return a.finish ? ["Finish Blood Trade"] : [a.upgrade];
       case A.excess: return [a.remove];
       case A.innerFire: return ["Skip"]; // other options use the path of their action
       default: throw new Error(`No click path for ${a.ability || a.kind}`);
     }
+  },
+
+  stepHint(ability, index) {
+    const hints = {
+      [A.bloodTrade]: { 2: "How many Reserve Dice do you put into the Exile (+1 TP each, +1 extra)?" },
+    };
+    return hints[ability] && hints[ability][index];
   },
 
   pendingPrompt(p) {

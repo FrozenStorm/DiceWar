@@ -198,18 +198,24 @@ function movementsOf(s, at) {
 
 function leadershipOptions(s, pending) {
   const { player } = pending;
-  const tp = s.players[player].tp;
+  // The TP chosen with the spell are spent move by move; it ends when they are used up
+  // or no creature fits the rest (unused TP stay).
+  const tp = Math.min(s.players[player].tp, pending.data.left ?? Infinity);
   const subs = [];
   for (const at of diceOf(s, player)) {
     const d = s.board[at];
     if (at === pending.data.caster || pending.data.moved.includes(d.id) || d.level > tp) continue;
     subs.push(...movementsOf(s, at));
   }
-  if (!subs.length) return [];
-  return [
-    ...decorate(s, player, subs).map((sub) => ({ type: "choice", kind: A.leadership, sub })),
-    { type: "choice", kind: A.leadership, finish: true },
-  ];
+  return decorate(s, player, subs).map((sub) => ({ type: "choice", kind: A.leadership, sub }));
+}
+
+/** Leadership: how many TP can be spent at most (all own movable creatures but the caster). */
+function leadershipMaxTP(s, at) {
+  const player = s.board[at].owner;
+  let sum = 0;
+  for (const x of diceOf(s, player)) if (x !== at && movementsOf(s, x).length) sum += s.board[x].level;
+  return Math.min(s.players[player].tp, sum);
 }
 
 let checkingThreat = false;
@@ -231,8 +237,13 @@ function commanderActions(s, at) {
   const p = s.players[player];
   const out = [];
   // KoS.commander.leadership
-  if (p.reserve >= 1 && p.tp >= 1 && diceOf(s, player).some((x) => x !== at && s.board[x].level <= p.tp && movementsOf(s, x).length)) {
-    out.push({ type: "spell", ability: A.leadership, at });
+  // Like the other 4 spells: spell, then the amount of TP, then the creatures to move.
+  if (p.reserve >= 1 && p.tp >= 1) {
+    const movable = diceOf(s, player).filter((x) => x !== at && movementsOf(s, x).length).map((x) => s.board[x].level);
+    if (movable.length) {
+      const min = Math.min(...movable);
+      for (let tp = min; tp <= leadershipMaxTP(s, at); tp++) out.push({ type: "spell", ability: A.leadership, at, tp });
+    }
   }
   // KoS.commander.supply: 4 First Swords on the edges, if the Commander is not threatened.
   if (p.reserve >= 4 && edgeFields(s, player).length >= 4 && !threatened(s, at)) {
@@ -287,15 +298,22 @@ const seen = new Int32Array(SQUARES), stack = new Int32Array(SQUARES);
 let seenMark = 0;
 
 const REINF_ORDER = [SPEAR, SHIELD, SWORD];
+const REINF_NAMES = { [SPEAR]: "Silver Spear", [SHIELD]: "Loyal Shield", [SWORD]: "First Sword" };
+
+/** Creatures Reinforcements still has to place (any order; older saves use `stage`). */
+const reinfLeft = (data) => data.left ?? REINF_ORDER.slice(data.stage ?? 0);
 
 function reinforcementOptions(s, pending) {
-  const { at, stage } = pending.data;
+  const { at } = pending.data;
   if (s.players[pending.player].reserve < 1) return [];
   const free = surrounding(at).filter((t) => canPlace(s, t));
-  const level = REINF_ORDER[stage];
-  const opt = { type: "choice", kind: A.reinforcements };
-  if (level === SWORD) return swordPlacements(opt, free, pending.player);
-  return free.flatMap((place) => withFaces({ ...opt, place }));
+  const out = [];
+  for (const level of reinfLeft(pending.data)) {
+    const opt = { type: "choice", kind: A.reinforcements, level };
+    if (level === SWORD) out.push(...swordPlacements(opt, free, pending.player));
+    else for (const place of free) out.push(...withFaces({ ...opt, place }));
+  }
+  return out;
 }
 
 // --- Orientation ---------------------------------------------------------------------------
@@ -394,13 +412,13 @@ export const KoS = {
         break;
       case A.leadership:
         exileFromReserve(s, player, 1);
-        pushChoice(s, player, A.leadership, { caster: a.at, moved: [] });
+        pushChoice(s, player, A.leadership, { caster: a.at, moved: [], left: a.tp });
         break;
       case A.supply:
         pushChoice(s, player, A.supply, { at: a.at, left: 4 });
         break;
       case A.reinforcements:
-        pushChoice(s, player, A.reinforcements, { at: a.at, stage: 0 });
+        pushChoice(s, player, A.reinforcements, { at: a.at, left: [...REINF_ORDER] });
         break;
       default:
         throw new Error(`Unknown KoS ability: ${a.ability}`);
@@ -471,11 +489,12 @@ export const KoS = {
         if (pending.data.left > 1) pushChoice(s, player, A.toSpears, { left: pending.data.left - 1, last: a.upgrade });
         break;
       case A.leadership: {
-        if (a.finish) break;
+        if (a.finish) break; // older saved games
         const d = s.board[actionOrigin(a.sub)];
+        const left = (pending.data.left ?? Infinity) - d.level;
         gainTP(s, player, -d.level);
         performAction(s, a.sub);
-        pushChoice(s, player, A.leadership, { ...pending.data, moved: [...pending.data.moved, d.id] });
+        if (left > 0) pushChoice(s, player, A.leadership, { ...pending.data, moved: [...pending.data.moved, d.id], left });
         break;
       }
       case A.supply: {
@@ -486,9 +505,11 @@ export const KoS = {
         break;
       }
       case A.reinforcements: {
-        const level = REINF_ORDER[pending.data.stage];
+        const left = reinfLeft(pending.data);
+        const level = a.level ?? left[0];
         placeDie(s, a.place, player, level, { dir: a.face ?? defaultDir(player) });
-        if (pending.data.stage < 2) pushChoice(s, player, A.reinforcements, { ...pending.data, stage: pending.data.stage + 1 });
+        const rest = left.filter((l, k) => k !== left.indexOf(level));
+        if (rest.length) pushChoice(s, player, A.reinforcements, { at: pending.data.at, left: rest });
         else removeDie(s, pending.data.at, "reserve", "split");
         break;
       }
@@ -567,9 +588,9 @@ export const KoS = {
       case A.support: return [a.at, "Support", a.target];
       case A.strike: return [a.from, "Shield Strike", a.target];
       case A.thrust: return [a.from, a.to];
-      case A.leadership: return a.finish ? ["Finish Leadership"] : a.at !== undefined ? [a.at, "Leadership"] : ["Skip"];
+      case A.leadership: return a.finish ? ["Finish Leadership"] : a.at !== undefined ? [a.at, "Leadership", `${a.tp} TP`] : ["Skip"];
       case A.supply: return a.place !== undefined ? [a.place] : [a.at, "Supply"];
-      case A.reinforcements: return a.place !== undefined ? [a.place] : [a.at, "Reinforcements"];
+      case A.reinforcements: return a.place !== undefined ? [REINF_NAMES[a.level], a.place] : [a.at, "Reinforcements"];
       case A.relentless: return ["Skip"]; // other options use the path of their action
       case A.rescue: return a.skip ? ["Skip"] : [a.place];
       case A.toSpears: return [a.upgrade];
@@ -577,14 +598,21 @@ export const KoS = {
     }
   },
 
+  stepHint(ability, index) {
+    const hints = {
+      [A.leadership]: { 2: "How many TP do you spend (= total Power Level of the creatures to move)?" },
+    };
+    return hints[ability] && hints[ability][index];
+  },
+
   pendingPrompt(p) {
     switch (p.kind) {
       case A.relentless: return "Relentless: an additional action for another First Sword that has not acted yet, or skip.";
       case A.rescue: return "Relentless: place the First Sword on a free edge field instead of the Exile, or skip.";
       case A.toSpears: return `To the Spears: choose a Loyal Shield to upgrade (${p.data.left} left; 3 stay).`;
-      case A.leadership: return "Leadership: move a friendly creature (costs TP = its Power Level), or finish.";
+      case A.leadership: return `Leadership: move a friendly creature (costs TP = its Power Level, ${p.data.left ?? "any"} TP left).`;
       case A.supply: return `Supply: place a First Sword on a free edge field (${p.data.left} left).`;
-      case A.reinforcements: return `Reinforcements: place the ${["Silver Spear", "Loyal Shield", "First Sword"][p.data.stage]} on a free surrounding field.`;
+      case A.reinforcements: return `Reinforcements: choose the creature to place (${reinfLeft(p.data).map((l) => REINF_NAMES[l]).join(", ")}), then a free surrounding field.`;
       default: return "Make a choice.";
     }
   },
