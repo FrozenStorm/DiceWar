@@ -5,9 +5,10 @@
 // every set; each set adds the material value of its six creatures and may add
 // its own features through the hook `evalTerms` of its set module:
 //
-//   evalTerms: { names: ["barrierSouls", ...], add(s, player, f, base, sign) }
+//   evalTerms: { names: ["barrierSouls", ...], add(s, player, f, base, sign, own, n) }
 //
-// `add` adds sign * value to f[base + i] for its i-th name. The weights of all
+// `add` adds sign * value to f[base + i] for its i-th name; own[0..n-1] are the
+// squares of the player's dice. The weights of all
 // features live in WEIGHTS under "name" (general) or "<set>.<name>" (set).
 // tools/features.mjs extracts the same features for learning the weights.
 
@@ -31,11 +32,12 @@ const GENERAL = [
 
 /** Names of all features, in the order of the feature vector. */
 export const FEATURES = [...GENERAL];
-const SET_BASE = {}; // set id -> index of its level-1 material feature
+const SET_BASE = {}, SET_END = {}; // set id -> range of its features
 for (const id of SET_IDS) {
   SET_BASE[id] = FEATURES.length;
   for (let level = 1; level <= 6; level++) FEATURES.push(`${id}.L${level}`);
   for (const name of getSet(id).evalTerms?.names || []) FEATURES.push(`${id}.${name}`);
+  SET_END[id] = FEATURES.length;
 }
 // Indices of the general features (constants: faster than a lookup by name).
 const [VP, TP, RESERVE, CENTER, ADVANCE, FIELD_BONUS, NEAR_PREY, CRATER_ONE, CRATER_BOTH, ORACLE_HELD,
@@ -160,7 +162,7 @@ function addSide(s, p, toMove, f, sign) {
       }
     }
   }
-  if (set.evalTerms) set.evalTerms.add(s, p, f, base + 7, sign);
+  if (set.evalTerms) set.evalTerms.add(s, p, f, base + 7, sign, own, n);
 }
 
 /** Fills `f` with the features of state `s` from the point of view of `me`
@@ -199,6 +201,10 @@ export function evaluate(s, me, W = WEIGHTS) {
   const f = featureVector(s, me, features);
   const w = vectorOf(W);
   let v = 0;
-  for (let i = 0; i < f.length; i++) v += w[i] * f[i];
+  for (let i = 0; i < GENERAL.length; i++) v += w[i] * f[i];
+  // Only the features of the two sets in play can be non-zero.
+  const a = s.players[1].set, b = s.players[2].set;
+  for (let i = SET_BASE[a], end = SET_END[a]; i < end; i++) v += w[i] * f[i];
+  if (b !== a) for (let i = SET_BASE[b], end = SET_END[b]; i < end; i++) v += w[i] * f[i];
   return v;
 }

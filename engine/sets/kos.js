@@ -500,6 +500,56 @@ export const KoS = {
   virtualVP: breakthrough,
 
 
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["shieldFront", "spearForward", "swordsTogether", "supplyReady", "formationNear"],
+    add(s, player, f, base, sign, own, n) {
+      const board = s.board, forward = defaultDir(player);
+      let shieldFront = 0, spearForward = 0, swords = 0, commanders = 0, knight = false;
+      for (let i = 0; i < n; i++) {
+        const at = own[i], d = board[at];
+        if (d.level === SWORD) swords++;
+        else if (d.level === COMMANDER) commanders++;
+        else if (d.level === KNIGHT) knight = true;
+        else if (d.level === SPEAR && d.dir === forward) spearForward++;
+        else if (d.level === SHIELD) {
+          // Resistance and Shield Strike work against the creature in front.
+          const front = step(at, d.dir);
+          const e = front >= 0 ? board[front] : null;
+          if (e && e.owner !== player) shieldFront++;
+        }
+      }
+      f[base] += sign * shieldFront;
+      f[base + 1] += sign * spearForward;
+      // Relentless: every further First Sword can act in the same turn.
+      f[base + 2] += sign * Math.max(0, swords - 1);
+      f[base + 3] += sign * (commanders && s.players[player].reserve >= 4 ? 1 : 0);
+      // Breakthrough: formations close to 9 (6 to 8) while a King's Knight is in play.
+      if (knight) {
+        const mark = ++seenMark;
+        let near = 0;
+        for (let i = 0; i < n; i++) {
+          const start = own[i];
+          if (seen[start] === mark) continue;
+          let sum = 0, top = 0;
+          stack[top++] = start;
+          seen[start] = mark;
+          while (top) {
+            const x = stack[--top];
+            sum += board[x].level;
+            const adj = adjacent(x);
+            for (let k = 0; k < adj.length; k++) {
+              const y = adj[k], d = board[y];
+              if (d && d.owner === player && seen[y] !== mark) { seen[y] = mark; stack[top++] = y; }
+            }
+          }
+          if (sum >= 6 && sum < FORMATION_POWER) near++;
+        }
+        f[base + 4] += sign * near;
+      }
+    },
+  },
+
   // Starting lineups of the AI.
   aiBook: {
     // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).

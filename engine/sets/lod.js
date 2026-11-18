@@ -188,6 +188,10 @@ function innerFireOptions(s, pending) {
 
 // --- Set definition ----------------------------------------------------------------
 
+// Scratch arrays of the evaluation features.
+const seen = new Int32Array(SQUARES), stack = new Int32Array(SQUARES);
+let seenMark = 0;
+
 export const LoD = {
   id: "LoD",
   name: "Light of Dragons",
@@ -307,24 +311,26 @@ export const LoD = {
   // AI evaluation features (weights in ai/eval.js).
   evalTerms: {
     names: ["barrierSouls", "bloodTrade"],
-    add(s, player, f, base, sign) {
+    add(s, player, f, base, sign, own, n) {
       // Souls in a Protective Barrier (groups of 3 to 6): immune to the opponent.
       const board = s.board;
       let mages = 0, inBarriers = 0;
-      const seen = new Uint8Array(SQUARES);
-      for (let at = 0; at < SQUARES; at++) {
-        const d = board[at];
-        if (!d || d.owner !== player) continue;
+      const mark = ++seenMark;
+      for (let i = 0; i < n; i++) {
+        const at = own[i], d = board[at];
         if (d.level === MAGE) mages++;
-        if (d.level !== SOUL || seen[at]) continue;
+        if (d.level !== SOUL || seen[at] === mark) continue;
         let size = 0;
-        const stack = [at];
-        seen[at] = 1;
-        while (stack.length) {
-          const x = stack.pop();
+        let top = 0;
+        stack[top++] = at;
+        seen[at] = mark;
+        while (top) {
+          const x = stack[--top];
           size++;
-          for (const n of adjacent(x)) {
-            if (!seen[n] && isOwn(s, n, player, SOUL)) { seen[n] = 1; stack.push(n); }
+          const adj = adjacent(x);
+          for (let k = 0; k < adj.length; k++) {
+            const y = adj[k];
+            if (seen[y] !== mark && isOwn(s, y, player, SOUL)) { seen[y] = mark; stack[top++] = y; }
           }
         }
         if (size >= BARRIER_MIN && size <= BARRIER_MAX) inBarriers += size;

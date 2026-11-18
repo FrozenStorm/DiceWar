@@ -347,19 +347,19 @@ export const RoM = {
   // AI evaluation features (weights in ai/eval.js).
   evalTerms: {
     names: ["breathOfLife", "symbiosis", "maliAdvance"],
-    add(s, player, f, base, sign) {
+    add(s, player, f, base, sign, own, n) {
       const board = s.board;
       let protectresses = 0, fruits = 0, symbiosis = 0, maliAdvance = 0;
-      for (let at = 0; at < SQUARES; at++) {
-        const d = board[at];
-        if (!d || d.owner !== player) continue;
+      for (let i = 0; i < n; i++) {
+        const at = own[i], d = board[at];
         if (d.level === FRUIT) fruits++;
         else if (d.level === MALI) maliAdvance += player === 1 ? SIZE - 1 - rowOf(at) : rowOf(at);
         else if (d.level === PROTECTRESS) {
           protectresses++;
           // Symbiosis: a Golden Fruit next to her turns her into a Shadow Runner.
-          for (const n of adjacent(at)) {
-            const x = board[n];
+          const adj = adjacent(at);
+          for (let k = 0; k < adj.length; k++) {
+            const x = board[adj[k]];
             if (x && x.owner === player && x.level === FRUIT) { symbiosis++; break; }
           }
         }

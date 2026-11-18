@@ -277,6 +277,26 @@ export const BoD = {
   // BoD.demon.bound: 1 virtual VP per pair of Demon and Possessed.
   virtualVP: (s, player) => Math.min(countLevel(s, player, DEMON), countLevel(s, player, POSSESSED)),
 
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["gnomeAura"],
+    add(s, player, f, base, sign, own, n) {
+      // Protective Aura: own creatures of level 2+ next to an own Gnome.
+      const board = s.board;
+      let protectedCount = 0;
+      for (let i = 0; i < n; i++) {
+        const at = own[i], d = board[at];
+        if (d.level < 2) continue;
+        const adj = adjacent(at);
+        for (let k = 0; k < adj.length; k++) {
+          const g = board[adj[k]];
+          if (g && g.owner === player && g.level === GNOME) { protectedCount++; break; }
+        }
+      }
+      f[base] += sign * protectedCount;
+    },
+  },
+
   // Starting lineups of the AI.
   aiBook: {
     // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).

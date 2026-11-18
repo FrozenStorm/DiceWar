@@ -413,6 +413,24 @@ export const DoA = {
   virtualVP: (s, player) => diceOf(s, player, AWAKENING).filter((at) => twilight(s, at, player)).length,
 
 
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["fisherSquared", "sintFlutReady"],
+    add(s, player, f, base, sign, own, n) {
+      let fishers = 0, awakenings = 0;
+      for (let i = 0; i < n; i++) {
+        const level = s.board[own[i]].level;
+        if (level === FISHER) fishers++;
+        else if (level === AWAKENING) awakenings++;
+      }
+      // Rest Breaker: a Fisher attacks with the number of own Fishers.
+      fishers = Math.min(4, fishers);
+      f[base] += sign * fishers * fishers;
+      const p = s.players[player];
+      f[base + 1] += sign * (p.tp >= 10 && p.reserve >= 1 && awakenings ? 1 : 0);
+    },
+  },
+
   // Starting lineups of the AI.
   aiBook: {
     // Expert: the lineups that did best in a self-play tournament (tools/setups.mjs).
