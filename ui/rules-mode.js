@@ -330,9 +330,11 @@ function historyOfSave(json) {
 }
 
 /** Load a game from a save file, with its history so that Undo / Redo work. */
-function loadSave(json) {
+function loadSave(json, { ai = null } = {}) {
   const game = (json.snapshot || json).rulesGame;
   rm.ai = null;
+  rm.aiToken++;
+  rm.thinking = false;
   load(game, { resetHistory: true });
   const hist = historyOfSave(json);
   const states = statesFrom(hist, game);
@@ -340,8 +342,10 @@ function loadSave(json) {
     rm.undo = states.slice(0, -1);
     rm.undoActions = [...hist.actions];
     rm.game = states[states.length - 1];
-    render();
   }
+  // The AI joins only now, so it starts on the final state (with its history).
+  rm.ai = ai ? { player: ai.player, level: ai.level } : null;
+  render();
   return !!states;
 }
 
@@ -459,14 +463,14 @@ function confirmSetup() {
  *  180 degrees in duel and online games. */
 function alignmentRotation(d) {
   if (rm.game.players[d.owner].set !== "KoS") return 0;
-  const base = (state.gameMode === "duel" || state.gameMode === "online") && d.owner === 2 ? 180 : 0;
+  const base = turnsPlayer2Dice() && d.owner === 2 ? 180 : 0;
   return (d.dir * 90 - base + 360) % 360;
 }
 
 /** Total rotation of a die image with alignment `dir`, as rendered by index.html
  *  (the 180 degrees for player 2 in duel and online games included). */
 function alignDeg(owner, dir) {
-  const base = (state.gameMode === "duel" || state.gameMode === "online") && owner === 2 ? 180 : 0;
+  const base = turnsPlayer2Dice() && owner === 2 ? 180 : 0;
   return base + alignmentRotation({ owner, dir });
 }
 
@@ -613,7 +617,7 @@ function dieImageOf(at) {
 function dieImageRotation(at) {
   const cell = state.board[rowOf(at)][colOf(at)];
   let rot = cell.rotation || 0;
-  if ((state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2) rot += 180;
+  if (turnsPlayer2Dice() && cell.owner === 2) rot += 180;
   return rot;
 }
 
@@ -755,6 +759,7 @@ window.RulesMode = {
   get ai() { return rm.ai; },
   getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
   implementedLocations: IMPLEMENTED_LOCATIONS,
+  aiInfo: () => (rm.ai ? { player: rm.ai.player, level: rm.ai.level } : null),
   canUndo: () => rm.undo.length > 0 && state.gameMode !== "online",
   canRedo: () => rm.redo.length > 0 && state.gameMode !== "online",
 };
