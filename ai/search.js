@@ -172,7 +172,10 @@ function orderedActions(s, p, ctx, ply, tableMove) {
   const k0 = ctx.killers[2 * ply], k1 = ctx.killers[2 * ply + 1];
   for (let i = 0; i < all.length; i++) {
     const a = all[i];
-    if (a.type === "declareEndOfWar" || isRedundant(a)) continue;
+    // Placements marked redundant (fixed square order) are only redundant
+    // within one search of the whole sequence: decisions are taken one by one
+    // here, so every option of an open decision stays.
+    if (a.type === "declareEndOfWar" || (isRedundant(a) && !s.pending.length)) continue;
     const sig = signature(a);
     let score;
     if (sig === tableMove) score = 3e9;
@@ -225,7 +228,7 @@ function quiescence(s, p, depth, alpha, beta, ply, ctx) {
   let caps = [];
   for (let i = 0; i < all.length; i++) {
     const a = all[i];
-    if (isRedundant(a) || a.type === "declareEndOfWar") continue;
+    if ((isRedundant(a) && !open) || a.type === "declareEndOfWar") continue;
     if (open || isCapture(a)) caps.push(a);
   }
   if (!open && caps.length > 1) {
