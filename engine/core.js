@@ -597,9 +597,7 @@ export function applyAction(state, action) {
     const loc = getLocation(id);
     if (loc.afterAction) loc.afterAction(s);
   }
-  // Player 1's effects first (in a game with swapped players, engine/mirror.js:
-  // the original player 1, so the swapped game plays out exactly the same).
-  for (const p of s.options && s.options.mirrored ? [2, 1] : [1, 2]) {
+  for (const p of [1, 2]) {
     const set = setOf(s, p);
     if (set.afterAction) set.afterAction(s, p); // e.g. KoS Phalanx
   }

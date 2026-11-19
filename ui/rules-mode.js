@@ -14,7 +14,6 @@ import { IMPLEMENTED_SETS } from "../engine/sets/index.js";
 import { IMPLEMENTED_LOCATIONS } from "../engine/locations/index.js";
 import { actionPath, pendingPrompt, abilityName, TURN_LABELS, FACE_LABELS } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
-import { mirrorWithHistory } from "../engine/mirror.js";
 import { SIZE, sq, rowOf, colOf, supplyRow, defaultDir } from "../engine/board.js";
 import { captureDice, play as playAnimation, animateTurnAt, getSpeed, setSpeed } from "./animate.js";
 
@@ -330,17 +329,6 @@ function historyOfSave(json) {
   return null;
 }
 
-/** The save with both players swapped (engine/mirror.js): player 2's
- *  position becomes player 1's, with the history so that Undo / Redo work. */
-function swapSave(json) {
-  const game = (json.snapshot || json).rulesGame;
-  const hist = historyOfSave(json);
-  const res = mirrorWithHistory(game, statesFrom(hist, game) ? hist : null, applyAction, legalActions);
-  const snapshot = { rulesGame: res.game };
-  if (res.history) snapshot.rulesHistory = res.history;
-  return { version: 1, snapshot };
-}
-
 /** Load a game from a save file, with its history so that Undo / Redo work. */
 function loadSave(json, { ai = null } = {}) {
   const game = (json.snapshot || json).rulesGame;
@@ -498,8 +486,7 @@ function project() {
         // Several tiles on one field are shown as a split tile ("DoA+BoD+LoD").
         type: tile ? tile.map((id) => LOCATION_TILE_TYPE[id] || "neutral").join("+") : "neutral",
         rotation: d ? alignmentRotation(d) : 0,
-        flow: g.locations.includes("river") && RIVER_ROWS.includes(r) && !tile
-          ? (g.options && g.options.mirrored ? "left" : "right") : false,
+        flow: g.locations.includes("river") && RIVER_ROWS.includes(r) && !tile,
       };
     }
   }
@@ -772,7 +759,6 @@ window.RulesMode = {
   get ai() { return rm.ai; },
   getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
   implementedLocations: IMPLEMENTED_LOCATIONS,
-  swapSave,
   aiInfo: () => (rm.ai ? { player: rm.ai.player, level: rm.ai.level } : null),
   canUndo: () => rm.undo.length > 0 && state.gameMode !== "online",
   canRedo: () => rm.redo.length > 0 && state.gameMode !== "online",

@@ -258,8 +258,6 @@
 
     /* DoA River: fields in the three middle rows where the flow pushes creatures */
     .cell.flow { background: linear-gradient(90deg, rgba(40, 110, 170, 0.12), rgba(40, 110, 170, 0.32)); }
-    /* Game loaded with swapped players: the River flows to the left. */
-    .cell.flow.flow-left { background: linear-gradient(270deg, rgba(40, 110, 170, 0.12), rgba(40, 110, 170, 0.32)); }
 
     .cell.selected { background: rgba(240, 200, 120, 0.35); box-shadow: inset 0 0 0 2px var(--edge), inset 0 0 0 4px var(--accent); }
     .cell.hint { background: rgba(23, 145, 143, 0.38); box-shadow: inset 0 0 0 2px #0f6463, inset 0 0 0 4px rgba(244, 238, 223, 0.7); }
@@ -583,12 +581,6 @@
               <option value="ai">Against the AI</option>
               <option value="solo">Solo (play both sides)</option>
               <option value="duel">Duel (two players, one device)</option>
-            </select>
-          </label>
-          <label id="load-side-label">You play
-            <select id="load-side">
-              <option value="1">Player 1</option>
-              <option value="2">Player 2</option>
             </select>
           </label>
           <label id="load-ai-level-label">AI strength
@@ -1093,7 +1085,6 @@
             cellEl.classList.add("type-" + data.type);
           }
           cellEl.classList.toggle("flow", !!data.flow);
-          cellEl.classList.toggle("flow-left", data.flow === "left");
 
           if (
             state.selected &&
@@ -2114,19 +2105,14 @@
       const sets = setsOfSave(json);
       const withRules = !!(snap.rulesGame && window.RulesMode);
       const modeSel = document.getElementById("load-mode");
-      const sideSel = document.getElementById("load-side");
       const levelSel = document.getElementById("load-ai-level");
       // The AI only plays with the rules engine (not the Numbers set).
       modeSel.querySelector('option[value="ai"]').disabled = !withRules;
-      for (const p of [1, 2]) {
-        sideSel.querySelector(`option[value="${p}"]`).textContent = `Player ${p} – ${SET_LONG_NAMES[sets[p]] || sets[p]}`;
-      }
       // Suggest how the game was played when it was saved.
       const savedAi = snap.ai;
       const savedMode = savedAi || snap.gameMode === "ai" ? "ai" : snap.gameMode;
       modeSel.value = savedMode === "ai" && !withRules ? "duel"
         : ["ai", "solo", "duel"].includes(savedMode) ? savedMode : "duel";
-      sideSel.value = String(savedAi ? 3 - savedAi.player : 1);
       levelSel.value = (savedAi && savedAi.level) || document.getElementById("ai-level").value;
       const g = snap.rulesGame;
       const where = !g ? "" : g.phase === "over" ? " The game is over." : g.phase === "setup" ? " Starting lineup." : ` Turn ${g.turnNumber}.`;
@@ -2138,7 +2124,6 @@
 
     function updateLoadDialog() {
       const ai = document.getElementById("load-mode").value === "ai";
-      document.getElementById("load-side-label").style.display = ai ? "flex" : "none";
       document.getElementById("load-ai-level-label").style.display = ai ? "flex" : "none";
       const note = document.getElementById("load-note");
       note.style.display = ai ? "block" : "none";
@@ -2155,8 +2140,8 @@
       document.getElementById("load-overlay").style.display = "none";
       if (!json) return;
       const mode = document.getElementById("load-mode").value;
-      const human = Number(document.getElementById("load-side").value);
-      const ai = mode === "ai" ? { player: 3 - human, level: document.getElementById("load-ai-level").value } : null;
+      // As in every game against the AI: you are player 1 (bottom), the AI player 2.
+      const ai = mode === "ai" ? { player: 2, level: document.getElementById("load-ai-level").value } : null;
       try {
         if (window.Online && Online.inGame() && !Online.leaveForOtherMode()) return;
         if (window.Online && !Online.inGame()) Online.leaveForOtherMode();
@@ -2173,13 +2158,6 @@
      *  and `ai` ({ player, level }) choose how the game continues; without them
      *  the save is loaded as a game on one device. */
     function loadSaveData(json, { quiet = false, mode = null, ai = null } = {}) {
-      // Playing player 2 against the AI: the players are swapped (the board is
-      // turned and player 2's position becomes player 1's), so you play at the
-      // bottom as in every game against the AI.
-      if (ai && ai.player === 1 && window.RulesMode && (json.snapshot || json).rulesGame) {
-        json = RulesMode.swapSave(json);
-        ai = { ...ai, player: 2 };
-      }
       const snapshot = json.snapshot || json;
       const rg = snapshot.rulesGame;
       if (window.RulesMode) RulesMode.stop();
