@@ -11,7 +11,7 @@ import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
   pushChoice, inSquareOrder, doMove, doAttack, relocate, defeat, canDefeatWith, canMove, canRaise,
   isProtected, standardActionsOf, standardMoves, performAction, mainActions, actionOrigin,
-  canPlace,
+  canPlace, attackableBy,
 } from "../core.js";
 
 const SWORD = 1, SHIELD = 2, SPEAR = 3, COMMANDER = 4, STAG = 5, KNIGHT = 6;
@@ -210,27 +210,16 @@ function leadershipOptions(s, pending) {
   return decorate(s, player, subs).map((sub) => ({ type: "choice", kind: A.leadership, sub }));
 }
 
-/** Leadership: how many TP can be spent at most (all own movable creatures but the caster). */
-function leadershipMaxTP(s, at) {
-  const player = s.board[at].owner;
-  let sum = 0;
-  for (const x of diceOf(s, player)) if (x !== at && movementsOf(s, x).length) sum += s.board[x].level;
-  return Math.min(s.players[player].tp, sum);
+/** Can the creature on `at` make a Movement (standard or special)? */
+function canMakeMovement(s, at) {
+  const d = s.board[at];
+  if (standardMoves(s, at).length) return true;
+  if (d.level === SWORD && diagonal(at).some((t) => empty(s, t))) return true;
+  return d.level === STAG && backMoves(s, at).length > 0;
 }
 
-let checkingThreat = false;
 /** Could the opponent defeat the creature on `at` with their next action? */
-function threatened(s, at) {
-  if (checkingThreat) return false;
-  checkingThreat = true;
-  try {
-    const opp = opponent(s.board[at].owner);
-    const view = { ...s, current: opp, pending: [] };
-    return mainActions(view).some((a) => a.type === "attack" && a.to === at);
-  } finally {
-    checkingThreat = false;
-  }
-}
+const threatened = (s, at) => attackableBy(s, opponent(s.board[at].owner), at);
 
 function commanderActions(s, at) {
   const player = s.board[at].owner;
@@ -239,11 +228,17 @@ function commanderActions(s, at) {
   // KoS.commander.leadership
   // Like the other 4 spells: spell, then the amount of TP, then the creatures to move.
   if (p.reserve >= 1 && p.tp >= 1) {
-    const movable = diceOf(s, player).filter((x) => x !== at && movementsOf(s, x).length).map((x) => s.board[x].level);
-    if (movable.length) {
-      const min = Math.min(...movable);
-      for (let tp = min; tp <= leadershipMaxTP(s, at); tp++) out.push({ type: "spell", ability: A.leadership, at, tp });
+    // At least the lowest, at most the total Power Level of the own creatures
+    // that can move (not the caster), and not more than the TP.
+    let min = Infinity, sum = 0;
+    for (const x of diceOf(s, player)) {
+      if (x === at || !canMakeMovement(s, x)) continue;
+      const level = s.board[x].level;
+      sum += level;
+      if (level < min) min = level;
     }
+    const max = Math.min(p.tp, sum);
+    for (let tp = min; tp <= max; tp++) out.push({ type: "spell", ability: A.leadership, at, tp });
   }
   // KoS.commander.supply: 4 First Swords on the edges, if the Commander is not threatened.
   if (p.reserve >= 4 && edgeFields(s, player).length >= 4 && !threatened(s, at)) {
@@ -372,10 +367,13 @@ export const KoS = {
 
   decorateActions: decorate,
 
-  extraActions(s, player) {
+  // `attacksOnly`: only the Attacks are needed (spells may be left out).
+  extraActions(s, player, { attacksOnly = false } = {}) {
     const out = [];
     for (const at of diceOf(s, player)) {
-      switch (s.board[at].level) {
+      const level = s.board[at].level;
+      if (attacksOnly && level !== SPEAR) continue;
+      switch (level) {
         case SWORD: out.push(...agileMoves(s, at), ...supportActions(s, at)); break;
         case SHIELD: out.push(...strikeActions(s, at)); break;
         case SPEAR: out.push(...thrustActions(s, at)); break;
@@ -472,6 +470,25 @@ export const KoS = {
           pending.data.last, "place", Math.min(pending.data.left, s.players[player].reserve));
       case A.reinforcements: return reinforcementOptions(s, pending);
       default: return [];
+    }
+  },
+
+  // Same answer as choiceOptions(s, pending).length > 0 without building the
+  // options (they are often many: every field and alignment).
+  hasChoiceOptions(s, pending) {
+    const p = s.players[pending.player];
+    switch (pending.kind) {
+      case A.relentless: {
+        const acted = actedSwords(s);
+        return diceOf(s, pending.player, SWORD).some((at) => !acted.includes(s.board[at].id)
+          && (standardActionsOf(s, at).length || agileMoves(s, at).length || supportActions(s, at).length));
+      }
+      case A.rescue: return p.exile >= 1;
+      case A.toSpears: return countLevel(s, pending.player, SHIELD) > 0;
+      case A.supply: return p.reserve >= 1 && edgeFields(s, pending.player).length > 0;
+      case A.reinforcements:
+        return p.reserve >= 1 && reinfLeft(pending.data).length > 0 && surrounding(pending.data.at).some((t) => canPlace(s, t));
+      default: return undefined;
     }
   },
 

@@ -6,7 +6,8 @@
 //   canUpgrade(s, at, die)               -> false forbids Upgrade
 //   beats(s, from, att, def)             -> override the power hierarchy (undefined = default)
 //   isImmuneToAttack(s, to, from)        -> defender immunity
-//   extraActions(s, player)              -> additional actions (special moves, spells)
+//   extraActions(s, player, {attacksOnly}) -> additional actions (special moves, spells);
+//                                           attacksOnly: only Attacks are needed
 //   applyAbility(s, action)              -> resolve an action carrying `ability`
 //   afterMoveOrAttack(s, at, die)        -> a die ended its Movement/Attack on `at`
 //   onPlaced(s, at, die, cause)          -> a die was placed from the Reserve
@@ -16,8 +17,12 @@
 //   onTurnStart(s, player) / onTurnEnd(s, player)
 //   choiceOptions(s, pending)            -> legal answers to a queued decision
 //   resolveChoice(s, pending, action)
+//   hasChoiceOptions(s, pending)         -> optional quick answer to choiceOptions(...).length > 0
+//                                           (undefined: not known, the options are built)
 //   virtualVP(s, player)
 //   constrainOpponent(s, player, actions) -> restrict the opponent's main actions
+//                                           (if it keeps an action of a part of the list, it must keep
+//                                           at least one of the whole list: see core hasMainAction)
 //   immuneTo(s, at, kind)                -> immune against the opponent's "attack" | "spell" | "speciality"
 //   stepTargets(s, from, die)            -> fields of a standard step (default: adjacent)
 //   afterDefeatedBy(s, at, defeatedDie)  -> a die of this set was defeated by an attack (attacker on `at`)

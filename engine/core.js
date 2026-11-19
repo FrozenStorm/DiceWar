@@ -446,7 +446,25 @@ const TURN_START_ACTIONS = Symbol("turnStartActions");
  *  returned list may be shared: do not change it. */
 export function mainActions(s) {
   const cached = s[TURN_START_ACTIONS];
-  return cached && cached.state === s ? cached.actions : computeMainActions(s);
+  if (!cached || cached.state !== s) return computeMainActions(s);
+  if (!cached.actions) cached.actions = computeMainActions(s);
+  return cached.actions;
+}
+
+/** Does the current player have any main action? Same answer as
+ *  computeMainActions(s).length > 0, usually without building the list: one
+ *  standard action that the opponent's constrainOpponent keeps is enough
+ *  (constrainOpponent may force a choice, but never takes away every action
+ *  while one it keeps from a part of the list exists). */
+function hasMainAction(s) {
+  const player = s.current;
+  const other = setOf(s, opponent(player));
+  for (const from of diceOf(s, player)) {
+    const some = standardActionsOf(s, from);
+    if (!some.length) continue;
+    if (!other.constrainOpponent || other.constrainOpponent(s, player, some).length) return true;
+  }
+  return computeMainActions(s).length > 0;
 }
 
 function computeMainActions(s, variants = false) {
@@ -461,6 +479,22 @@ function computeMainActions(s, variants = false) {
   // Variants of actions, e.g. KoS: the alignment chosen with a Movement or Attack.
   if (set.decorateActions) out = set.decorateActions(s, player, out, variants);
   return out;
+}
+
+/** Could `player` defeat the creature on `at` with an Attack as their next
+ *  main action (as if it were their turn)? Same result as looking for an
+ *  attack on `at` in mainActions, without building the variants. */
+export function attackableBy(s, player, at) {
+  const view = { ...s, current: player, pending: [] };
+  let out = [];
+  for (const from of diceOf(view, player)) {
+    for (const to of standardAttacks(view, from)) out.push({ type: "attack", from, to });
+  }
+  const set = setOf(view, player);
+  if (set.extraActions) out.push(...set.extraActions(view, player, { attacksOnly: true }));
+  const other = setOf(view, opponent(player));
+  if (other.constrainOpponent) out = other.constrainOpponent(view, player, out);
+  return out.some((a) => a.type === "attack" && a.to === at);
 }
 
 /** Standard Movement, Attack and Upgrade actions of the die on `from`. */
@@ -632,7 +666,9 @@ export function turnDie(s, at, dir) {
 function settlePending(s) {
   while (s.pending.length) {
     const p = s.pending[0];
-    if (setOf(s, p.player).choiceOptions(s, p).length) break;
+    const set = setOf(s, p.player);
+    const has = set.hasChoiceOptions ? set.hasChoiceOptions(s, p) : undefined;
+    if (has ?? set.choiceOptions(s, p).length > 0) break;
     s.pending.shift();
   }
 }
@@ -650,9 +686,10 @@ function startTurn(s) {
   settlePending(s);
   // A player without any valid action loses.
   if (!s.pending.length) {
-    const actions = computeMainActions(s);
-    if (actions.length === 0) finish(s, opponent(player), "noValidAction");
-    else s[TURN_START_ACTIONS] = { state: s, actions };
+    if (!hasMainAction(s)) finish(s, opponent(player), "noValidAction");
+    // The list itself is only built when it is asked for (the AI search
+    // reaches many turn starts whose actions it never looks at).
+    else s[TURN_START_ACTIONS] = { state: s, actions: null };
   }
 }
 
