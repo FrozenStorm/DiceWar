@@ -398,7 +398,15 @@
     #rules-overlay { gap: 8px; }
     #rules-overlay.player2, #lobby-overlay.player2 { transform: rotate(180deg); }
     .rules-stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .rules-stage img { max-width: calc(100% - 80px); max-height: 100%; object-fit: contain; }
+    /* Every card image is 680x985 (tools/normalize-rule-cards.py); the box is
+       fixed by height so all cards show at exactly the same size. */
+    .rules-stage { container-type: size; }
+    .rules-stage img {
+      width: min(100cqw - 84px, 100cqh * 680 / 985); height: auto; aspect-ratio: 680 / 985;
+      flex: 0 0 auto; object-fit: contain;
+      -webkit-touch-callout: none; -webkit-user-drag: none;
+    }
+    .die img { -webkit-touch-callout: none; -webkit-user-drag: none; }
     .rules-arrow {
       width: 36px; height: 60px; flex: 0 0 auto; border: 0; background: transparent;
       font-size: 2rem; color: var(--paper);
@@ -1614,19 +1622,23 @@
     };
     const globalRules = ["zugablauf", "glossar"];
 
-    function openRulesOverlay(player) {
+    function openRulesOverlay(player, startCard) {
       const diceSet = state.players[player].diceSet || "numbers";
       const imageList = RULES_PER_SET[diceSet] || [1, 2, 3, 4, 5, 6];
       const folder = diceSet === "numbers" ? "numbers" : diceSet;
 
       rulesState.currentPlayer = player;
-      rulesState.currentImageIndex = 0;
+      const startIndex = startCard != null ? imageList.indexOf(startCard) : -1;
+      rulesState.currentImageIndex = Math.max(0, startIndex);
       const setImages = imageList.map(i => `img/${folder}/rules/${i}.png`);
       const globalImages = globalRules.map(i => `img/global/${i}.png`);
       rulesState.images = [...setImages, ...globalImages];
 
       const overlay = document.getElementById("rules-overlay");
       overlay.style.display = "flex";
+      // Taps only count once a new touch starts inside the overlay, so the finger
+      // that just opened it with a long press does not close or flip it.
+      rulesState.armed = false;
       overlay.classList.toggle("player2", state.gameMode === "duel" && state.currentPlayer === 2);
 
       showRulesImage();
@@ -1654,6 +1666,86 @@
       rulesState.currentImageIndex = (rulesState.currentImageIndex - 1 + rulesState.images.length) % rulesState.images.length;
       showRulesImage();
     }
+
+    function rulesOverlayOpen() {
+      return document.getElementById("rules-overlay").style.display === "flex";
+    }
+
+    // --- Rule card straight from a die: right-click (mouse) or long press (touch) ---
+    // A normal click/tap still selects the die. Works for both players' dice,
+    // also while the radial menu is open (it lies over the board).
+    const DieCard = (() => {
+      const LONG_PRESS_MS = 500;
+      const MOVE_TOLERANCE = 10;
+      let timer = null;
+      let start = null;
+      let swallowClick = false;
+
+      function dieAt(x, y) {
+        for (const el of document.elementsFromPoint(x, y)) {
+          if (el.closest && el.closest("#ring-svg .seg")) return null; // a menu button, not a die
+          const cell = el.closest && el.closest("#board .cell");
+          if (!cell) continue;
+          const data = state.board[+cell.dataset.row] && state.board[+cell.dataset.row][+cell.dataset.col];
+          if (data && data.owner != null && data.value != null && cell.querySelector(".die")) {
+            return { player: data.owner, value: data.value };
+          }
+          return null;
+        }
+        return null;
+      }
+
+      function open(die) {
+        if (rulesOverlayOpen()) return;
+        openRulesOverlay(die.player, die.value);
+      }
+
+      function cancel() {
+        clearTimeout(timer);
+        timer = null;
+        start = null;
+      }
+
+      document.addEventListener("contextmenu", (e) => {
+        const die = dieAt(e.clientX, e.clientY);
+        if (!die) return;
+        e.preventDefault();
+        if (e.pointerType === "touch" || timer || swallowClick) return; // touch is handled by the long press
+        open(die);
+      });
+
+      document.addEventListener("pointerdown", (e) => {
+        swallowClick = false;
+        cancel();
+        if (e.pointerType === "mouse" || rulesOverlayOpen()) return;
+        const die = dieAt(e.clientX, e.clientY);
+        if (!die) return;
+        start = { x: e.clientX, y: e.clientY };
+        timer = setTimeout(() => {
+          timer = null;
+          start = null;
+          swallowClick = true;
+          if (navigator.vibrate) navigator.vibrate(30);
+          open(die);
+        }, LONG_PRESS_MS);
+      });
+
+      document.addEventListener("pointermove", (e) => {
+        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > MOVE_TOLERANCE) cancel();
+      });
+      document.addEventListener("pointerup", () => { if (timer) cancel(); });
+      document.addEventListener("pointercancel", cancel);
+
+      // The click that ends a long press must not also select the die.
+      document.addEventListener("click", (e) => {
+        if (!swallowClick) return;
+        swallowClick = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }, true);
+
+      return { dieAt };
+    })();
 
     // --- Online UI on/off ---
     function enableAllGameElements() {
@@ -1896,6 +1988,14 @@
       document
         .getElementById("rules-next")
         .addEventListener("click", nextRulesImage);
+
+      const rulesOverlayEl = document.getElementById("rules-overlay");
+      rulesOverlayEl.addEventListener("pointerdown", () => { rulesState.armed = true; });
+      rulesOverlayEl.addEventListener("click", (e) => {
+        if (!rulesState.armed) { e.stopPropagation(); return; }
+        // Tap outside the card and its buttons closes the overlay.
+        if (!e.target.closest("#rules-image, .rules-arrow, #btn-close-rules")) closeRulesOverlay();
+      }, true);
 
       document
         .getElementById("rules-image")
