@@ -464,6 +464,13 @@
     .online-bar .small-btn { min-height: 30px; padding: 2px 10px; }
     #online-result-overlay .lobby-card { text-align: center; }
 
+    /* ---------- Load a save: how to continue ---------- */
+    #load-overlay { overflow-y: auto; justify-content: safe center; z-index: 1050; }
+    #load-overlay label {
+      display: flex; flex-direction: column; gap: 3px;
+      font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: 0.03em;
+    }
+
     /* ---------- Landscape: board left, docks in a column on the right ---------- */
     @media (min-aspect-ratio: 5/4) {
       #app {
@@ -559,6 +566,36 @@
           <p id="online-result-text"></p>
           <button class="big-btn" id="btn-result-lobby">Back to Lobby</button>
           <button class="big-btn secondary" id="btn-result-close">Look at the Board</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load a save: choose how the game continues -->
+    <div id="load-overlay" class="overlay">
+      <div class="paper lobby-card">
+        <h1>Load Game</h1>
+        <div class="lobby-inner">
+          <p id="load-summary"></p>
+          <label>Continue as
+            <select id="load-mode">
+              <option value="ai">Against the AI</option>
+              <option value="solo">Solo (play both sides)</option>
+              <option value="duel">Duel (two players, one device)</option>
+            </select>
+          </label>
+          <label id="load-ai-level-label">AI strength
+            <select id="load-ai-level">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+              <option value="expert">Expert</option>
+            </select>
+          </label>
+          <p id="load-note" style="font-size: 14px;"></p>
+          <div class="challenge-buttons">
+            <button class="big-btn" id="btn-load-confirm">Load</button>
+            <button class="big-btn secondary" id="btn-load-cancel">Cancel</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2030,21 +2067,97 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (ev) => {
+          let json;
           try {
-            loadSaveData(JSON.parse(ev.target.result));
+            json = JSON.parse(ev.target.result);
           } catch (err) {
             console.error(err);
             alert("Error loading file.");
+            return;
           }
+          openLoadDialog(json);
         };
         reader.readAsText(file);
         e.target.value = "";
       });
     }
 
+    // --- Load dialog: how the loaded game continues ---
+    const SET_LONG_NAMES = {
+      RoX: "Rise of Xeladron", BoD: "Bond of Demons", LoD: "Light of Dragons", RoM: "Roots of Mali",
+      KoS: "Knights of Steel", DoA: "Dawn of Awakening", numbers: "Numbers",
+    };
+    let pendingLoad = null;
+
+    /** Dice sets of a save file: { 1: "RoX", 2: "KoS" }. */
+    function setsOfSave(json) {
+      const snap = json.snapshot || json;
+      const rg = snap.rulesGame;
+      if (rg && rg.players) return { 1: rg.players[1].set, 2: rg.players[2].set };
+      const pl = snap.players || {};
+      return { 1: (pl[1] && pl[1].diceSet) || "numbers", 2: (pl[2] && pl[2].diceSet) || "numbers" };
+    }
+
+    function openLoadDialog(json) {
+      const snap = json.snapshot || json;
+      if (!snap.board && !snap.rulesGame) { alert("This file is not a DiceWar save."); return; }
+      pendingLoad = json;
+      const sets = setsOfSave(json);
+      const withRules = !!(snap.rulesGame && window.RulesMode);
+      const modeSel = document.getElementById("load-mode");
+      const levelSel = document.getElementById("load-ai-level");
+      // The AI only plays with the rules engine (not the Numbers set).
+      modeSel.querySelector('option[value="ai"]').disabled = !withRules;
+      // Suggest how the game was played when it was saved.
+      const savedAi = snap.ai;
+      const savedMode = savedAi || snap.gameMode === "ai" ? "ai" : snap.gameMode;
+      modeSel.value = savedMode === "ai" && !withRules ? "duel"
+        : ["ai", "solo", "duel"].includes(savedMode) ? savedMode : "duel";
+      levelSel.value = (savedAi && savedAi.level) || document.getElementById("ai-level").value;
+      const g = snap.rulesGame;
+      const where = !g ? "" : g.phase === "over" ? " The game is over." : g.phase === "setup" ? " Starting lineup." : ` Turn ${g.turnNumber}.`;
+      document.getElementById("load-summary").textContent =
+        `${SET_LONG_NAMES[sets[1]] || sets[1]} vs. ${SET_LONG_NAMES[sets[2]] || sets[2]}.${where}`;
+      updateLoadDialog();
+      document.getElementById("load-overlay").style.display = "flex";
+    }
+
+    function updateLoadDialog() {
+      const ai = document.getElementById("load-mode").value === "ai";
+      document.getElementById("load-ai-level-label").style.display = ai ? "flex" : "none";
+      const note = document.getElementById("load-note");
+      note.style.display = ai ? "block" : "none";
+      note.textContent = "You play at the bottom, the AI plays at the top.";
+    }
+    document.getElementById("load-mode").addEventListener("change", updateLoadDialog);
+    document.getElementById("btn-load-cancel").addEventListener("click", () => {
+      pendingLoad = null;
+      document.getElementById("load-overlay").style.display = "none";
+    });
+    document.getElementById("btn-load-confirm").addEventListener("click", () => {
+      const json = pendingLoad;
+      pendingLoad = null;
+      document.getElementById("load-overlay").style.display = "none";
+      if (!json) return;
+      const mode = document.getElementById("load-mode").value;
+      // As in every game against the AI: you are player 1 (bottom), the AI player 2.
+      const ai = mode === "ai" ? { player: 2, level: document.getElementById("load-ai-level").value } : null;
+      try {
+        if (window.Online && Online.inGame() && !Online.leaveForOtherMode()) return;
+        if (window.Online && !Online.inGame()) Online.leaveForOtherMode();
+        loadSaveData(json, { quiet: true, mode, ai });
+        document.getElementById("lobby-overlay").style.display = "none";
+      } catch (err) {
+        console.error(err);
+        alert("Error loading file.");
+      }
+    });
+
     /** Load a save file. With the saved move history (rulesHistory), Undo / Redo
-     *  work after loading, also in a finished game. */
-    function loadSaveData(json, { quiet = false } = {}) {
+     *  work after loading, also in a finished game. `mode` ("ai", "solo", "duel")
+     *  and `ai` ({ player, level }) choose how the game continues; without them
+     *  the save is loaded as a game on one device. */
+    function loadSaveData(json, { quiet = false, mode = null, ai = null } = {}) {
       const snapshot = json.snapshot || json;
       const rg = snapshot.rulesGame;
       if (window.RulesMode) RulesMode.stop();
@@ -2053,6 +2166,9 @@
       } else {
         applyStateSnapshot(snapshot);
       }
+      if (!rg || !window.RulesMode) ai = null;
+      state.gameMode = ai ? "ai" : mode && mode !== "ai" ? mode : state.gameMode === "solo" ? "solo" : "duel";
+      updatePerspective();
       updateBoardDOM();
       refreshPlayerPanels();
       updateRoundDisplay();
@@ -2063,7 +2179,7 @@
       updateSaveLoadButtons();
       markGameStarted();
       // Last, so that the rules panel (e.g. "Game over") is not overwritten.
-      if (window.RulesMode && rg) RulesMode.loadSave(json);
+      if (window.RulesMode && rg) RulesMode.loadSave(json, { ai });
       if (!quiet) alert("Save loaded.");
     }
     window.loadSaveData = loadSaveData;
@@ -2076,6 +2192,8 @@
         // Moves so far, so that Undo / Redo still work after loading.
         const hist = RulesMode.history();
         if (hist) snapshot.rulesHistory = hist;
+        // Who the AI was, so that loading suggests the same setup again.
+        if (RulesMode.aiInfo()) snapshot.ai = RulesMode.aiInfo();
       }
       const data = {
         version: 1,

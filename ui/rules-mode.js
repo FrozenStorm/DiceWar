@@ -330,9 +330,11 @@ function historyOfSave(json) {
 }
 
 /** Load a game from a save file, with its history so that Undo / Redo work. */
-function loadSave(json) {
+function loadSave(json, { ai = null } = {}) {
   const game = (json.snapshot || json).rulesGame;
   rm.ai = null;
+  rm.aiToken++;
+  rm.thinking = false;
   load(game, { resetHistory: true });
   const hist = historyOfSave(json);
   const states = statesFrom(hist, game);
@@ -340,8 +342,10 @@ function loadSave(json) {
     rm.undo = states.slice(0, -1);
     rm.undoActions = [...hist.actions];
     rm.game = states[states.length - 1];
-    render();
   }
+  // The AI joins only now, so it starts on the final state (with its history).
+  rm.ai = ai ? { player: ai.player, level: ai.level } : null;
+  render();
   return !!states;
 }
 
@@ -755,6 +759,7 @@ window.RulesMode = {
   get ai() { return rm.ai; },
   getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
   implementedLocations: IMPLEMENTED_LOCATIONS,
+  aiInfo: () => (rm.ai ? { player: rm.ai.player, level: rm.ai.level } : null),
   canUndo: () => rm.undo.length > 0 && state.gameMode !== "online",
   canRedo: () => rm.redo.length > 0 && state.gameMode !== "online",
 };
