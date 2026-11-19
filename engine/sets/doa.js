@@ -413,6 +413,9 @@ export const DoA = {
   virtualVP: (s, player) => diceOf(s, player, AWAKENING).filter((at) => twilight(s, at, player)).length,
 
 
+  // Inside its look-ahead the AI takes these decisions by the evaluation of their options.
+  aiGreedyChoices: [A.godcatcher, A.newBeginning],
+
   // AI evaluation features (weights in ai/eval.js).
   evalTerms: {
     names: ["fisherSquared", "sintFlutReady"],

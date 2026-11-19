@@ -308,6 +308,10 @@ export const LoD = {
     return dragons ? Math.max(0, dragons - countLevel(s, opponent(player), 6)) : 0;
   },
 
+  // Inside its look-ahead the AI takes these step-by-step decisions by the
+  // evaluation of their options (searched when they come up).
+  aiGreedyChoices: [A.bloodUpgrade, A.excess],
+
   // AI evaluation features (weights in ai/eval.js).
   evalTerms: {
     names: ["barrierSouls", "bloodTrade"],

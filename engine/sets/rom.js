@@ -344,6 +344,9 @@ export const RoM = {
   virtualVP: (s, player) => diceOf(s, player, MALI).filter((at) => inOwnZone(opponent(player), at)).length,
 
 
+  // Inside its look-ahead the AI takes this decision by the evaluation of its options.
+  aiGreedyChoices: [A.children],
+
   // AI evaluation features (weights in ai/eval.js).
   evalTerms: {
     names: ["breathOfLife", "symbiosis", "maliAdvance"],

@@ -73,6 +73,11 @@ const features = new Float64Array(FEATURES.length);
 /** Attacker level `a` defeats defender level `d` by the base hierarchy. */
 const beatsLevel = (a, d) => (a > d && a >= 2) || (a === 3 && d === 6);
 
+// Features that the evaluation can skip because their weight is 0 (set by
+// evaluate for its weights; featureVector computes everything).
+let skipThreatened = false, skipRuinNear = false, skipSetTerms = {};
+const NO_SKIP = {};
+
 /** Adds sign * (features of player p) to f. */
 function addSide(s, p, toMove, f, sign) {
   const board = s.board;
@@ -94,10 +99,12 @@ function addSide(s, p, toMove, f, sign) {
     const r = (at / 7) | 0, c = at % 7;
     f[base + level] += sign;
     center += 3 - Math.abs(3 - c) * 0.5;
-    const adj = adjacent(at);
-    for (let k = 0; k < adj.length; k++) {
-      const e = board[adj[k]];
-      if (e && e.owner === o && beatsLevel(e.level, level)) { threatened++; break; }
+    if (!skipThreatened) {
+      const adj = adjacent(at);
+      for (let k = 0; k < adj.length; k++) {
+        const e = board[adj[k]];
+        if (e && e.owner === o && beatsLevel(e.level, level)) { threatened++; break; }
+      }
     }
     if (level >= 2) {
       // Pressure: advance into the opposing half, where defeats give the Field Bonus.
@@ -134,6 +141,7 @@ function addSide(s, p, toMove, f, sign) {
           const d = board[at];
           if (d && d.owner === p) { held++; continue; }
           if (!d) open = at;
+          if (skipRuinNear) continue;
           const adj = adjacent(at);
           for (let k = 0; k < adj.length; k++) {
             const x = board[adj[k]];
@@ -162,12 +170,18 @@ function addSide(s, p, toMove, f, sign) {
       }
     }
   }
-  if (set.evalTerms) set.evalTerms.add(s, p, f, base + 7, sign, own, n);
+  if (set.evalTerms && !skipSetTerms[set.id]) set.evalTerms.add(s, p, f, base + 7, sign, own, n);
 }
 
 /** Fills `f` with the features of state `s` from the point of view of `me`
  *  (own minus other side). Returns f. */
 export function featureVector(s, me, f = new Float64Array(FEATURES.length)) {
+  skipThreatened = skipRuinNear = false;
+  skipSetTerms = NO_SKIP;
+  return fillFeatures(s, me, f);
+}
+
+function fillFeatures(s, me, f) {
   f.fill(0);
   const board = s.board;
   let n1 = 0, n2 = 0;
@@ -182,13 +196,24 @@ export function featureVector(s, me, f = new Float64Array(FEATURES.length)) {
   return f;
 }
 
-// Weight vector of the last weight object (a search uses one object throughout).
-let lastWeights = null, weightVector = null;
+// Weight vector of the last weight object (a search uses one object throughout),
+// and which features it can skip because their weight is 0.
+let lastWeights = null, weightVector = null, skips = null;
 function vectorOf(W) {
   if (W !== lastWeights) {
     weightVector = Float64Array.from(FEATURES, (name) => W[name] ?? WEIGHTS[name]);
     lastWeights = W;
+    const sets = {};
+    for (const id of SET_IDS) {
+      let zero = true;
+      for (let i = SET_BASE[id] + 6; i < SET_END[id]; i++) if (weightVector[i] !== 0) zero = false;
+      sets[id] = zero;
+    }
+    skips = { threatened: weightVector[THREATENED] === 0, ruinNear: weightVector[RUIN_NEAR] === 0, sets };
   }
+  skipThreatened = skips.threatened;
+  skipRuinNear = skips.ruinNear;
+  skipSetTerms = skips.sets;
   return weightVector;
 }
 
@@ -198,8 +223,8 @@ export function evaluate(s, me, W = WEIGHTS) {
     const w = s.result.winner;
     return w === 0 ? 0 : w === me ? WIN : -WIN;
   }
-  const f = featureVector(s, me, features);
   const w = vectorOf(W);
+  const f = fillFeatures(s, me, features);
   let v = 0;
   for (let i = 0; i < GENERAL.length; i++) v += w[i] * f[i];
   // Only the features of the two sets in play can be non-zero.

@@ -540,6 +540,12 @@ export const KoS = {
   virtualVP: breakthrough,
 
 
+  // Inside its look-ahead the AI takes these decisions by the evaluation of
+  // their options and skips the additional actions of the other First Swords
+  // (it still searches them when they come up).
+  aiGreedyChoices: [A.relentless, A.rescue, A.toSpears, A.leadership, A.supply, A.reinforcements],
+  aiSkipInSearch: (pending) => (pending.kind === A.relentless ? { type: "choice", kind: A.relentless, skip: true } : null),
+
   // AI evaluation features (weights in ai/eval.js).
   evalTerms: {
     names: ["shieldFront", "spearForward", "swordsTogether", "supplyReady", "formationNear"],

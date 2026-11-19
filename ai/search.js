@@ -6,33 +6,64 @@
 // - move ordering (table move, captures, killer moves, history) so that
 //   alpha-beta cuts off early;
 // - late moves are searched with reduced depth and only re-searched when they
-//   turn out to be good, instead of dropping moves;
-// - every decision inside a turn (where to place a die, which First Sword acts
-//   next, how to spend Blood Trade TP) is searched like a move. A turn costs
-//   PLY units of depth and a decision inside it CHOICE_COST, so chains of
-//   decisions are searched exactly near the root; only beyond the horizon is
-//   a decision taken by the evaluation of its options;
+//   turn out to be good, instead of dropping all moves beyond a fixed width;
 // - quiescence search: at the horizon, captures are played out before the
 //   position is rated, so the AI does not stop thinking in the middle of an
 //   exchange;
 // - wins are worth more the sooner they happen, so a won game is finished.
 //
-// Values are always seen from the player `p` passed to the function (negamax).
+// Values are always seen from the player `p` passed to the function
+// (negamax); a turn is one ply of depth, decisions inside a turn are free.
 
 import { legalActions, mainActions, applyAction, actor, totalVP, diceOf } from "../engine/core.js";
 import { fieldBonus, SQUARES } from "../engine/board.js";
+import { getSet } from "../engine/sets/index.js";
 import { WIN, evaluate, WEIGHTS } from "./eval.js";
 
 /** Thrown inside a search when its time or node budget is used up. */
 class Timeout extends Error {}
 
-/** Variants with the same result as another action (KoS: turning before
- *  instead of after a Movement; placements in another order) are skipped. */
+/** Variants with the same result as another action (e.g. KoS: turning before
+ *  instead of after a Movement) are left out of the search. */
 const isRedundant = (a) => !!(a.redundant || (a.sub && a.sub.redundant));
 
+/** Is the next step a decision the AI takes by the evaluation of its options
+ *  inside the look-ahead (long chains of small steps such as LoD Blood Trade
+ *  upgrades would blow up the search)? At the root it is searched. */
+function greedyPending(s) {
+  if (!s.pending.length || s.phase === "over") return false;
+  const p = s.pending[0];
+  const set = getSet(s.players[p.player].set);
+  return !!(set.aiGreedyChoices && set.aiGreedyChoices.includes(p.kind));
+}
+
+/** Best option of such a decision by the evaluation for the deciding player
+ *  (every option, also those marked redundant: a fixed order of placements
+ *  must not limit the choice). */
+function greedyChoice(s, W, evalFn) {
+  const who = actor(s);
+  let best = null, bestV = -Infinity;
+  for (const a of legalActions(s)) {
+    const v = evalFn(applyAction(s, a), who, W);
+    if (v > bestV) { bestV = v; best = a; }
+  }
+  return best;
+}
+
+/** Settle such decisions until the state needs a real choice again.
+ *  Decisions a set marks with aiSkipInSearch get that fixed answer. */
+function resolveGreedy(s, W, evalFn) {
+  let guard = 0;
+  while (greedyPending(s) && guard++ < 20) {
+    const p = s.pending[0];
+    const set = getSet(s.players[p.player].set);
+    const fixed = set.aiSkipInSearch ? set.aiSkipInSearch(p) : null;
+    s = applyAction(s, fixed || greedyChoice(s, W, evalFn));
+  }
+  return s;
+}
+
 const MAX_PLY = 64;
-/** Units of depth: a whole turn, and one decision inside a turn. */
-const PLY = 4, CHOICE_COST = 1;
 /** Share of the thinking time for a decision inside a turn (e.g. where to place a die). */
 const CHOICE_SHARE = 0.2;
 /** Default plies of captures searched beyond the horizon. */
@@ -168,9 +199,8 @@ function tick(ctx) {
   if (++ctx.nodes >= ctx.maxNodes || (ctx.nodes % 128 === 0 && Date.now() > ctx.deadline)) throw new Timeout();
 }
 
-/** Depth left after `child` was reached from `s` by one action. */
-const nextDepth = (s, child, depth) =>
-  depth - (child.phase === "over" || child.current !== s.current ? PLY : CHOICE_COST);
+/** Apply `a`, settle the decisions the AI takes greedily. */
+const play = (s, a, ctx) => resolveGreedy(applyAction(s, a), ctx.W, ctx.evalFn);
 
 /** Value of `child` for `p`, searched with the given routine. */
 function childValue(child, p, search, depth, alpha, beta, ply, ctx) {
@@ -179,54 +209,31 @@ function childValue(child, p, search, depth, alpha, beta, ply, ctx) {
   return q === p ? search(child, p, depth, alpha, beta, ply, ctx) : -search(child, q, depth, -beta, -alpha, ply, ctx);
 }
 
-/** The options of the decision open in `s` with their results, best rated
- *  first for the player who decides. Placements in square order: after a
- *  placement on a late square only "redundant" earlier squares may be left;
- *  that order of placements is tried elsewhere, so there are no options then,
- *  unless `deadEnd` asks for the redundant ones. */
-function optionsByEvaluation(s, ctx, deadEnd = false) {
-  const who = actor(s);
-  const all = legalActions(s);
-  const skip = !deadEnd || all.some((a) => !isRedundant(a));
-  const acts = [], children = [], values = [];
-  for (let i = 0; i < all.length; i++) {
-    if (skip && isRedundant(all[i])) continue;
-    const child = applyAction(s, all[i]);
-    acts.push(all[i]); children.push(child);
-    values.push(child.phase === "over" ? overValue(child, who, 0) : ctx.evalFn(child, who, ctx.W));
-  }
-  const index = acts.map((_, i) => i);
-  index.sort((x, y) => values[y] - values[x] || x - y);
-  return { acts: index.map((i) => acts[i]), children: index.map((i) => children[i]) };
-}
-
 /** Captures only, until the position is quiet. */
 function quiescence(s, p, depth, alpha, beta, ply, ctx) {
   tick(ctx);
-  if (s.pending.length) {
-    // Beyond the horizon a decision inside the turn is taken by the
-    // evaluation of its options.
-    const { children } = optionsByEvaluation(s, ctx, true);
-    if (!children.length || ply >= MAX_PLY) return ctx.evalFn(s, p, ctx.W);
-    const child = children[0];
-    const next = child.phase !== "over" && child.current !== s.current ? depth - 1 : depth;
-    return childValue(child, p, quiescence, next, alpha, beta, ply + 1, ctx);
+  const open = s.pending.length > 0; // a decision has to be taken: no standing pat
+  let best = -Infinity;
+  // Safety net: a chain of decisions inside one turn must not run on forever.
+  if (open && ply >= MAX_PLY) return ctx.evalFn(s, p, ctx.W);
+  if (!open) {
+    best = ctx.evalFn(s, p, ctx.W);
+    if (depth <= 0 || best >= beta || ply >= MAX_PLY) return best;
+    if (best > alpha) alpha = best;
   }
-  let best = ctx.evalFn(s, p, ctx.W);
-  if (depth <= 0 || best >= beta || ply >= MAX_PLY) return best;
-  if (best > alpha) alpha = best;
-  const all = mainActions(s);
+  const all = open ? legalActions(s) : mainActions(s);
   let caps = [];
   for (let i = 0; i < all.length; i++) {
     const a = all[i];
-    if (isCapture(a) && !isRedundant(a)) caps.push(a);
+    if (isRedundant(a) || a.type === "declareEndOfWar") continue;
+    if (open || isCapture(a)) caps.push(a);
   }
-  if (caps.length > 1) {
+  if (!open && caps.length > 1) {
     const gain = caps.map((a) => captureGain(s, p, a));
     caps = caps.map((a, i) => i).sort((x, y) => gain[y] - gain[x] || x - y).map((i) => caps[i]);
   }
   for (let i = 0; i < caps.length; i++) {
-    const child = applyAction(s, caps[i]);
+    const child = play(s, caps[i], ctx);
     const next = child.phase !== "over" && child.current !== s.current ? depth - 1 : depth;
     const v = childValue(child, p, quiescence, next, alpha, beta, ply + 1, ctx);
     if (v > best) best = v;
@@ -240,12 +247,11 @@ function negamax(s, p, depth, alpha, beta, ply, ctx) {
   if (depth <= 0 || ply >= MAX_PLY) return quiescence(s, p, ctx.quiescence, alpha, beta, ply, ctx);
   tick(ctx);
 
-  // Transposition table (only for positions at the start of a turn: inside
-  // a turn, what happened so far differs between orders of moves).
-  const inTurn = s.pending.length > 0;
+  // Transposition table (only for positions at the start of a turn).
+  const useTable = s.pending.length === 0;
   let slot = 0, check = 0, tableMove = -1;
   const alpha0 = alpha;
-  if (!inTurn) {
+  if (useTable) {
     hashState(s);
     slot = key[0] & TT_MASK; check = key[1] || 1;
     if (ttCheck[slot] === check && ttMeta[slot] !== 0) {
@@ -263,28 +269,21 @@ function negamax(s, p, depth, alpha, beta, ply, ctx) {
     }
   }
 
-  // Decisions inside a turn: options in the order of their evaluation (their
-  // results are needed anyway). Main actions: the usual move ordering.
-  let acts, children = null;
-  if (inTurn) ({ acts, children } = optionsByEvaluation(s, ctx));
-  else acts = orderedActions(s, p, ctx, ply, tableMove);
-  if (!acts.length) return inTurn ? -Infinity : ctx.evalFn(s, p, ctx.W); // in a turn: an order tried elsewhere
+  const acts = orderedActions(s, p, ctx, ply, tableMove);
+  if (!acts.length) return ctx.evalFn(s, p, ctx.W);
   let best = -Infinity, bestSig = -1;
   for (let i = 0; i < acts.length; i++) {
     const a = acts[i];
-    const child = children ? children[i] : applyAction(s, a);
-    const next = nextDepth(s, child, depth);
+    const child = play(s, a, ctx);
+    const turnOver = child.phase === "over" || child.current !== s.current;
+    const next = turnOver ? depth - 1 : depth;
     let v;
-    if (i === 0) {
+    if (i === 0 || !turnOver) {
       v = childValue(child, p, negamax, next, alpha, beta, ply + 1, ctx);
     } else {
-      // Late moves: reduced depth and a minimal window first. Late options of
-      // a decision inside a turn are always reduced (they come in the order of
-      // the evaluation of their results); beyond the horizon the rest of the
-      // turn is then decided by that evaluation.
+      // Late quiet moves: reduced depth and a minimal window first.
       let reduced = next;
-      const from = inTurn ? 0 : 2 * PLY;
-      if (depth > from && i >= ctx.lateFrom && !isCapture(a)) reduced -= i >= ctx.veryLateFrom && depth >= from + PLY ? 2 * PLY : PLY;
+      if (depth >= 2 && i >= ctx.lateFrom && !isCapture(a)) reduced -= i >= ctx.veryLateFrom && depth >= 3 ? 2 : 1;
       v = childValue(child, p, negamax, reduced, alpha, alpha + 1e-3, ply + 1, ctx);
       if (v > alpha && (reduced < next || v < beta)) v = childValue(child, p, negamax, next, alpha, beta, ply + 1, ctx);
     }
@@ -301,7 +300,7 @@ function negamax(s, p, depth, alpha, beta, ply, ctx) {
     }
   }
 
-  if (!inTurn) {
+  if (useTable) {
     const old = ttMeta[slot];
     if (ttCheck[slot] !== check || (old >> 2) <= depth) {
       let v = best;
@@ -338,21 +337,24 @@ function declaresEndOfWar(s, me) {
 /**
  * The start of a search: either the decision is clear without searching
  * (`result`), or the root actions come back with their results, sorted by a
- * first rating (plus the level's noise).
+ * first rating (plus the level's noise). Decisions the look-ahead takes by
+ * evaluation are searched here like any other move, with a part of the time.
  */
 function rootStart(s, cfg, random, ctx) {
   const me = actor(s);
   if (declaresEndOfWar(s, me)) return { result: { action: { type: "declareEndOfWar" }, score: 0, depth: 0, nodes: 0 } };
-  const actions = s.pending.length ? optionsByEvaluation(s, ctx, true).acts : orderedActions(s, me, ctx, 0, -1);
+  const actions = orderedActions(s, me, ctx, 0, -1);
   if (actions.length === 1) return { result: { action: actions[0], score: 0, depth: 0, nodes: 0 } };
+  // Every root action is played once; a small random number breaks ties, so
+  // equal moves are not always tried (and chosen) in the same order.
   const root = actions.map((a) => {
-    const child = applyAction(s, a);
+    const child = play(s, a, ctx);
     const v = child.phase === "over" ? overValue(child, me, 1) : ctx.evalFn(child, me, ctx.W);
     // Noise (weaker levels): a fixed random amount per move for this search.
     return { a, child, v, noise: cfg.noise ? (random() - 0.5) * 2 * cfg.noise : 0, jitter: random() };
   });
   root.sort((x, y) => y.v + y.noise - x.v - x.noise || x.jitter - y.jitter);
-  return { root, share: s.pending.length ? CHOICE_SHARE : 1 };
+  return { root, share: greedyPending(s) ? CHOICE_SHARE : 1 };
 }
 
 /**
@@ -384,14 +386,14 @@ export function chooseSearchAction(s, cfg, random, maxNodes = 0) {
   let reached = 0;
   const started = Date.now();
 
-  for (let d = 1; d <= cfg.maxDepth; d++) {
-    const depth = d * PLY;
+  for (let depth = 1; depth <= cfg.maxDepth; depth++) {
     let alpha = -Infinity;
     let iterationBest = null;
     try {
       for (let i = 0; i < root.length; i++) {
         const item = root[i];
-        const next = nextDepth(s, item.child, depth);
+        const turnOver = item.child.phase === "over" || item.child.current !== s.current;
+        const next = turnOver ? depth - 1 : depth;
         let v;
         if (i === 0) v = childValue(item.child, me, negamax, next, -Infinity, Infinity, 1, ctx);
         else {
@@ -411,7 +413,7 @@ export function chooseSearchAction(s, cfg, random, maxNodes = 0) {
       break;
     }
     best = iterationBest;
-    reached = d;
+    reached = depth;
     // Best move first for the next iteration; the others keep their order.
     root = [best, ...root.filter((x) => x !== best)];
     if (Math.abs(best.v) >= WIN / 2) break; // forced result found
@@ -444,18 +446,18 @@ export function searchRoot(s, cfg, random) {
  * value and searches it exactly only if it does (null: exact straight away).
  */
 export function createRootSearcher() {
-  let ctx = null, me = 0, state = null, children = [];
+  let ctx = null, me = 0, children = [], current = 0;
   return {
     start(s, cfg, actions) {
       ctx = newContext(cfg);
       me = actor(s);
-      state = s;
+      current = s.current;
       ttMeta.fill(0);
-      children = actions.map((a) => applyAction(s, a));
+      children = actions.map((a) => play(s, a, ctx));
     },
-    run(index, turns, alpha, deadline) {
+    run(index, depth, alpha, deadline) {
       const child = children[index];
-      const next = nextDepth(state, child, turns * PLY);
+      const next = child.phase === "over" || child.current !== current ? depth - 1 : depth;
       const before = ctx.nodes;
       ctx.deadline = deadline;
       try {

@@ -32,6 +32,8 @@
 //   decorateActions(s, player, actions, variants) -> variants of the own actions (e.g. KoS alignment);
 //                                           `variants`: also those that end like another one (marked redundant)
 //   afterAction(s, player)               -> after every action of either player (e.g. KoS Phalanx)
+//   aiGreedyChoices                      -> decision kinds the AI takes by evaluation inside its look-ahead
+//   aiSkipInSearch(pending)              -> answer the AI assumes for a decision inside its look-ahead (or null)
 //
 // Rule texts: docs/rules/<SET>.md. Ability IDs in the code match the docs.
 

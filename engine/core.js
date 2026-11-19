@@ -230,9 +230,21 @@ export function pushChoice(s, player, kind, data = {}) {
  *  come (this one included), so are squares with too few later squares left
  *  for the others. The user interface offers all options. */
 export function inSquareOrder(options, last, field = "place", remaining = 1) {
-  const squares = [...new Set(options.map((o) => o[field]))].sort((a, b) => a - b);
-  const latest = remaining > 1 ? squares[squares.length - remaining] : Infinity;
-  return options.map((o) => (o[field] < (last ?? -1) || o[field] > latest ? { ...o, redundant: true } : o));
+  let latest = Infinity;
+  if (remaining > 1) {
+    // Distinct squares in ascending order (options usually come sorted).
+    let squares = [], sorted = true;
+    for (const o of options) {
+      const x = o[field], prev = squares[squares.length - 1];
+      if (prev === undefined || x > prev) squares.push(x);
+      else if (x < prev) { sorted = false; break; }
+    }
+    if (!sorted) squares = [...new Set(options.map((o) => o[field]))].sort((a, b) => a - b);
+    latest = squares[squares.length - remaining];
+  }
+  const first = last ?? -1;
+  if (first < 0 && latest === Infinity) return options;
+  return options.map((o) => (o[field] < first || o[field] > latest ? { ...o, redundant: true } : o));
 }
 
 // ---------------------------------------------------------------------------
