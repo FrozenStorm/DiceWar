@@ -123,8 +123,11 @@ const knoll = {
 
 /** DoA: The River. Rules: docs/rules/DoA.md, "Location: The River".
  *  The tile covers the three middle rows of one column (any column, DoA4);
- *  the flow always points to the right (seen from player 1). */
+ *  the flow always points to the right (seen from player 1). In a game whose
+ *  players were swapped (engine/mirror.js, options.mirrored) the flow points to
+ *  the left, which is the right seen from the original player 1. */
 const RIVER_ROWS = [2, 3, 4];
+const riverFlow = (s) => (s.options && s.options.mirrored ? -1 : 1);
 const river = {
   id: "river",
   name: "The River",
@@ -134,9 +137,10 @@ const river = {
   // (no location tile) in the three middle rows are pushed 1 field downstream.
   onTurnEnd(s, player) {
     if (player !== s.startingPlayer) return;
+    const flow = riverFlow(s);
     for (const r of RIVER_ROWS) {
-      for (let c = SIZE - 1; c >= 0; c--) {
-        const at = sq(r, c);
+      for (let i = SIZE - 1; i >= 0; i--) {
+        const at = sq(r, flow === 1 ? i : SIZE - 1 - i); // downstream first
         if (s.board[at] && !s.tiles[at]) riverPush(s, at);
       }
     }
@@ -150,14 +154,15 @@ const river = {
  *  creatures that cannot move themselves. */
 function riverPush(s, at) {
   const die = s.board[at];
-  if (colOf(at) === SIZE - 1) {
+  const flow = riverFlow(s);
+  if (colOf(at) === (flow === 1 ? SIZE - 1 : 0)) {
     // Not a defeat (Daniel, 2026-11-11): into the Exile without defeat effects
     // (no Depth Rapture, no Fake Gold rule); the opponent still gets the VP.
     removeDie(s, at, "exile", "river");
     gainVP(s, opponent(die.owner), die.level);
     return;
   }
-  const to = at + 1;
+  const to = at + flow;
   if (s.board[to]) riverPush(s, to);
   if (s.board[to]) return; // cannot happen, kept as a safety net
   s.board[at] = null;

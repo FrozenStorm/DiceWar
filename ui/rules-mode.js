@@ -14,6 +14,7 @@ import { IMPLEMENTED_SETS } from "../engine/sets/index.js";
 import { IMPLEMENTED_LOCATIONS } from "../engine/locations/index.js";
 import { actionPath, pendingPrompt, abilityName, TURN_LABELS, FACE_LABELS } from "../engine/paths.js";
 import { getSet } from "../engine/sets/index.js";
+import { mirrorWithHistory } from "../engine/mirror.js";
 import { SIZE, sq, rowOf, colOf, supplyRow, defaultDir } from "../engine/board.js";
 import { captureDice, play as playAnimation, animateTurnAt, getSpeed, setSpeed } from "./animate.js";
 
@@ -329,6 +330,17 @@ function historyOfSave(json) {
   return null;
 }
 
+/** The save with both players swapped (engine/mirror.js): player 2's
+ *  position becomes player 1's, with the history so that Undo / Redo work. */
+function swapSave(json) {
+  const game = (json.snapshot || json).rulesGame;
+  const hist = historyOfSave(json);
+  const res = mirrorWithHistory(game, statesFrom(hist, game) ? hist : null, applyAction, legalActions);
+  const snapshot = { rulesGame: res.game };
+  if (res.history) snapshot.rulesHistory = res.history;
+  return { version: 1, snapshot };
+}
+
 /** Load a game from a save file, with its history so that Undo / Redo work. */
 function loadSave(json, { ai = null } = {}) {
   const game = (json.snapshot || json).rulesGame;
@@ -463,14 +475,14 @@ function confirmSetup() {
  *  180 degrees in duel and online games. */
 function alignmentRotation(d) {
   if (rm.game.players[d.owner].set !== "KoS") return 0;
-  const base = turnsPlayer2Dice() && d.owner === 2 ? 180 : 0;
+  const base = (state.gameMode === "duel" || state.gameMode === "online") && d.owner === 2 ? 180 : 0;
   return (d.dir * 90 - base + 360) % 360;
 }
 
 /** Total rotation of a die image with alignment `dir`, as rendered by index.html
  *  (the 180 degrees for player 2 in duel and online games included). */
 function alignDeg(owner, dir) {
-  const base = turnsPlayer2Dice() && owner === 2 ? 180 : 0;
+  const base = (state.gameMode === "duel" || state.gameMode === "online") && owner === 2 ? 180 : 0;
   return base + alignmentRotation({ owner, dir });
 }
 
@@ -486,7 +498,8 @@ function project() {
         // Several tiles on one field are shown as a split tile ("DoA+BoD+LoD").
         type: tile ? tile.map((id) => LOCATION_TILE_TYPE[id] || "neutral").join("+") : "neutral",
         rotation: d ? alignmentRotation(d) : 0,
-        flow: g.locations.includes("river") && RIVER_ROWS.includes(r) && !tile,
+        flow: g.locations.includes("river") && RIVER_ROWS.includes(r) && !tile
+          ? (g.options && g.options.mirrored ? "left" : "right") : false,
       };
     }
   }
@@ -617,7 +630,7 @@ function dieImageOf(at) {
 function dieImageRotation(at) {
   const cell = state.board[rowOf(at)][colOf(at)];
   let rot = cell.rotation || 0;
-  if (turnsPlayer2Dice() && cell.owner === 2) rot += 180;
+  if ((state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2) rot += 180;
   return rot;
 }
 
@@ -759,6 +772,7 @@ window.RulesMode = {
   get ai() { return rm.ai; },
   getAnimationSpeed: getSpeed, setAnimationSpeed: setSpeed,
   implementedLocations: IMPLEMENTED_LOCATIONS,
+  swapSave,
   aiInfo: () => (rm.ai ? { player: rm.ai.player, level: rm.ai.level } : null),
   canUndo: () => rm.undo.length > 0 && state.gameMode !== "online",
   canRedo: () => rm.redo.length > 0 && state.gameMode !== "online",

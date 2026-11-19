@@ -258,6 +258,8 @@
 
     /* DoA River: fields in the three middle rows where the flow pushes creatures */
     .cell.flow { background: linear-gradient(90deg, rgba(40, 110, 170, 0.12), rgba(40, 110, 170, 0.32)); }
+    /* Game loaded with swapped players: the River flows to the left. */
+    .cell.flow.flow-left { background: linear-gradient(270deg, rgba(40, 110, 170, 0.12), rgba(40, 110, 170, 0.32)); }
 
     .cell.selected { background: rgba(240, 200, 120, 0.35); box-shadow: inset 0 0 0 2px var(--edge), inset 0 0 0 4px var(--accent); }
     .cell.hint { background: rgba(23, 145, 143, 0.38); box-shadow: inset 0 0 0 2px #0f6463, inset 0 0 0 4px rgba(244, 238, 223, 0.7); }
@@ -837,18 +839,7 @@
       },
       selected: null,
       roundNumber: 1,
-      localSide: 1, // against the AI: the player who sits at this device (shown at the bottom)
     };
-
-    /** Is the board seen from player 2's side (online player 2, or player 2 against the AI)? */
-    function viewFromPlayer2() {
-      return document.getElementById("app").classList.contains("online-player2");
-    }
-
-    /** Are player 2's dice turned by 180 degrees (they face player 2)? */
-    function turnsPlayer2Dice() {
-      return state.gameMode === "duel" || state.gameMode === "online" || viewFromPlayer2();
-    }
 
     const boardEl = document.getElementById("board");
     const statusTextEl = document.getElementById("status-text");
@@ -1102,6 +1093,7 @@
             cellEl.classList.add("type-" + data.type);
           }
           cellEl.classList.toggle("flow", !!data.flow);
+          cellEl.classList.toggle("flow-left", data.flow === "left");
 
           if (
             state.selected &&
@@ -1129,7 +1121,7 @@
             if (diceSet === "numbers") {
               die.textContent = data.value;
               let transform = "";
-              if (turnsPlayer2Dice() && owner === 2) {
+              if ((state.gameMode === "duel" || state.gameMode === "online") && owner === 2) {
                 transform = "rotate(180deg)";
               }
               if (data.rotation !== 0) {
@@ -1150,7 +1142,7 @@
               img.style.borderRadius = "6px";
               img.alt = `Die ${data.value}`;
               let transform = "";
-              if (turnsPlayer2Dice() && owner === 2) {
+              if ((state.gameMode === "duel" || state.gameMode === "online") && owner === 2) {
                 transform = "rotate(180deg)";
               }
               if (data.rotation !== 0) {
@@ -1502,8 +1494,8 @@
       currentDieBox.classList.remove("empty");
       currentDieBox.style.borderStyle = "solid";
 
-      const needsOwnerRotation = turnsPlayer2Dice() && cell.owner === 2;
-      const needsPerspectiveRotation = viewFromPlayer2();
+      const needsOwnerRotation = (state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2;
+      const needsPerspectiveRotation = state.gameMode === "online" && onlineState.localPlayer === 2;
 
       if (diceSet === "numbers") {
         currentDieBox.innerHTML = String(cell.value);
@@ -1637,7 +1629,6 @@
 
     function startNewGameBase(p1Set, p2Set, gameMode) {
       document.getElementById("app").classList.remove("online-player2");
-      state.localSide = 1;
       lobbyOverlay.classList.remove("player2");
       markGameStarted();
       state.currentPlayer = 1;
@@ -2182,6 +2173,13 @@
      *  and `ai` ({ player, level }) choose how the game continues; without them
      *  the save is loaded as a game on one device. */
     function loadSaveData(json, { quiet = false, mode = null, ai = null } = {}) {
+      // Playing player 2 against the AI: the players are swapped (the board is
+      // turned and player 2's position becomes player 1's), so you play at the
+      // bottom as in every game against the AI.
+      if (ai && ai.player === 1 && window.RulesMode && (json.snapshot || json).rulesGame) {
+        json = RulesMode.swapSave(json);
+        ai = { ...ai, player: 2 };
+      }
       const snapshot = json.snapshot || json;
       const rg = snapshot.rulesGame;
       if (window.RulesMode) RulesMode.stop();
@@ -2192,7 +2190,6 @@
       }
       if (!rg || !window.RulesMode) ai = null;
       state.gameMode = ai ? "ai" : mode && mode !== "ai" ? mode : state.gameMode === "solo" ? "solo" : "duel";
-      state.localSide = ai ? 3 - ai.player : 1;
       updatePerspective();
       updateBoardDOM();
       refreshPlayerPanels();
@@ -2276,9 +2273,7 @@
 
     function updatePerspective() {
       const app = document.getElementById("app");
-      const p2 = state.gameMode === "online" ? onlineState.localPlayer === 2
-        : state.gameMode === "ai" && state.localSide === 2;
-      if (p2) {
+      if (state.gameMode === "online" && onlineState.localPlayer === 2) {
         app.classList.add("online-player2");
       } else {
         app.classList.remove("online-player2");

@@ -192,7 +192,7 @@
 
   function dieImageRotation(cell) {
     let rot = cell.rotation || 0;
-    if (turnsPlayer2Dice() && cell.owner === 2) rot += 180;
+    if ((state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2) rot += 180;
     return rot;
   }
 
