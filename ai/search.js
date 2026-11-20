@@ -1,6 +1,6 @@
-// Search of the "expert" AI level.
+// Search of the AI. All levels use it; they differ only in their settings
+// (thinking time, depth, quiescence, noise: see LEVELS in ai.js).
 //
-// Compared with the classic search (ai.js) it looks deeper in the same time:
 // - transposition table: positions reached again by another order of moves
 //   are not searched twice, and their best move is tried first next time;
 // - move ordering (table move, captures, killer moves, history) so that
@@ -17,13 +17,56 @@
 
 import { legalActions, mainActions, applyAction, actor, totalVP, diceOf } from "../engine/core.js";
 import { fieldBonus, SQUARES } from "../engine/board.js";
-import { WIN, evaluateExpert, EXPERT_WEIGHTS } from "./eval.js";
-import { Timeout, isRedundant, greedyPending, resolveGreedy } from "./common.js";
+import { getSet } from "../engine/sets/index.js";
+import { WIN, evaluate, WEIGHTS } from "./eval.js";
+
+/** Thrown inside a search when its time or node budget is used up. */
+class Timeout extends Error {}
+
+/** Variants with the same result as another action (e.g. KoS: turning before
+ *  instead of after a Movement) are left out of the search. */
+const isRedundant = (a) => !!(a.redundant || (a.sub && a.sub.redundant));
+
+/** Is the next step a decision the AI takes by the evaluation of its options
+ *  inside the look-ahead (long chains of small steps such as LoD Blood Trade
+ *  upgrades would blow up the search)? At the root it is searched. */
+function greedyPending(s) {
+  if (!s.pending.length || s.phase === "over") return false;
+  const p = s.pending[0];
+  const set = getSet(s.players[p.player].set);
+  return !!(set.aiGreedyChoices && set.aiGreedyChoices.includes(p.kind));
+}
+
+/** Best option of such a decision by the evaluation for the deciding player
+ *  (every option, also those marked redundant: a fixed order of placements
+ *  must not limit the choice). */
+function greedyChoice(s, W, evalFn) {
+  const who = actor(s);
+  let best = null, bestV = -Infinity;
+  for (const a of legalActions(s)) {
+    const v = evalFn(applyAction(s, a), who, W);
+    if (v > bestV) { bestV = v; best = a; }
+  }
+  return best;
+}
+
+/** Settle such decisions until the state needs a real choice again.
+ *  Decisions a set marks with aiSkipInSearch get that fixed answer. */
+function resolveGreedy(s, W, evalFn) {
+  let guard = 0;
+  while (greedyPending(s) && guard++ < 20) {
+    const p = s.pending[0];
+    const set = getSet(s.players[p.player].set);
+    const fixed = set.aiSkipInSearch ? set.aiSkipInSearch(p) : null;
+    s = applyAction(s, fixed || greedyChoice(s, W, evalFn));
+  }
+  return s;
+}
 
 const MAX_PLY = 64;
 /** Share of the thinking time for a decision inside a turn (e.g. where to place a die). */
 const CHOICE_SHARE = 0.2;
-/** Plies of captures searched beyond the horizon. */
+/** Default plies of captures searched beyond the horizon. */
 const QUIESCENCE_PLIES = 4;
 /** The AI declares the End of War when it leads, the game is past this turn
  *  and the opponent has at most this many creatures left (a chase). */
@@ -129,7 +172,10 @@ function orderedActions(s, p, ctx, ply, tableMove) {
   const k0 = ctx.killers[2 * ply], k1 = ctx.killers[2 * ply + 1];
   for (let i = 0; i < all.length; i++) {
     const a = all[i];
-    if (a.type === "declareEndOfWar" || isRedundant(a)) continue;
+    // Placements marked redundant (fixed square order) are only redundant
+    // within one search of the whole sequence: decisions are taken one by one
+    // here, so every option of an open decision stays.
+    if (a.type === "declareEndOfWar" || (isRedundant(a) && !s.pending.length)) continue;
     const sig = signature(a);
     let score;
     if (sig === tableMove) score = 3e9;
@@ -157,7 +203,7 @@ function tick(ctx) {
 }
 
 /** Apply `a`, settle the decisions the AI takes greedily. */
-const play = (s, a, ctx) => resolveGreedy(applyAction(s, a), ctx.W, ctx.evalFn, true);
+const play = (s, a, ctx) => resolveGreedy(applyAction(s, a), ctx.W, ctx.evalFn);
 
 /** Value of `child` for `p`, searched with the given routine. */
 function childValue(child, p, search, depth, alpha, beta, ply, ctx) {
@@ -182,7 +228,7 @@ function quiescence(s, p, depth, alpha, beta, ply, ctx) {
   let caps = [];
   for (let i = 0; i < all.length; i++) {
     const a = all[i];
-    if (isRedundant(a) || a.type === "declareEndOfWar") continue;
+    if ((isRedundant(a) && !open) || a.type === "declareEndOfWar") continue;
     if (open || isCapture(a)) caps.push(a);
   }
   if (!open && caps.length > 1) {
@@ -201,7 +247,7 @@ function quiescence(s, p, depth, alpha, beta, ply, ctx) {
 }
 
 function negamax(s, p, depth, alpha, beta, ply, ctx) {
-  if (depth <= 0 || ply >= MAX_PLY) return quiescence(s, p, QUIESCENCE_PLIES, alpha, beta, ply, ctx);
+  if (depth <= 0 || ply >= MAX_PLY) return quiescence(s, p, ctx.quiescence, alpha, beta, ply, ctx);
   tick(ctx);
 
   // Transposition table (only for positions at the start of a turn).
@@ -271,54 +317,74 @@ function negamax(s, p, depth, alpha, beta, ply, ctx) {
   return best;
 }
 
+const newContext = (cfg) => ({
+  nodes: 0,
+  deadline: Infinity,
+  maxNodes: Infinity,
+  W: { ...WEIGHTS, ...(cfg.weights || {}) },
+  evalFn: cfg.evalFn ?? evaluate,
+  quiescence: cfg.quiescence ?? QUIESCENCE_PLIES,
+  lateFrom: cfg.lateFrom ?? 4,
+  veryLateFrom: cfg.veryLateFrom ?? 12,
+  killers: new Int32Array(2 * (MAX_PLY + 2)).fill(-1),
+  history: [new Float64Array(SIGNATURES), new Float64Array(SIGNATURES)],
+});
+
+/** The End of War costs no action. When the opponent has only a few creatures
+ *  left and could run away for ever, the leading side declares it. */
+function declaresEndOfWar(s, me) {
+  return !s.pending.length && !s.endOfWar && !s.turn.declared && s.turnNumber >= END_OF_WAR_FROM_TURN
+    && totalVP(s, me) > totalVP(s, 3 - me) && diceOf(s, 3 - me).length <= END_OF_WAR_MAX_DICE;
+}
+
+/**
+ * The start of a search: either the decision is clear without searching
+ * (`result`), or the root actions come back with their results, sorted by a
+ * first rating (plus the level's noise). Decisions the look-ahead takes by
+ * evaluation are searched here like any other move, with a part of the time.
+ */
+function rootStart(s, cfg, random, ctx) {
+  const me = actor(s);
+  if (declaresEndOfWar(s, me)) return { result: { action: { type: "declareEndOfWar" }, score: 0, depth: 0, nodes: 0 } };
+  const actions = orderedActions(s, me, ctx, 0, -1);
+  if (actions.length === 1) return { result: { action: actions[0], score: 0, depth: 0, nodes: 0 } };
+  // Every root action is played once; a small random number breaks ties, so
+  // equal moves are not always tried (and chosen) in the same order.
+  const root = actions.map((a) => {
+    const child = play(s, a, ctx);
+    const v = child.phase === "over" ? overValue(child, me, 1) : ctx.evalFn(child, me, ctx.W);
+    // Noise (weaker levels): a fixed random amount per move for this search.
+    return { a, child, v, noise: cfg.noise ? (random() - 0.5) * 2 * cfg.noise : 0, jitter: random() };
+  });
+  root.sort((x, y) => y.v + y.noise - x.v - x.noise || x.jitter - y.jitter);
+  return { root, share: greedyPending(s) ? CHOICE_SHARE : 1 };
+}
+
 /**
  * Choose an action for the player who has to act in `s`.
  * @param {object} s engine state (war phase)
- * @param {object} cfg level settings: maxDepth, timeMs, weights, lateFrom, veryLateFrom
+ * @param {object} cfg level settings: timeMs, maxDepth, quiescence, noise, weights, lateFrom, veryLateFrom
  * @param {() => number} random
  * @param {number} [maxNodes] node budget instead of the time limit (reproducible)
- * @returns {{action: object, score: number, depth: number, nodes: number, ties: number}}
+ * @returns {{action: object, score: number, depth: number, nodes: number}}
  */
-export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
+export function chooseSearchAction(s, cfg, random, maxNodes = 0) {
   const me = actor(s);
-  const W = { ...EXPERT_WEIGHTS, ...(cfg.weights || {}) };
-  const evalFn = evaluateExpert;
-  // Small decisions inside a turn (which the look-ahead settles greedily) are
-  // searched like any other move here, with a part of the thinking time.
-  const share = greedyPending(s) ? CHOICE_SHARE : 1;
-
-  // The End of War costs no action. When the opponent has only a few
-  // creatures left and could run away for ever, the leading side declares it.
-  if (!s.pending.length && !s.endOfWar && !s.turn.declared && s.turnNumber >= END_OF_WAR_FROM_TURN
-    && totalVP(s, me) > totalVP(s, 3 - me) && diceOf(s, 3 - me).length <= END_OF_WAR_MAX_DICE) {
-    return { action: { type: "declareEndOfWar" }, score: 0, depth: 0, nodes: 0, ties: 1 };
-  }
-
-  const ctx = {
-    nodes: 0,
-    deadline: maxNodes ? Infinity : Date.now() + cfg.timeMs * share,
-    maxNodes: maxNodes ? Math.ceil(maxNodes * share) : Infinity,
-    W, evalFn,
-    lateFrom: cfg.lateFrom ?? 4,
-    veryLateFrom: cfg.veryLateFrom ?? 12,
-    killers: new Int32Array(2 * (MAX_PLY + 2)).fill(-1),
-    history: [new Float64Array(SIGNATURES), new Float64Array(SIGNATURES)],
-  };
+  const ctx = newContext(cfg);
+  const start = rootStart(s, cfg, random, ctx);
+  if (start.result) return start.result;
+  const { share } = start;
+  let root = start.root;
+  ctx.deadline = maxNodes ? Infinity : Date.now() + cfg.timeMs * share;
+  ctx.maxNodes = maxNodes ? Math.ceil(maxNodes * share) : Infinity;
   // The table is kept between the moves of a game, but values from another
   // game or evaluation must not leak in: it is cleared for every search.
   ttMeta.fill(0);
 
-  const actions = orderedActions(s, me, ctx, 0, -1);
-  if (actions.length === 1) return { action: actions[0], score: 0, depth: 0, nodes: 0, ties: 1 };
-
-  // Every root action is played once; a small random number breaks ties, so
-  // equal moves are not always tried (and chosen) in the same order.
-  let root = actions.map((a) => {
-    const child = play(s, a, ctx);
-    const v = child.phase === "over" ? overValue(child, me, 1) : evalFn(child, me, W);
-    return { a, child, v, jitter: random() };
-  });
-  root.sort((x, y) => y.v - x.v || x.jitter - y.jitter);
+  // With noise, moves up to twice the noise below the best one get exact
+  // values: after adding the noise, any of them can come out on top.
+  const margin = 2 * (cfg.noise || 0);
+  const score = (item) => item.v + item.noise;
   let best = root[0];
   let reached = 0;
   const started = Date.now();
@@ -334,17 +400,19 @@ export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
         let v;
         if (i === 0) v = childValue(item.child, me, negamax, next, -Infinity, Infinity, 1, ctx);
         else {
-          v = childValue(item.child, me, negamax, next, alpha, alpha + 1e-3, 1, ctx);
-          if (v > alpha) v = childValue(item.child, me, negamax, next, alpha, Infinity, 1, ctx);
+          const low = alpha - margin;
+          v = childValue(item.child, me, negamax, next, low, low + 1e-3, 1, ctx);
+          if (v > low) v = childValue(item.child, me, negamax, next, low, Infinity, 1, ctx);
         }
         item.v = v;
-        if (v > alpha) { alpha = v; iterationBest = item; }
+        if (v > alpha) alpha = v;
+        if (!iterationBest || score(item) > score(iterationBest)) iterationBest = item;
       }
     } catch (e) {
       if (!(e instanceof Timeout)) throw e;
       // An unfinished iteration still counts if it found a move that is
       // better than the first one (the best of the previous iteration).
-      if (iterationBest) best = iterationBest;
+      if (iterationBest && iterationBest !== root[0]) best = iterationBest;
       break;
     }
     best = iterationBest;
@@ -355,53 +423,30 @@ export function chooseExpertAction(s, cfg, random, maxNodes = 0) {
     // The next iteration takes several times as long: stop if it cannot finish.
     if (!maxNodes && Date.now() - started > cfg.timeMs * share * 0.6) break;
   }
-  return { action: best.a, score: best.v, depth: reached, nodes: ctx.nodes, ties: 1 };
+  return { action: best.a, score: best.v, depth: reached, nodes: ctx.nodes };
 }
 
 // ---------------------------------------------------------------------------
-// Parts for the multi-core search (expert-parallel.js): the root is split up,
+// Parts for the multi-core search (parallel.js): the root is split up,
 // several background threads each search single root actions.
 // ---------------------------------------------------------------------------
 
-const newContext = (cfg) => ({
-  nodes: 0,
-  deadline: Infinity,
-  maxNodes: Infinity,
-  W: { ...EXPERT_WEIGHTS, ...(cfg.weights || {}) },
-  evalFn: evaluateExpert,
-  lateFrom: cfg.lateFrom ?? 4,
-  veryLateFrom: cfg.veryLateFrom ?? 12,
-  killers: new Int32Array(2 * (MAX_PLY + 2)).fill(-1),
-  history: [new Float64Array(SIGNATURES), new Float64Array(SIGNATURES)],
-});
-
 /**
- * The start of a search: either the decision is clear without searching
- * (`result`), or the root actions come back sorted by a first rating.
+ * The start of a multi-core search: either the decision is clear without
+ * searching (`result`), or the root actions come back in their first order.
  * @returns {{result: object}|{share: number, actions: object[], values: number[]}}
  */
-export function expertRoot(s, cfg, random) {
-  const me = actor(s);
-  if (!s.pending.length && !s.endOfWar && !s.turn.declared && s.turnNumber >= END_OF_WAR_FROM_TURN
-    && totalVP(s, me) > totalVP(s, 3 - me) && diceOf(s, 3 - me).length <= END_OF_WAR_MAX_DICE) {
-    return { result: { action: { type: "declareEndOfWar" }, score: 0, depth: 0, nodes: 0, ties: 1 } };
-  }
-  const ctx = newContext(cfg);
-  const actions = orderedActions(s, me, ctx, 0, -1);
-  if (actions.length === 1) return { result: { action: actions[0], score: 0, depth: 0, nodes: 0, ties: 1 } };
-  const root = actions.map((a) => {
-    const child = play(s, a, ctx);
-    return { a, v: child.phase === "over" ? overValue(child, me, 1) : ctx.evalFn(child, me, ctx.W), jitter: random() };
-  });
-  root.sort((x, y) => y.v - x.v || x.jitter - y.jitter);
-  return { share: greedyPending(s) ? CHOICE_SHARE : 1, actions: root.map((x) => x.a), values: root.map((x) => x.v) };
+export function searchRoot(s, cfg, random) {
+  const start = rootStart(s, cfg, random, newContext(cfg));
+  if (start.result) return start;
+  return { share: start.share, actions: start.root.map((x) => x.a), values: start.root.map((x) => x.v) };
 }
 
 /**
  * One thread of the multi-core search. `start` takes the position and its
- * root actions; `run` searches one of them to the given depth. With `alpha`
- * the thread first only checks whether the action beats that value and
- * searches it exactly only if it does (null: exact straight away).
+ * root actions; `run` searches one of them to the given depth (in turns).
+ * With `alpha` the thread first only checks whether the action beats that
+ * value and searches it exactly only if it does (null: exact straight away).
  */
 export function createRootSearcher() {
   let ctx = null, me = 0, children = [], current = 0;

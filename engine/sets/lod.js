@@ -1,9 +1,9 @@
 // Dice set LoD (Light of Dragons, base game). Rules: docs/rules/LoD.md
 
-import { adjacent, diagonal, step, opponent } from "../board.js";
+import { adjacent, diagonal, step, opponent, SQUARES } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, doAttack, relocate, canDefeatWith, canRaise, isProtected,
+  pushChoice, inSquareOrder, doMove, doAttack, relocate, canDefeatWith, canRaise, isProtected,
   standardActionsOf, performAction, lineSplits,
 } from "../core.js";
 
@@ -166,7 +166,7 @@ function bloodUpgradeOptions(s, pending) {
   const targets = upgradeTargets(s, player, pending.data.caster);
   if (!targets.length) return [];
   return [
-    ...targets.map((t) => ({ type: "choice", kind: A.bloodUpgrade, upgrade: t })),
+    ...inSquareOrder(targets.map((t) => ({ type: "choice", kind: A.bloodUpgrade, upgrade: t })), pending.data.last, "upgrade"),
     { type: "choice", kind: A.bloodUpgrade, finish: true },
   ];
 }
@@ -187,6 +187,10 @@ function innerFireOptions(s, pending) {
 }
 
 // --- Set definition ----------------------------------------------------------------
+
+// Scratch arrays of the evaluation features.
+const seen = new Int32Array(SQUARES), stack = new Int32Array(SQUARES);
+let seenMark = 0;
 
 export const LoD = {
   id: "LoD",
@@ -286,7 +290,7 @@ export const LoD = {
         } else {
           gainTP(s, player, -1);
           setLevel(s, a.upgrade, s.board[a.upgrade].level + 1);
-          pushChoice(s, player, A.bloodUpgrade, pending.data);
+          pushChoice(s, player, A.bloodUpgrade, { ...pending.data, last: a.upgrade });
           settleBloodTrade(s, player, pending.data.caster);
         }
         break;
@@ -299,10 +303,47 @@ export const LoD = {
   },
 
   // LoD.dragon.luminous_flame: 1 virtual VP per Light Dragon (level 6) more than the opponent.
-  virtualVP: (s, player) => Math.max(0, countLevel(s, player, DRAGON) - countLevel(s, opponent(player), 6)),
+  virtualVP(s, player) {
+    const dragons = countLevel(s, player, DRAGON);
+    return dragons ? Math.max(0, dragons - countLevel(s, opponent(player), 6)) : 0;
+  },
 
-  // The AI resolves these step-by-step decisions greedily instead of searching them.
+  // Inside its look-ahead the AI takes these step-by-step decisions by the
+  // evaluation of their options (searched when they come up).
   aiGreedyChoices: [A.bloodUpgrade, A.excess],
+
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["barrierSouls", "bloodTrade"],
+    add(s, player, f, base, sign, own, n) {
+      // Souls in a Protective Barrier (groups of 3 to 6): immune to the opponent.
+      const board = s.board;
+      let mages = 0, inBarriers = 0;
+      const mark = ++seenMark;
+      for (let i = 0; i < n; i++) {
+        const at = own[i], d = board[at];
+        if (d.level === MAGE) mages++;
+        if (d.level !== SOUL || seen[at] === mark) continue;
+        let size = 0;
+        let top = 0;
+        stack[top++] = at;
+        seen[at] = mark;
+        while (top) {
+          const x = stack[--top];
+          size++;
+          const adj = adjacent(x);
+          for (let k = 0; k < adj.length; k++) {
+            const y = adj[k];
+            if (seen[y] !== mark && isOwn(s, y, player, SOUL)) { seen[y] = mark; stack[top++] = y; }
+          }
+        }
+        if (size >= BARRIER_MIN && size <= BARRIER_MAX) inBarriers += size;
+      }
+      f[base] += sign * inBarriers;
+      // Blood Trade: TP it can raise now (Reserve dice to exile, one per Blood Mage).
+      f[base + 1] += sign * (mages ? Math.min(mages, s.players[player].reserve) : 0);
+    },
+  },
 
   // Starting lineups of the AI.
   aiBook: {

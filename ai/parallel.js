@@ -1,15 +1,15 @@
-// Multi-core search of the "expert" AI level.
+// Multi-core search of the AI (used for the expert level in the game).
 //
 // The actions of the position to decide (the root) are handed out to several
 // background threads. Each thread searches one action at a time with the
-// normal expert search and keeps its own table of positions. The first action
+// normal search and keeps its own table of positions. The first action
 // (the best one of the previous depth) is searched exactly; the others only
 // have to show whether they beat the best value known so far, which is passed
 // on to every new job. Threads cannot share memory on a plain static web
 // site, so this is all the threads tell each other.
 
 import { WIN } from "./eval.js";
-import { expertRoot, createRootSearcher } from "./expert.js";
+import { searchRoot, createRootSearcher } from "./search.js";
 
 /** While the first action of a depth is still being searched, the other
  *  threads assume it will not lose more than this much against the last depth. */
@@ -68,8 +68,8 @@ export function createPool(workers, listen) {
  * @param {() => number} random
  * @param {object} pool from createPool
  */
-export async function chooseExpertActionParallel(s, cfg, random, pool) {
-  const start = expertRoot(s, cfg, random);
+export async function chooseActionParallel(s, cfg, random, pool) {
+  const start = searchRoot(s, cfg, random);
   if (start.result) return start.result;
   const { actions, values, share } = start;
   const began = Date.now();
@@ -134,5 +134,5 @@ export async function chooseExpertActionParallel(s, cfg, random, pool) {
     if (Math.abs(bestV) >= WIN / 2) break; // forced result found
     if (Date.now() - began > budget * 0.6) break; // the next depth would not finish
   }
-  return { action: actions[best], score: bestV, depth: reached, nodes, ties: 1, threads: pool.size };
+  return { action: actions[best], score: bestV, depth: reached, nodes, threads: pool.size };
 }

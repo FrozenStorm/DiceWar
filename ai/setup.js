@@ -53,7 +53,7 @@ function chooseLineup(s, opts) {
   const random = opts.random || Math.random;
   if (opts.placements) return { type: "setup", placements: opts.placements.map((p) => ({ ...p })) }; // given (developer tools)
   const book = getSet(s.players[s.current].set).aiBook;
-  if (book && book.expertSetups && opts.level === "expert") {
+  if (book && book.expertSetups && (opts.level === "expert" || opts.level === "hard")) {
     // Lineups that did best in self-play tournaments (tools/setups.mjs).
     const pick = book.expertSetups[Math.floor(random() * book.expertSetups.length)];
     return { type: "setup", placements: pick.map((p) => ({ ...p })) };

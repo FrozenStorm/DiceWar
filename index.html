@@ -624,6 +624,7 @@
                   <option value="solo">Solo (play both sides)</option>
                   <option value="duel">Duel (two players, one device)</option>
                   <option value="online">Online (play over the internet)</option>
+                  <option value="lab">AI Lab (AI vs AI test runs)</option>
                 </select>
               </label>
             </div>
@@ -672,6 +673,10 @@
               </select>
             </label>
           </div>
+
+          <p id="lab-note" style="display: none; font-size: 14px;">
+            In the AI Lab the AI plays many games against itself: choose pairings of dice sets, AI levels and landscapes, then download the statistics and the final position of every game as a ZIP. The games run on your device.
+          </p>
 
           <p id="ai-note" style="display: none; font-size: 14px;">
             You play at the bottom, the AI plays at the top.
@@ -2153,7 +2158,7 @@
       }
     });
 
-    /** Load a save file. With the saved move history (rulesHistory), Undo / Redo
+    /** Load a save file (or an AI Lab replay, which has only the rules engine state). With the saved move history (rulesHistory), Undo / Redo
      *  work after loading, also in a finished game. `mode` ("ai", "solo", "duel")
      *  and `ai` ({ player, level }) choose how the game continues; without them
      *  the save is loaded as a game on one device. */
@@ -2162,7 +2167,9 @@
       const rg = snapshot.rulesGame;
       if (window.RulesMode) RulesMode.stop();
       if (!snapshot.board && rg && rg.players) {
-        startNewGameBase(rg.players[1].set, rg.players[2].set, "duel");
+        // AI Lab replays are usually looked at by one person on a computer:
+        // board as in a game against the AI (nothing turned towards player 2).
+        startNewGameBase(rg.players[1].set, rg.players[2].set, json.lab ? "ai" : "duel");
       } else {
         applyStateSnapshot(snapshot);
       }
@@ -2180,7 +2187,7 @@
       markGameStarted();
       // Last, so that the rules panel (e.g. "Game over") is not overwritten.
       if (window.RulesMode && rg) RulesMode.loadSave(json, { ai });
-      if (!quiet) alert("Save loaded.");
+      if (!quiet) alert(json.lab ? "AI Lab replay loaded." : "Save loaded.");
     }
     window.loadSaveData = loadSaveData;
 
@@ -2294,6 +2301,11 @@
       const p1Set = p1Select ? p1Select.value : "numbers";
       const p2Set = p2Select ? p2Select.value : "numbers";
 
+      if (gameMode === "lab") {
+        if (window.Lab) Lab.open();
+        else alert("The AI Lab is still loading. Please try again in a moment.");
+        return;
+      }
       if (gameMode === "online") {
         if (window.Online) Online.openLobby();
         else alert("The online lobby is still loading. Please try again in a moment.");
@@ -2387,11 +2399,13 @@
       document.getElementById("p1-set-title").textContent = mode === "ai" ? "Your Dice Set" : "Player 1 – Dice Set";
       document.getElementById("p2-set-title").textContent = mode === "ai" ? "AI Dice Set" : "Player 2 – Dice Set";
       const online = mode === "online";
+      const labMode = mode === "lab";
       document.getElementById("lobby-config").querySelectorAll(".lobby-player-config").forEach((el, i) => {
-        if (i > 0) el.style.display = online ? "none" : "";
+        if (i > 0) el.style.display = online || labMode ? "none" : "";
       });
-      document.getElementById("start-game-btn").textContent = online ? "Enter Lobby" : "Start New Game";
-      const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && !online;
+      document.getElementById("start-game-btn").textContent = online ? "Enter Lobby" : labMode ? "Open AI Lab" : "Start New Game";
+      document.getElementById("lab-note").style.display = labMode ? "block" : "none";
+      const available = window.RulesMode && RulesMode.isAvailable(p1Set, p2Set) && !online && !labMode;
       document.getElementById("rules-options").style.display = available ? "flex" : "none";
       document.getElementById("enforce-rules-label").style.display = mode === "ai" ? "none" : "flex";
       document.getElementById("ai-level-label").style.display = mode === "ai" ? "flex" : "none";
@@ -2433,6 +2447,7 @@
   </script>
   <script type="module" src="ui/rules-mode.js"></script>
   <script type="module" src="net/online.js"></script>
+  <script type="module" src="ui/lab.js"></script>
   <!-- Cloudflare Web Analytics -->
   <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "5a155bde3a4c487ba8bcee92b8c73808"}'></script>
   <!-- End Cloudflare Web Analytics -->

@@ -9,7 +9,7 @@
 import { adjacent, diagonal, surrounding, step, rowOf, colOf, sq, onBoard, SIZE, SQUARES, opponent, supplyRow, defaultDir } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, doAttack, relocate, defeat, canDefeatWith, canMove, canRaise,
+  pushChoice, inSquareOrder, doMove, doAttack, relocate, defeat, canDefeatWith, canMove, canRaise,
   isProtected, standardActionsOf, standardMoves, performAction, mainActions, actionOrigin,
   canPlace, attackableBy,
 } from "../core.js";
@@ -20,10 +20,13 @@ const FORMATION_POWER = 9;
 const FACES = [0, 1, 2, 3];
 /** One option per alignment for a die placed on `place`. */
 const withFaces = (opt) => FACES.map((face) => ({ ...opt, face }));
-/** The same for a First Sword of `player`: its alignment only matters once it
- *  has been upgraded, so the AI only looks at the one facing the opponent. */
-const withSwordFaces = (opt, player) =>
-  FACES.map((face) => (face === defaultDir(player) ? { ...opt, face } : { ...opt, face, redundant: true }));
+/** Options to place a First Sword of `player` on one of `places`, every
+ *  alignment. Facing the opponent comes first for all places (the alignment
+ *  of a First Sword only matters once it has been upgraded). */
+function swordPlacements(opt, places, player) {
+  const forward = defaultDir(player);
+  return [forward, ...FACES.filter((f) => f !== forward)].flatMap((face) => places.map((place) => ({ ...opt, place, face })));
+}
 
 const A = {
   agile: "KoS.sword.agile",
@@ -258,12 +261,12 @@ function backMoves(s, from) {
 /** KoS.knight.breakthrough: 1 virtual VP per Formation with Power Level 9+. */
 function breakthrough(s, player) {
   const board = s.board;
-  let knight = false;
+  let knight = false, power = 0;
   for (let i = 0; i < SQUARES; i++) {
     const d = board[i];
-    if (d && d.owner === player && d.level === KNIGHT) { knight = true; break; }
+    if (d && d.owner === player) { power += d.level; if (d.level === KNIGHT) knight = true; }
   }
-  if (!knight) return 0;
+  if (!knight || power < FORMATION_POWER) return 0;
   // Flood fill over the own creatures; `seenMark` is reused between calls.
   const mark = ++seenMark;
   let vp = 0;
@@ -301,10 +304,9 @@ function reinforcementOptions(s, pending) {
   const free = surrounding(at).filter((t) => canPlace(s, t));
   const out = [];
   for (const level of reinfLeft(pending.data)) {
-    for (const place of free) {
-      const opt = { type: "choice", kind: A.reinforcements, level, place };
-      out.push(...(level === SWORD ? withSwordFaces(opt, pending.player) : withFaces(opt)));
-    }
+    const opt = { type: "choice", kind: A.reinforcements, level };
+    if (level === SWORD) out.push(...swordPlacements(opt, free, pending.player));
+    else for (const place of free) out.push(...withFaces({ ...opt, place }));
   }
   return out;
 }
@@ -318,9 +320,9 @@ function reinforcementOptions(s, pending) {
  *  - Burning Stag (Cautiousness): after the action.
  *  For the Shield, turning before a Movement or Attack that does not depend on
  *  the alignment gives the same result as turning afterwards; these variants
- *  are marked `redundant` so the AI skips them (the UI offers them when a die
- *  is clicked). */
-function decorate(s, player, actions) {
+ *  are only made with `variants` (the UI offers them when a die is clicked)
+ *  and are marked `redundant`. */
+function decorate(s, player, actions, variants) {
   const out = [];
   for (const a of actions) {
     if ((a.type === "move" || a.type === "attack") && a.face === undefined) {
@@ -334,7 +336,7 @@ function decorate(s, player, actions) {
           continue;
         }
         for (const face of FACES) out.push({ ...a, face });
-        if (d.level === STAG) continue;
+        if (d.level === STAG || !variants) continue;
         for (const pre of FACES) if (pre !== d.dir) out.push({ ...a, pre, redundant: true });
         continue;
       }
@@ -458,13 +460,14 @@ export const KoS = {
       case A.relentless: return relentlessOptions(s, pending);
       case A.rescue:
         if (s.players[player].exile < 1) return [];
-        return [...edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.rescue, place }, player)), { type: "choice", kind: A.rescue, skip: true }];
+        return [...swordPlacements({ type: "choice", kind: A.rescue }, edgeFields(s, player), player), { type: "choice", kind: A.rescue, skip: true }];
       case A.toSpears:
-        return diceOf(s, player, SHIELD).map((upgrade) => ({ type: "choice", kind: A.toSpears, upgrade }));
+        return inSquareOrder(diceOf(s, player, SHIELD).map((upgrade) => ({ type: "choice", kind: A.toSpears, upgrade })), pending.data.last, "upgrade");
       case A.leadership: return leadershipOptions(s, pending);
       case A.supply:
         if (s.players[player].reserve < 1) return [];
-        return edgeFields(s, player).flatMap((place) => withSwordFaces({ type: "choice", kind: A.supply, place }, player));
+        return inSquareOrder(swordPlacements({ type: "choice", kind: A.supply }, edgeFields(s, player), player),
+          pending.data.last, "place", Math.min(pending.data.left, s.players[player].reserve));
       case A.reinforcements: return reinforcementOptions(s, pending);
       default: return [];
     }
@@ -502,7 +505,7 @@ export const KoS = {
         break;
       case A.toSpears:
         setLevel(s, a.upgrade, s.board[a.upgrade].level + 1);
-        if (pending.data.left > 1) pushChoice(s, player, A.toSpears, { left: pending.data.left - 1 });
+        if (pending.data.left > 1) pushChoice(s, player, A.toSpears, { left: pending.data.left - 1, last: a.upgrade });
         break;
       case A.leadership: {
         if (a.finish) break; // older saved games
@@ -516,7 +519,7 @@ export const KoS = {
       case A.supply: {
         placeDie(s, a.place, player, SWORD, { dir: a.face ?? defaultDir(player) });
         const left = pending.data.left - 1;
-        if (left > 0) pushChoice(s, player, A.supply, { ...pending.data, left });
+        if (left > 0) pushChoice(s, player, A.supply, { ...pending.data, left, last: a.place });
         else removeDie(s, pending.data.at, "reserve", "split");
         break;
       }
@@ -536,10 +539,62 @@ export const KoS = {
 
   virtualVP: breakthrough,
 
+
+  // Inside its look-ahead the AI takes these decisions by the evaluation of
+  // their options and skips the additional actions of the other First Swords
+  // (it still searches them when they come up).
   aiGreedyChoices: [A.relentless, A.rescue, A.toSpears, A.leadership, A.supply, A.reinforcements],
-  // Inside its look-ahead the expert AI skips the additional actions of the
-  // other First Swords (it still decides them properly when they come up).
   aiSkipInSearch: (pending) => (pending.kind === A.relentless ? { type: "choice", kind: A.relentless, skip: true } : null),
+
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["shieldFront", "spearForward", "swordsTogether", "supplyReady", "formationNear"],
+    add(s, player, f, base, sign, own, n) {
+      const board = s.board, forward = defaultDir(player);
+      let shieldFront = 0, spearForward = 0, swords = 0, commanders = 0, knight = false;
+      for (let i = 0; i < n; i++) {
+        const at = own[i], d = board[at];
+        if (d.level === SWORD) swords++;
+        else if (d.level === COMMANDER) commanders++;
+        else if (d.level === KNIGHT) knight = true;
+        else if (d.level === SPEAR && d.dir === forward) spearForward++;
+        else if (d.level === SHIELD) {
+          // Resistance and Shield Strike work against the creature in front.
+          const front = step(at, d.dir);
+          const e = front >= 0 ? board[front] : null;
+          if (e && e.owner !== player) shieldFront++;
+        }
+      }
+      f[base] += sign * shieldFront;
+      f[base + 1] += sign * spearForward;
+      // Relentless: every further First Sword can act in the same turn.
+      f[base + 2] += sign * Math.max(0, swords - 1);
+      f[base + 3] += sign * (commanders && s.players[player].reserve >= 4 ? 1 : 0);
+      // Breakthrough: formations close to 9 (6 to 8) while a King's Knight is in play.
+      if (knight) {
+        const mark = ++seenMark;
+        let near = 0;
+        for (let i = 0; i < n; i++) {
+          const start = own[i];
+          if (seen[start] === mark) continue;
+          let sum = 0, top = 0;
+          stack[top++] = start;
+          seen[start] = mark;
+          while (top) {
+            const x = stack[--top];
+            sum += board[x].level;
+            const adj = adjacent(x);
+            for (let k = 0; k < adj.length; k++) {
+              const y = adj[k], d = board[y];
+              if (d && d.owner === player && seen[y] !== mark) { seen[y] = mark; stack[top++] = y; }
+            }
+          }
+          if (sum >= 6 && sum < FORMATION_POWER) near++;
+        }
+        f[base + 4] += sign * near;
+      }
+    },
+  },
 
   // Starting lineups of the AI.
   aiBook: {

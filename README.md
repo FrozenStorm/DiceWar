@@ -40,7 +40,7 @@ The site is static (plain HTML and ES modules, no build step) and is hosted on G
 - `docs/rules/` – all rules as text: base rules and one file per dice set
 - `docs/online.md` – how the online lobby works and how to set up the database rules
 - `engine/` – rules engine: `core.js` for the base rules, `sets/<set>.js` per dice set, `locations/` for the landscapes
-- `ai/` – AI opponent, runs in a Web Worker (`ui/ai-worker.js`, `ui/expert-worker.js`): `ai.js` (levels Easy / Medium / Hard: minimax with alpha-beta pruning), `expert.js` (level Expert: transposition table, move ordering, late move reductions, quiescence search), `eval.js` (position evaluation), `setup.js` (starting lineups)
+- `ai/` – AI opponent, runs in a Web Worker (`ui/ai-worker.js`): `ai.js` (levels Easy / Medium / Hard / Expert as settings of one search), `search.js` (transposition table, move ordering, late move reductions, quiescence search; every decision inside a turn is searched), `parallel.js` (the same search on several cores, `ui/search-worker.js`), `eval.js` (position evaluation: features times weights), `setup.js` (starting lineups)
 - `net/` – online lobby and game sync via Firebase Realtime Database (`online.js`, `backend-firebase.js`, `backend-mock.js` for tests)
 - `ui/` – board and HUD: `rules-mode.js` (connects engine and AI to the board), `ring.js` (radial menu), `hud.js`, `animate.js` (animations from the engine event log)
 - `sw.js`, `site.webmanifest` – service worker and manifest for the installable app

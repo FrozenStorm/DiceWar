@@ -1,4 +1,4 @@
-const CACHE_NAME = "dicewar-v39";
+const CACHE_NAME = "dicewar-v40";
 
 const PRECACHE_ASSETS = [
   "./",
@@ -22,8 +22,11 @@ const PRECACHE_ASSETS = [
   "net/online.js", "net/backend-firebase.js", "net/firebase-config.js",
   "img/ui/board.jpg", "img/ui/crown.png", "img/ui/claw.png", "img/ui/exile.png", "img/ui/reserve.png",
   "fonts/cinzel.woff2", "fonts/crimson-text-400.woff2", "fonts/crimson-text-600.woff2", "fonts/crimson-text-400-italic.woff2",
-  "ui/ai-worker.js", "ui/expert-worker.js",
-  "ai/ai.js", "ai/eval.js", "ai/common.js", "ai/setup.js", "ai/expert.js", "ai/expert-parallel.js",
+  "ui/ai-worker.js", "ui/search-worker.js",
+  "ai/ai.js", "ai/eval.js", "ai/setup.js", "ai/search.js", "ai/parallel.js",
+  "ai/rng.js",
+  "lab/runner.js", "lab/stats.js", "lab/report.js", "lab/zip.js", "lab/lab-worker.js",
+  "ui/lab.js",
   "icon/favicon.ico",
   "icon/favicon-16x16.png",
   "icon/favicon-32x32.png",

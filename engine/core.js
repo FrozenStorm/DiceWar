@@ -223,6 +223,30 @@ export function pushChoice(s, player, kind, data = {}) {
   s.pending.push({ player, kind, data });
 }
 
+/** Several steps of the same kind in a row whose order does not change the
+ *  result (placing 3 Sprouts, spending Blood Trade TP): options on a square
+ *  before the one of the previous step (`last`) are marked `redundant`, so the
+ *  AI tries every combination only once. With `remaining` placements still to
+ *  come (this one included), so are squares with too few later squares left
+ *  for the others. The user interface offers all options. */
+export function inSquareOrder(options, last, field = "place", remaining = 1) {
+  let latest = Infinity;
+  if (remaining > 1) {
+    // Distinct squares in ascending order (options usually come sorted).
+    let squares = [], sorted = true;
+    for (const o of options) {
+      const x = o[field], prev = squares[squares.length - 1];
+      if (prev === undefined || x > prev) squares.push(x);
+      else if (x < prev) { sorted = false; break; }
+    }
+    if (!sorted) squares = [...new Set(options.map((o) => o[field]))].sort((a, b) => a - b);
+    latest = squares[squares.length - remaining];
+  }
+  const first = last ?? -1;
+  if (first < 0 && latest === Infinity) return options;
+  return options.map((o) => (o[field] < first || o[field] > latest ? { ...o, redundant: true } : o));
+}
+
 // ---------------------------------------------------------------------------
 // Power hierarchy
 // ---------------------------------------------------------------------------
@@ -414,7 +438,9 @@ export function legalActions(s) {
     const p = s.pending[0];
     return setOf(s, p.player).choiceOptions(s, p);
   }
-  const actions = [...mainActions(s)];
+  // With the variants that end the same way as another action (the user
+  // interface offers them), e.g. KoS: turning before instead of after.
+  const actions = computeMainActions(s, true);
   if (!s.endOfWar && !s.turn.declared) actions.push({ type: "declareEndOfWar" });
   return actions;
 }
@@ -427,8 +453,9 @@ export function legalActions(s) {
 // and the symbol key keeps it out of save files and worker messages.
 const TURN_START_ACTIONS = Symbol("turnStartActions");
 
-/** Standard actions (and set abilities) of the current player. The returned
- *  list may be shared: do not change it. */
+/** Standard actions (and set abilities) of the current player, without
+ *  variants that end the same way as another action (used by the AI). The
+ *  returned list may be shared: do not change it. */
 export function mainActions(s) {
   const cached = s[TURN_START_ACTIONS];
   if (!cached || cached.state !== s) return computeMainActions(s);
@@ -452,7 +479,7 @@ function hasMainAction(s) {
   return computeMainActions(s).length > 0;
 }
 
-function computeMainActions(s) {
+function computeMainActions(s, variants = false) {
   const player = s.current;
   let out = [];
   for (const from of diceOf(s, player)) out.push(...standardActionsOf(s, from));
@@ -462,7 +489,7 @@ function computeMainActions(s) {
   const other = setOf(s, opponent(player));
   if (other.constrainOpponent) out = other.constrainOpponent(s, player, out);
   // Variants of actions, e.g. KoS: the alignment chosen with a Movement or Attack.
-  if (set.decorateActions) out = set.decorateActions(s, player, out);
+  if (set.decorateActions) out = set.decorateActions(s, player, out, variants);
   return out;
 }
 

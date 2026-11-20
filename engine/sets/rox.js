@@ -320,6 +320,22 @@ export const RoX = {
 
   virtualVP: forcefulAlliance,
 
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["wormholes", "portalsProtected"],
+    add(s, player, f, base, sign, own, n) {
+      let portals = 0, bearers = 0;
+      for (let i = 0; i < n; i++) {
+        const level = s.board[own[i]].level;
+        if (level === PORTAL) portals++;
+        else if (level === BEARER) bearers++;
+      }
+      // Wormhole needs a Portal and a Portal Bearer; Resistance: Portals <= Bearers.
+      f[base] += sign * Math.min(portals, bearers);
+      f[base + 1] += sign * (portals && portals <= bearers ? portals : 0);
+    },
+  },
+
   // Starting lineups for the AI (from experienced players): 1-6-3.
   aiBook: {
     setups: [

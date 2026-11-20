@@ -3,7 +3,7 @@
 import { adjacent, step, rowOf, colOf, sq, SIZE, SQUARES, inOwnZone, opponent } from "../board.js";
 import {
   diceOf, countLevel, placeDie, removeDie, setLevel, gainTP, exileFromReserve,
-  pushChoice, doMove, doAttack, relocate, canDefeatWith, standardActionsOf, performAction,
+  pushChoice, inSquareOrder, doMove, doAttack, relocate, canDefeatWith, standardActionsOf, performAction,
   finishMoveOrAttack, lineSplits,
   canPlace, moveOnto,
 } from "../core.js";
@@ -312,7 +312,8 @@ export const RoM = {
         return followOptions(s, pending);
       case A.children:
         if (s.players[pending.player].reserve < 1) return [];
-        return freeOwnZone(s, pending.player).map((place) => ({ type: "choice", kind: A.children, place }));
+        return inSquareOrder(freeOwnZone(s, pending.player).map((place) => ({ type: "choice", kind: A.children, place })),
+          pending.data.last, "place", Math.min(pending.data.left, s.players[pending.player].reserve));
       default:
         return [];
     }
@@ -330,7 +331,7 @@ export const RoM = {
       case A.children: {
         placeDie(s, a.place, player, SPROUT);
         const left = pending.data.left - 1;
-        if (left > 0) pushChoice(s, player, A.children, { ...pending.data, left });
+        if (left > 0) pushChoice(s, player, A.children, { ...pending.data, left, last: a.place });
         else removeDie(s, pending.data.at, "reserve", "split");
         break;
       }
@@ -342,7 +343,37 @@ export const RoM = {
   // RoM.mali.deep_roots: 1 virtual VP per own Mali in the opponent's zone.
   virtualVP: (s, player) => diceOf(s, player, MALI).filter((at) => inOwnZone(opponent(player), at)).length,
 
+
+  // Inside its look-ahead the AI takes this decision by the evaluation of its options.
   aiGreedyChoices: [A.children],
+
+  // AI evaluation features (weights in ai/eval.js).
+  evalTerms: {
+    names: ["breathOfLife", "symbiosis", "maliAdvance"],
+    add(s, player, f, base, sign, own, n) {
+      const board = s.board;
+      let protectresses = 0, fruits = 0, symbiosis = 0, maliAdvance = 0;
+      for (let i = 0; i < n; i++) {
+        const at = own[i], d = board[at];
+        if (d.level === FRUIT) fruits++;
+        else if (d.level === MALI) maliAdvance += player === 1 ? SIZE - 1 - rowOf(at) : rowOf(at);
+        else if (d.level === PROTECTRESS) {
+          protectresses++;
+          // Symbiosis: a Golden Fruit next to her turns her into a Shadow Runner.
+          const adj = adjacent(at);
+          for (let k = 0; k < adj.length; k++) {
+            const x = board[adj[k]];
+            if (x && x.owner === player && x.level === FRUIT) { symbiosis++; break; }
+          }
+        }
+      }
+      // Breath of Life: levels the TP can give a Golden Fruit (at most 5).
+      f[base] += sign * (protectresses && fruits ? Math.min(5, s.players[player].tp) : 0);
+      f[base + 1] += sign * symbiosis;
+      // Mali: rows towards the opponent's zone (Deep Roots gives a virtual VP there).
+      f[base + 2] += sign * maliAdvance;
+    },
+  },
 
   // Starting lineups of the AI.
   aiBook: {

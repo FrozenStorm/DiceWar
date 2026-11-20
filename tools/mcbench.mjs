@@ -4,7 +4,7 @@
 import { Worker, isMainThread, parentPort } from "node:worker_threads";
 import { createGame, applyAction, actor } from "../engine/core.js";
 import { chooseAction, chooseSetup, LEVELS } from "../ai/ai.js";
-import { createPool, createThreadHandler, chooseExpertActionParallel } from "../ai/expert-parallel.js";
+import { createPool, createThreadHandler, chooseActionParallel } from "../ai/parallel.js";
 import { mulberry32, deriveSeed } from "../ai/rng.js";
 
 if (!isMainThread) {
@@ -28,7 +28,7 @@ if (!isMainThread) {
       const p = s.phase === "setup" ? s.current : actor(s);
       let action;
       if (s.phase === "setup") action = chooseSetup(s, { level: "expert", random });
-      else if (p === aPlayer) { const r = await chooseExpertActionParallel(s, cfg, random, pool); action = r.action; if (r.nodes) { depthA += r.depth; nA++; } }
+      else if (p === aPlayer) { const r = await chooseActionParallel(s, cfg, random, pool); action = r.action; if (r.nodes) { depthA += r.depth; nA++; } }
       else { const r = chooseAction(s, { level: B, random, overrides: { timeMs: tb } }); action = r.action; if (r.nodes) { depthB += r.depth; nB++; } }
       s = applyAction(s, action);
     }

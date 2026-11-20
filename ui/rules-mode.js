@@ -131,7 +131,7 @@ function getWorker() {
 }
 
 // Expert uses several processor cores when the device has them: a pool of
-// search threads (ai/expert-parallel.js), coordinated from here.
+// search threads (ai/parallel.js), coordinated from here.
 /** Thinking time of Expert per move with several cores (one core: the level's own limit). */
 const EXPERT_MULTI_CORE_MS = 5000;
 let expertPool = null;
@@ -143,8 +143,8 @@ async function getExpertPool() {
   const size = Math.min(8, cores - 1); // one core stays free for the page
   if (size < 2) { expertPoolFailed = true; return null; }
   try {
-    const { createPool } = await import("../ai/expert-parallel.js");
-    const workers = Array.from({ length: size }, () => new Worker(new URL("./expert-worker.js", import.meta.url), { type: "module" }));
+    const { createPool } = await import("../ai/parallel.js");
+    const workers = Array.from({ length: size }, () => new Worker(new URL("./search-worker.js", import.meta.url), { type: "module" }));
     const pool = createPool(workers, (w, handler) => { w.onmessage = (e) => handler(e.data); });
     for (const w of workers) {
       w.onerror = (e) => {
@@ -167,10 +167,10 @@ async function askExpertParallel(game) {
   const pool = await getExpertPool();
   if (!pool) return null;
   try {
-    const [{ chooseExpertActionParallel }, { LEVELS }] = await Promise.all([import("../ai/expert-parallel.js"), import("../ai/ai.js")]);
+    const [{ chooseActionParallel }, { LEVELS }] = await Promise.all([import("../ai/parallel.js"), import("../ai/ai.js")]);
     // Several cores reach the same depth in about half the time.
     const cfg = { ...LEVELS.expert, timeMs: EXPERT_MULTI_CORE_MS };
-    return (await chooseExpertActionParallel(game, cfg, Math.random, pool)).action;
+    return (await chooseActionParallel(game, cfg, Math.random, pool)).action;
   } catch (err) {
     console.warn("Multi-core search failed, using a single core", err);
     return null;
