@@ -490,6 +490,13 @@ async function leaveGame(message) {
   store.del(KEY_GAME);
   $("online-result-overlay").style.display = "none";
   hideOnlineBar();
+  // Reset the local view right away: the caller may start another game (e.g.
+  // against the AI) while the database calls below are still running.
+  ON.status = "free";
+  if (window.RulesMode) RulesMode.stop();
+  state.gameMode = "solo";
+  onlineState.localPlayer = null;
+  if (typeof updatePerspective === "function") updatePerspective();
   if (ON.db) {
     const db = ON.db;
     db.cancelOnDisconnect(`games/${g.id}/presence/${db.uid}`);
@@ -502,10 +509,6 @@ async function leaveGame(message) {
     } catch (e) { /* already gone */ }
     db.remove(`lobby/${db.uid}`);
   }
-  ON.status = "free";
-  if (window.RulesMode) RulesMode.stop();
-  state.gameMode = "duel";
-  onlineState.localPlayer = null;
   if (message) alert(message);
 }
 

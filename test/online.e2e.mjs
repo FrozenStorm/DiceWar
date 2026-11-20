@@ -285,6 +285,44 @@ try {
     }
   });
 
+  await step("Bob (turned board) sees a die move start on its old field", async () => {
+    // Record where each animated die on the board starts on the screen.
+    await B.page.evaluate(() => {
+      window.__starts = [];
+      const orig = Element.prototype.animate;
+      Element.prototype.animate = function (...args) {
+        const anim = orig.apply(this, args);
+        const cell = this.closest && this.closest("#board .cell");
+        if (cell && this.classList.contains("die")) {
+          anim.pause(); anim.currentTime = 0;
+          const r = this.getBoundingClientRect();
+          anim.play();
+          const cells = [...document.querySelectorAll("#board .cell")];
+          const d = cells.map((c) => { const q = c.getBoundingClientRect(); return Math.hypot(q.x + q.width / 2 - r.x - r.width / 2, q.y + q.height / 2 - r.y - r.height / 2); });
+          window.__starts.push({ at: cells.indexOf(cell), start: d.indexOf(Math.min(...d)), dist: Math.min(...d) });
+        }
+        return anim;
+      };
+    });
+    let checked = 0;
+    for (let i = 0; i < 30 && checked < 3; i++) {
+      await B.page.evaluate(() => { window.__starts = []; });
+      await randomMove([A, B]);
+      await waitSynced(A, B);
+      await new Promise((r) => setTimeout(r, 1500));
+      const { starts, events } = await B.page.evaluate(() => ({ starts: window.__starts, events: RulesMode.game.events }));
+      for (const ev of events || []) {
+        if (ev.t !== "move" || events.filter((e) => e.t === "move").length > 1) continue;
+        const s = starts.find((x) => x.at === ev.path[ev.path.length - 1]);
+        if (!s) continue;
+        assert.equal(s.start, ev.path[0], `move ${ev.path} starts on field ${s.start}`);
+        assert.ok(s.dist < 5);
+        checked++;
+      }
+    }
+    assert.ok(checked > 0, "no move animation seen");
+  });
+
   await step("reload: Bob is back in the same game", async () => {
     const before = await gameOf(A);
     await B.page.reload();
@@ -338,10 +376,26 @@ try {
     assert.equal(await A.page.evaluate(() => state.board.flat().filter((c) => c.owner === 1).length), 1);
   });
 
-  await step("lobby leave removes the player", async () => {
+  await step("leaving for a game against the AI resets the online view", async () => {
+    // Alice is player 2 here: her board is turned. She resigns, looks at the
+    // board and starts a game against the AI from the menu.
+    assert.equal(await A.page.evaluate(() => document.getElementById("app").classList.contains("online-player2")), true);
     await A.page.click("#btn-resign");
-    await A.page.click("#btn-result-lobby");
-    await A.page.click("#btn-online-leave");
+    await A.page.click("#btn-result-close");
+    await A.page.click("#btn-lobby");
+    await A.page.selectOption("#game-mode-select", "ai");
+    await A.page.selectOption("#p1-dice-set", "RoX");
+    await A.page.selectOption("#p2-dice-set", "KoS");
+    await A.page.click("#start-game-btn");
+    await new Promise((r) => setTimeout(r, 500)); // the database calls of leaving finish
+    assert.equal(await A.page.evaluate(() => state.gameMode), "ai");
+    assert.equal(await A.page.evaluate(() => RulesMode.active), true);
+    assert.equal(await A.page.evaluate(() => document.getElementById("app").className.includes("online-player2")), false);
+    await A.page.click("#btn-lobby");
+    assert.equal(await A.page.evaluate(() => document.getElementById("lobby-overlay").classList.contains("player2")), false, "menu not upside down");
+  });
+
+  await step("lobby leave removes the player", async () => {
     await B.page.click("#btn-result-lobby");
     await B.page.waitForSelector("#online-players li.empty");
   });
