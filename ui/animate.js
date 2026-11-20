@@ -28,6 +28,10 @@ const cellEl = (at) => document.querySelectorAll("#board .cell")[at];
 const dieEl = (at) => { const c = cellEl(at); return c && c.querySelector(".die"); };
 const boxEl = (player, dest) => document.getElementById(`p${player}-${dest}`);
 
+/** Online, player 2: the board is turned by 180 degrees (index.html), so a
+ *  shift on the screen is the opposite shift inside the board. */
+const boardSign = () => (document.getElementById("app").classList.contains("online-player2") ? -1 : 1);
+
 function center(el) {
   const r = el.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
@@ -49,6 +53,8 @@ function ghostFrom(before, at, event) {
   if (old) {
     node = old.node.cloneNode(true);
     rect = old.rect;
+    // The ghost leaves the turned board: keep the die looking the same.
+    if (boardSign() < 0) node.style.transform = `rotate(180deg) ${node.style.transform || ""}`.trim();
   } else {
     // Die that did not exist before this action (e.g. moved there and removed in the same turn).
     node = document.createElement("div");
@@ -85,9 +91,10 @@ function animateMove(ev, ms) {
   if (!die) return Promise.resolve();
   const end = center(cellEl(to));
   const base = die.style.transform || "";
+  const k = boardSign();
   const frames = path.map((at, i) => {
     const c = center(cellEl(at));
-    return { transform: `translate(${c.x - end.x}px, ${c.y - end.y}px) ${base}`, offset: i / (path.length - 1) };
+    return { transform: `translate(${k * (c.x - end.x)}px, ${k * (c.y - end.y)}px) ${base}`, offset: i / (path.length - 1) };
   });
   // Lift the die a little while it travels.
   frames.forEach((f, i) => { if (i > 0 && i < frames.length - 1) f.transform += " scale(1.08)"; });
@@ -102,8 +109,9 @@ function animatePlace(ev, ms) {
   if (!die || !box) return Promise.resolve();
   const from = center(box), to = center(cellEl(ev.at));
   const base = die.style.transform || "";
+  const k = boardSign();
   return die.animate([
-    { transform: `translate(${from.x - to.x}px, ${from.y - to.y}px) scale(0.4) ${base}`, opacity: 0.3 },
+    { transform: `translate(${k * (from.x - to.x)}px, ${k * (from.y - to.y)}px) scale(0.4) ${base}`, opacity: 0.3 },
     { transform: `translate(0, 0) scale(1) ${base}`, opacity: 1 },
   ], { duration: ms, easing: "ease-out" }).finished.catch(() => {});
 }
@@ -226,7 +234,8 @@ export async function play(events, before, { slow = false, alignDeg = null, preS
     if (!die || fs !== end || j === 0) return; // only needed when something happens first
     const a = center(cellEl(ev.path[0])), b = center(cellEl(end));
     holds.set(die, die.style.transform);
-    die.style.transform = `translate(${a.x - b.x}px, ${a.y - b.y}px) ${die.style.transform || ""}`;
+    const k = boardSign();
+    die.style.transform = `translate(${k * (a.x - b.x)}px, ${k * (a.y - b.y)}px) ${die.style.transform || ""}`;
   });
   // Dice that leave the board stay visible where they stood until it is their turn to go.
   const ghosts = new Map();

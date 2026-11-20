@@ -191,9 +191,8 @@
   }
 
   function dieImageRotation(cell) {
-    let rot = cell.rotation || 0;
-    if ((state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2) rot += 180;
-    return rot;
+    // The ring lies outside the turned board: add the board's own turn.
+    return ((cell.rotation || 0) + dieBaseTurn(cell.owner) + (viewFlipped() ? 180 : 0)) % 360;
   }
 
   function renderManual() {

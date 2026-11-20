@@ -459,19 +459,17 @@ function confirmSetup() {
 // ---------------------------------------------------------------------------
 
 /** KoS alignment: rotate the die image so its arrow points in die.dir (0 up,
- *  1 right, 2 down, 3 left on screen). Player 2's dice are already turned by
- *  180 degrees in duel and online games. */
+ *  1 right, 2 down, 3 left on the board). The die is already turned by
+ *  dieBaseTurn() (index.html): player 2's dice in a duel, all dice online for player 2. */
 function alignmentRotation(d) {
   if (rm.game.players[d.owner].set !== "KoS") return 0;
-  const base = (state.gameMode === "duel" || state.gameMode === "online") && d.owner === 2 ? 180 : 0;
-  return (d.dir * 90 - base + 360) % 360;
+  return (d.dir * 90 - dieBaseTurn(d.owner) + 360) % 360;
 }
 
-/** Total rotation of a die image with alignment `dir`, as rendered by index.html
- *  (the 180 degrees for player 2 in duel and online games included). */
+/** Total rotation of a die image with alignment `dir` on the board, as rendered
+ *  by index.html (dieBaseTurn() included). */
 function alignDeg(owner, dir) {
-  const base = (state.gameMode === "duel" || state.gameMode === "online") && owner === 2 ? 180 : 0;
-  return base + alignmentRotation({ owner, dir });
+  return dieBaseTurn(owner) + alignmentRotation({ owner, dir });
 }
 
 function project() {
@@ -616,9 +614,8 @@ function dieImageOf(at) {
 
 function dieImageRotation(at) {
   const cell = state.board[rowOf(at)][colOf(at)];
-  let rot = cell.rotation || 0;
-  if ((state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2) rot += 180;
-  return rot;
+  // The ring lies outside the turned board: add the board's own turn.
+  return ((cell.rotation || 0) + dieBaseTurn(cell.owner) + (viewFlipped() ? 180 : 0)) % 360;
 }
 
 /** The radial menu for the current click path, or null. */

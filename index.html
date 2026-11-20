@@ -1117,9 +1117,8 @@
             if (diceSet === "numbers") {
               die.textContent = data.value;
               let transform = "";
-              if ((state.gameMode === "duel" || state.gameMode === "online") && owner === 2) {
-                transform = "rotate(180deg)";
-              }
+              const turn = dieBaseTurn(owner);
+              if (turn) transform = `rotate(${turn}deg)`;
               if (data.rotation !== 0) {
                 transform += ` rotate(${data.rotation}deg)`;
               }
@@ -1138,9 +1137,8 @@
               img.style.borderRadius = "6px";
               img.alt = `Die ${data.value}`;
               let transform = "";
-              if ((state.gameMode === "duel" || state.gameMode === "online") && owner === 2) {
-                transform = "rotate(180deg)";
-              }
+              const turn = dieBaseTurn(owner);
+              if (turn) transform = `rotate(${turn}deg)`;
               if (data.rotation !== 0) {
                 transform += ` rotate(${data.rotation}deg)`;
               }
@@ -1490,8 +1488,8 @@
       currentDieBox.classList.remove("empty");
       currentDieBox.style.borderStyle = "solid";
 
-      const needsOwnerRotation = (state.gameMode === "duel" || state.gameMode === "online") && cell.owner === 2;
-      const needsPerspectiveRotation = state.gameMode === "online" && onlineState.localPlayer === 2;
+      // The box is outside the board: add the board's own turn (online, player 2).
+      const boxTurn = (dieBaseTurn(cell.owner) + (viewFlipped() ? 180 : 0)) % 360;
 
       if (diceSet === "numbers") {
         currentDieBox.innerHTML = String(cell.value);
@@ -1502,8 +1500,7 @@
             : "radial-gradient(circle at 30% 20%, #79b5ff, var(--p2-color))";
         currentDieBox.style.color = "#fff";
         let transform = "";
-        if (needsOwnerRotation) transform += " rotate(180deg)";
-        if (needsPerspectiveRotation) transform += " rotate(180deg)";
+        if (boxTurn) transform += ` rotate(${boxTurn}deg)`;
         if (cell.rotation !== 0) transform += ` rotate(${cell.rotation}deg)`;
         currentDieBox.style.transform = transform.trim() || "none";
       } else {
@@ -1520,8 +1517,7 @@
         img.style.borderRadius = "6px";
         img.alt = `Die ${cell.value}`;
         let transform = "";
-        if (needsOwnerRotation) transform += " rotate(180deg)";
-        if (needsPerspectiveRotation) transform += " rotate(180deg)";
+        if (boxTurn) transform += ` rotate(${boxTurn}deg)`;
         if (cell.rotation !== 0) transform += ` rotate(${cell.rotation}deg)`;
         img.style.transform = transform.trim() || "none";
         currentDieBox.appendChild(img);
@@ -2256,9 +2252,23 @@
       updateOnlineUIState();
     }
 
+    /** Online game of player 2: the board is turned by 180 degrees, so that each
+     *  player sees the game like against the AI (own side at the bottom). */
+    function viewFlipped() {
+      return state.gameMode === "online" && onlineState.localPlayer === 2;
+    }
+
+    /** Turn of a die on the board before its alignment (KoS). Duel on one device:
+     *  player 2's dice face player 2. Online: every die faces the local player,
+     *  as against the AI (turned back against the turned board for player 2). */
+    function dieBaseTurn(owner) {
+      if (state.gameMode === "duel") return owner === 2 ? 180 : 0;
+      return viewFlipped() ? 180 : 0;
+    }
+
     function updatePerspective() {
       const app = document.getElementById("app");
-      if (state.gameMode === "online" && onlineState.localPlayer === 2) {
+      if (viewFlipped()) {
         app.classList.add("online-player2");
       } else {
         app.classList.remove("online-player2");
