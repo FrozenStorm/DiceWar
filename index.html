@@ -398,7 +398,15 @@
     #rules-overlay { gap: 8px; }
     #rules-overlay.player2, #lobby-overlay.player2 { transform: rotate(180deg); }
     .rules-stage { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .rules-stage img { max-width: calc(100% - 80px); max-height: 100%; object-fit: contain; }
+    /* Every card image is 680x985 (tools/normalize-rule-cards.py); the box is
+       fixed by height so all cards show at exactly the same size. */
+    .rules-stage { container-type: size; }
+    .rules-stage img {
+      width: min(100cqw - 84px, 100cqh * 680 / 985); height: auto; aspect-ratio: 680 / 985;
+      flex: 0 0 auto; object-fit: contain;
+      -webkit-touch-callout: none; -webkit-user-drag: none;
+    }
+    .die img { -webkit-touch-callout: none; -webkit-user-drag: none; }
     .rules-arrow {
       width: 36px; height: 60px; flex: 0 0 auto; border: 0; background: transparent;
       font-size: 2rem; color: var(--paper);
@@ -455,6 +463,13 @@
     .online-bar .text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .online-bar .small-btn { min-height: 30px; padding: 2px 10px; }
     #online-result-overlay .lobby-card { text-align: center; }
+
+    /* ---------- Load a save: how to continue ---------- */
+    #load-overlay { overflow-y: auto; justify-content: safe center; z-index: 1050; }
+    #load-overlay label {
+      display: flex; flex-direction: column; gap: 3px;
+      font-family: var(--display); font-weight: 600; font-size: 12px; letter-spacing: 0.03em;
+    }
 
     /* ---------- Landscape: board left, docks in a column on the right ---------- */
     @media (min-aspect-ratio: 5/4) {
@@ -551,6 +566,36 @@
           <p id="online-result-text"></p>
           <button class="big-btn" id="btn-result-lobby">Back to Lobby</button>
           <button class="big-btn secondary" id="btn-result-close">Look at the Board</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load a save: choose how the game continues -->
+    <div id="load-overlay" class="overlay">
+      <div class="paper lobby-card">
+        <h1>Load Game</h1>
+        <div class="lobby-inner">
+          <p id="load-summary"></p>
+          <label>Continue as
+            <select id="load-mode">
+              <option value="ai">Against the AI</option>
+              <option value="solo">Solo (play both sides)</option>
+              <option value="duel">Duel (two players, one device)</option>
+            </select>
+          </label>
+          <label id="load-ai-level-label">AI strength
+            <select id="load-ai-level">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+              <option value="expert">Expert</option>
+            </select>
+          </label>
+          <p id="load-note" style="font-size: 14px;"></p>
+          <div class="challenge-buttons">
+            <button class="big-btn" id="btn-load-confirm">Load</button>
+            <button class="big-btn secondary" id="btn-load-cancel">Cancel</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1619,19 +1664,23 @@
     };
     const globalRules = ["zugablauf", "glossar"];
 
-    function openRulesOverlay(player) {
+    function openRulesOverlay(player, startCard) {
       const diceSet = state.players[player].diceSet || "numbers";
       const imageList = RULES_PER_SET[diceSet] || [1, 2, 3, 4, 5, 6];
       const folder = diceSet === "numbers" ? "numbers" : diceSet;
 
       rulesState.currentPlayer = player;
-      rulesState.currentImageIndex = 0;
+      const startIndex = startCard != null ? imageList.indexOf(startCard) : -1;
+      rulesState.currentImageIndex = Math.max(0, startIndex);
       const setImages = imageList.map(i => `img/${folder}/rules/${i}.png`);
       const globalImages = globalRules.map(i => `img/global/${i}.png`);
       rulesState.images = [...setImages, ...globalImages];
 
       const overlay = document.getElementById("rules-overlay");
       overlay.style.display = "flex";
+      // Taps only count once a new touch starts inside the overlay, so the finger
+      // that just opened it with a long press does not close or flip it.
+      rulesState.armed = false;
       overlay.classList.toggle("player2", state.gameMode === "duel" && state.currentPlayer === 2);
 
       showRulesImage();
@@ -1659,6 +1708,86 @@
       rulesState.currentImageIndex = (rulesState.currentImageIndex - 1 + rulesState.images.length) % rulesState.images.length;
       showRulesImage();
     }
+
+    function rulesOverlayOpen() {
+      return document.getElementById("rules-overlay").style.display === "flex";
+    }
+
+    // --- Rule card straight from a die: right-click (mouse) or long press (touch) ---
+    // A normal click/tap still selects the die. Works for both players' dice,
+    // also while the radial menu is open (it lies over the board).
+    const DieCard = (() => {
+      const LONG_PRESS_MS = 500;
+      const MOVE_TOLERANCE = 10;
+      let timer = null;
+      let start = null;
+      let swallowClick = false;
+
+      function dieAt(x, y) {
+        for (const el of document.elementsFromPoint(x, y)) {
+          if (el.closest && el.closest("#ring-svg .seg")) return null; // a menu button, not a die
+          const cell = el.closest && el.closest("#board .cell");
+          if (!cell) continue;
+          const data = state.board[+cell.dataset.row] && state.board[+cell.dataset.row][+cell.dataset.col];
+          if (data && data.owner != null && data.value != null && cell.querySelector(".die")) {
+            return { player: data.owner, value: data.value };
+          }
+          return null;
+        }
+        return null;
+      }
+
+      function open(die) {
+        if (rulesOverlayOpen()) return;
+        openRulesOverlay(die.player, die.value);
+      }
+
+      function cancel() {
+        clearTimeout(timer);
+        timer = null;
+        start = null;
+      }
+
+      document.addEventListener("contextmenu", (e) => {
+        const die = dieAt(e.clientX, e.clientY);
+        if (!die) return;
+        e.preventDefault();
+        if (e.pointerType === "touch" || timer || swallowClick) return; // touch is handled by the long press
+        open(die);
+      });
+
+      document.addEventListener("pointerdown", (e) => {
+        swallowClick = false;
+        cancel();
+        if (e.pointerType === "mouse" || rulesOverlayOpen()) return;
+        const die = dieAt(e.clientX, e.clientY);
+        if (!die) return;
+        start = { x: e.clientX, y: e.clientY };
+        timer = setTimeout(() => {
+          timer = null;
+          start = null;
+          swallowClick = true;
+          if (navigator.vibrate) navigator.vibrate(30);
+          open(die);
+        }, LONG_PRESS_MS);
+      });
+
+      document.addEventListener("pointermove", (e) => {
+        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > MOVE_TOLERANCE) cancel();
+      });
+      document.addEventListener("pointerup", () => { if (timer) cancel(); });
+      document.addEventListener("pointercancel", cancel);
+
+      // The click that ends a long press must not also select the die.
+      document.addEventListener("click", (e) => {
+        if (!swallowClick) return;
+        swallowClick = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }, true);
+
+      return { dieAt };
+    })();
 
     // --- Online UI on/off ---
     function enableAllGameElements() {
@@ -1902,6 +2031,14 @@
         .getElementById("rules-next")
         .addEventListener("click", nextRulesImage);
 
+      const rulesOverlayEl = document.getElementById("rules-overlay");
+      rulesOverlayEl.addEventListener("pointerdown", () => { rulesState.armed = true; });
+      rulesOverlayEl.addEventListener("click", (e) => {
+        if (!rulesState.armed) { e.stopPropagation(); return; }
+        // Tap outside the card and its buttons closes the overlay.
+        if (!e.target.closest("#rules-image, .rules-arrow, #btn-close-rules")) closeRulesOverlay();
+      }, true);
+
       document
         .getElementById("rules-image")
         .addEventListener("click", (e) => {
@@ -1935,20 +2072,97 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (ev) => {
+          let json;
           try {
-            loadSaveData(JSON.parse(ev.target.result));
+            json = JSON.parse(ev.target.result);
           } catch (err) {
             console.error(err);
             alert("Error loading file.");
+            return;
           }
+          openLoadDialog(json);
         };
         reader.readAsText(file);
         e.target.value = "";
       });
     }
 
-    /** Load a save file (or an AI Lab replay, which has only the rules engine state). */
-    function loadSaveData(json, { quiet = false } = {}) {
+    // --- Load dialog: how the loaded game continues ---
+    const SET_LONG_NAMES = {
+      RoX: "Rise of Xeladron", BoD: "Bond of Demons", LoD: "Light of Dragons", RoM: "Roots of Mali",
+      KoS: "Knights of Steel", DoA: "Dawn of Awakening", numbers: "Numbers",
+    };
+    let pendingLoad = null;
+
+    /** Dice sets of a save file: { 1: "RoX", 2: "KoS" }. */
+    function setsOfSave(json) {
+      const snap = json.snapshot || json;
+      const rg = snap.rulesGame;
+      if (rg && rg.players) return { 1: rg.players[1].set, 2: rg.players[2].set };
+      const pl = snap.players || {};
+      return { 1: (pl[1] && pl[1].diceSet) || "numbers", 2: (pl[2] && pl[2].diceSet) || "numbers" };
+    }
+
+    function openLoadDialog(json) {
+      const snap = json.snapshot || json;
+      if (!snap.board && !snap.rulesGame) { alert("This file is not a DiceWar save."); return; }
+      pendingLoad = json;
+      const sets = setsOfSave(json);
+      const withRules = !!(snap.rulesGame && window.RulesMode);
+      const modeSel = document.getElementById("load-mode");
+      const levelSel = document.getElementById("load-ai-level");
+      // The AI only plays with the rules engine (not the Numbers set).
+      modeSel.querySelector('option[value="ai"]').disabled = !withRules;
+      // Suggest how the game was played when it was saved.
+      const savedAi = snap.ai;
+      const savedMode = savedAi || snap.gameMode === "ai" ? "ai" : snap.gameMode;
+      modeSel.value = savedMode === "ai" && !withRules ? "duel"
+        : ["ai", "solo", "duel"].includes(savedMode) ? savedMode : "duel";
+      levelSel.value = (savedAi && savedAi.level) || document.getElementById("ai-level").value;
+      const g = snap.rulesGame;
+      const where = !g ? "" : g.phase === "over" ? " The game is over." : g.phase === "setup" ? " Starting lineup." : ` Turn ${g.turnNumber}.`;
+      document.getElementById("load-summary").textContent =
+        `${SET_LONG_NAMES[sets[1]] || sets[1]} vs. ${SET_LONG_NAMES[sets[2]] || sets[2]}.${where}`;
+      updateLoadDialog();
+      document.getElementById("load-overlay").style.display = "flex";
+    }
+
+    function updateLoadDialog() {
+      const ai = document.getElementById("load-mode").value === "ai";
+      document.getElementById("load-ai-level-label").style.display = ai ? "flex" : "none";
+      const note = document.getElementById("load-note");
+      note.style.display = ai ? "block" : "none";
+      note.textContent = "You play at the bottom, the AI plays at the top.";
+    }
+    document.getElementById("load-mode").addEventListener("change", updateLoadDialog);
+    document.getElementById("btn-load-cancel").addEventListener("click", () => {
+      pendingLoad = null;
+      document.getElementById("load-overlay").style.display = "none";
+    });
+    document.getElementById("btn-load-confirm").addEventListener("click", () => {
+      const json = pendingLoad;
+      pendingLoad = null;
+      document.getElementById("load-overlay").style.display = "none";
+      if (!json) return;
+      const mode = document.getElementById("load-mode").value;
+      // As in every game against the AI: you are player 1 (bottom), the AI player 2.
+      const ai = mode === "ai" ? { player: 2, level: document.getElementById("load-ai-level").value } : null;
+      try {
+        if (window.Online && Online.inGame() && !Online.leaveForOtherMode()) return;
+        if (window.Online && !Online.inGame()) Online.leaveForOtherMode();
+        loadSaveData(json, { quiet: true, mode, ai });
+        document.getElementById("lobby-overlay").style.display = "none";
+      } catch (err) {
+        console.error(err);
+        alert("Error loading file.");
+      }
+    });
+
+    /** Load a save file (or an AI Lab replay, which has only the rules engine state). With the saved move history (rulesHistory), Undo / Redo
+     *  work after loading, also in a finished game. `mode` ("ai", "solo", "duel")
+     *  and `ai` ({ player, level }) choose how the game continues; without them
+     *  the save is loaded as a game on one device. */
+    function loadSaveData(json, { quiet = false, mode = null, ai = null } = {}) {
       const snapshot = json.snapshot || json;
       const rg = snapshot.rulesGame;
       if (window.RulesMode) RulesMode.stop();
@@ -1959,6 +2173,9 @@
       } else {
         applyStateSnapshot(snapshot);
       }
+      if (!rg || !window.RulesMode) ai = null;
+      state.gameMode = ai ? "ai" : mode && mode !== "ai" ? mode : state.gameMode === "solo" ? "solo" : "duel";
+      updatePerspective();
       updateBoardDOM();
       refreshPlayerPanels();
       updateRoundDisplay();
@@ -1969,7 +2186,7 @@
       updateSaveLoadButtons();
       markGameStarted();
       // Last, so that the rules panel (e.g. "Game over") is not overwritten.
-      if (window.RulesMode && rg) RulesMode.loadSave(json);
+      if (window.RulesMode && rg) RulesMode.loadSave(json, { ai });
       if (!quiet) alert(json.lab ? "AI Lab replay loaded." : "Save loaded.");
     }
     window.loadSaveData = loadSaveData;
@@ -1982,6 +2199,8 @@
         // Moves so far, so that Undo / Redo still work after loading.
         const hist = RulesMode.history();
         if (hist) snapshot.rulesHistory = hist;
+        // Who the AI was, so that loading suggests the same setup again.
+        if (RulesMode.aiInfo()) snapshot.ai = RulesMode.aiInfo();
       }
       const data = {
         version: 1,
